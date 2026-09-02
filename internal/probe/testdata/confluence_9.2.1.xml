@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<applinks-manifest>
+    <id>2b7d9e00-0000-0000-0000-9f8e7d6c5b4a</id>
+    <name>Confluence</name>
+    <typeId>confluence</typeId>
+    <version>9.2.1</version>
+    <buildNumber>9021</buildNumber>
+    <applinksVersion>9.3.5</applinksVersion>
+</applinks-manifest>
