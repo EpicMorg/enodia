@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<applinks-manifest>
+    <id>8f4a2c11-0000-0000-0000-1a2b3c4d5e6f</id>
+    <name>Jira</name>
+    <typeId>jira</typeId>
+    <version>10.3.2</version>
+    <buildNumber>1003002</buildNumber>
+    <applinksVersion>9.3.5</applinksVersion>
+    <publicSignup>false</publicSignup>
+</applinks-manifest>
