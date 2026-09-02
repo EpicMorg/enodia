@@ -1,0 +1,27 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - errorlint      # правильное оборачивание ошибок — критично для типизированных sentinel'ов
+    - bodyclose      # утечка HTTP-соединений при 50 параллельных пробах
+    - contextcheck   # context.Context должен идти насквозь
+    - noctx          # запрещает HTTP-запросы без контекста
+    - gosec
+    - misspell
+    - revive
+
+linters-settings:
+  gosec:
+    excludes:
+      - G402   # InsecureSkipVerify — намеренная фича, закрыта opt-in флагом
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters: [gosec, errcheck]

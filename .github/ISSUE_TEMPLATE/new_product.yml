@@ -1,0 +1,37 @@
+name: Product support request
+description: Ask for a product Enodia doesn't know yet
+labels: ["enhancement", "probe"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The more of this you can fill in, the faster it gets built — and if you
+        have all of it, consider opening a pull request instead. See
+        CONTRIBUTING.md; it's one file plus one line.
+  - type: input
+    id: product
+    attributes:
+      label: Product
+      placeholder: Nextcloud
+    validations: { required: true }
+  - type: input
+    id: endpoint
+    attributes:
+      label: Endpoint that returns the version
+      placeholder: /status.php
+  - type: textarea
+    id: response
+    attributes:
+      label: Example response
+      description: "Scrub hostnames and tokens."
+      render: text
+  - type: dropdown
+    id: auth
+    attributes:
+      label: Does it need authentication?
+      options: ["No", "Yes", "Optional"]
+  - type: input
+    id: eol
+    attributes:
+      label: endoflife.date slug, if it has one
+      placeholder: nextcloud
