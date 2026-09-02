@@ -1,0 +1,50 @@
+name: Broken probe
+description: A product's version stopped being detected
+labels: ["bug", "probe"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vendors change their APIs without warning. If a probe used to work and
+        now doesn't, that's our bug.
+
+        As a stopgap, `product: generic` with a hand-written parser will keep
+        you running until a fix ships.
+  - type: input
+    id: product
+    attributes:
+      label: Product
+      placeholder: jira
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Product version
+      placeholder: 10.3.2
+    validations: { required: true }
+  - type: input
+    id: enodia
+    attributes:
+      label: Enodia version
+      placeholder: 0.1.0
+    validations: { required: true }
+  - type: textarea
+    id: output
+    attributes:
+      label: What Enodia reported
+      render: text
+    validations: { required: true }
+  - type: textarea
+    id: response
+    attributes:
+      label: Raw response from the endpoint
+      description: "Remove hostnames, tokens, and anything internal before pasting."
+      render: text
+    validations: { required: true }
+  - type: checkboxes
+    id: scrubbed
+    attributes:
+      label: Confirm
+      options:
+        - label: I removed all credentials and internal hostnames from the above
+          required: true
