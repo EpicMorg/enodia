@@ -94,7 +94,7 @@ func one(ctx context.Context, t probe.Target, opts Options) probe.Observation {
 	for attempt := range attempts {
 		if attempt > 0 {
 			delay := opts.Backoff * (1 << (attempt - 1))
-			delay += time.Duration(rand.Int64N(int64(delay/2 + 1)))
+			delay += time.Duration(rand.Int64N(int64(delay/2 + 1))) //nolint:gosec // jitter, not a security decision; crypto/rand would be the wrong tool here
 			select {
 			case <-time.After(delay):
 			case <-ctx.Done():
