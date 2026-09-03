@@ -4,10 +4,15 @@ package main
 
 import "github.com/spf13/cobra"
 
-// buildVersion is overridden at release time via
-// -ldflags "-X main.buildVersion=...". goreleaser wires this — see
-// docs/ROADMAP.md, "Then — packaging".
-var buildVersion = "dev"
+// buildVersion, buildCommit and buildDate are overridden at release time via
+// -ldflags "-X main.buildVersion=... -X main.buildCommit=... -X main.buildDate=...".
+// goreleaser wires these (see .goreleaser.yaml) — docs/ROADMAP.md, "Then —
+// packaging".
+var (
+	buildVersion = "dev"
+	buildCommit  = "unknown"
+	buildDate    = "unknown"
+)
 
 // configFlag is the --config persistent flag: an explicit path that must
 // exist (never a fallback — see internal/config.Locate), or empty to search

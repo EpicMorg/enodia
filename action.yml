@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: "enodia"
+description: "Service inventory and lifecycle (EOL) monitoring — run enodia as a CI step"
+branding:
+  icon: "clock"
+  color: "blue"
+
+inputs:
+  args:
+    description: >
+      The enodia command line, e.g. "check --config enodia.yaml --warn-days 30".
+      Mount your config into the container and reference it here; check's
+      exit code (0 clean, 3 warn/info, 4 fail — see docs/ROADMAP.md) becomes
+      the step's exit code, so a lifecycle failure fails the job.
+    required: false
+    default: "version"
+
+runs:
+  using: "docker"
+  image: "action.Dockerfile"
+  entrypoint: "sh"
+  args:
+    - "-c"
+    - "enodia ${{ inputs.args }}"

@@ -16,6 +16,6 @@ var versionCmd = &cobra.Command{
 }
 
 func runVersionCmd(cmd *cobra.Command, _ []string) error {
-	fmt.Fprintln(cmd.OutOrStdout(), buildVersion)
+	fmt.Fprintf(cmd.OutOrStdout(), "enodia %s (commit %s, built %s)\n", buildVersion, buildCommit, buildDate)
 	return nil
 }

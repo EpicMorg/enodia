@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# docs/ROADMAP.md, "Then — packaging": binaries, checksums, signatures.
+# See DECISIONS.md D17 for why cosign keyless (no key to manage or leak)
+# and dockers_v2 (goreleaser's current multi-arch mechanism — the name is
+# provisional upstream, it will become plain "dockers" in goreleaser v3).
+version: 2
+
+project_name: enodia
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: enodia
+    main: ./cmd/enodia
+    binary: enodia
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.buildVersion={{ .Version }}
+      - -X main.buildCommit={{ .Commit }}
+      - -X main.buildDate={{ .Date }}
+
+archives:
+  - id: enodia
+    name_template: "enodia_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+# Cosign keyless signing (Sigstore): the CI job's GitHub OIDC identity IS the
+# signing key, so there is no private key to generate, store as a secret, or
+# ever leak. Anyone can verify the binary was built by this repo's release
+# workflow via `cosign verify-blob --certificate-identity-regexp` against
+# the transparency log — no key distribution problem on either side.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    artifacts: checksum
+    output: true
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - --yes
+
+dockers_v2:
+  - images:
+      - ghcr.io/epicmorg/enodia
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}{{ .Major }}{{ end }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    annotations:
+      "org.opencontainers.image.description": "Service inventory and lifecycle (EOL) monitoring"
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.name": "{{ .ProjectName }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+      "org.opencontainers.image.licenses": "AGPL-3.0-or-later"
+
+# Signs the pushed image the same way as the checksums above: the CI job's
+# OIDC identity, verifiable against the container's own digest.
+docker_signs:
+  - cmd: cosign
+    artifacts: manifests
+    output: true
+    args:
+      - sign
+      - "${artifact}@${digest}"
+      - --yes
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^test:"
+      - "^test\\("
+      - "^chore(\\(.+\\))?:"
+      - "^docs(\\(.+\\))?:"
+      - "^ci(\\(.+\\))?:"
+      - "^Merge "
+  groups:
+    - title: "Features"
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 100
+    - title: "Fixes"
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 200
+    - title: "Other"
+      order: 9999
+
+release:
+  prerelease: auto
