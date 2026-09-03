@@ -71,7 +71,7 @@ func (p *atlassianProbe) Probe(ctx context.Context, t Target) (Observation, erro
 
 	var m applinksManifest
 	if err := xml.Unmarshal(body, &m); err != nil {
-		return obs, fmt.Errorf("%w: applinks manifest is not valid XML: %v", ErrUnparseable, err)
+		return obs, fmt.Errorf("%w: applinks manifest is not valid XML: %w", ErrUnparseable, err)
 	}
 	if m.Version == "" {
 		return obs, fmt.Errorf("%w: applinks manifest carries no <version>", ErrUnparseable)
