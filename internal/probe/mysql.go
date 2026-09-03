@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"strings"
 	"time"
 )
@@ -36,65 +35,30 @@ func (mysqlProbe) Meta() Meta {
 
 const (
 	mysqlDefaultPort  = "3306"
-	mysqlReadTimeout  = 10 * time.Second // last-resort default if Target.Timeout is unset
-	maxMySQLHandshake = 4096             // a real handshake is well under 150 bytes
+	maxMySQLHandshake = 4096 // a real handshake is well under 150 bytes
 )
 
 func (mysqlProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	start := time.Now()
 	obs := Observation{Kind: "observation", ID: t.ID, Name: t.Name, Product: t.Product, CollectedAt: start.UTC()}
 
-	addr := mysqlAddress(t.Address)
+	addr := defaultPort(t.Address, mysqlDefaultPort)
 
-	var d net.Dialer
-	conn, err := d.DialContext(ctx, "tcp", addr)
+	conn, cleanup, err := dialTCP(ctx, addr, t.Timeout)
 	if err != nil {
-		return obs, fmt.Errorf("%w: %w", ErrUnreachable, err)
+		return obs, err
 	}
-	defer conn.Close()
-
-	timeout := t.Timeout
-	if timeout <= 0 {
-		timeout = mysqlReadTimeout
-	}
-	_ = conn.SetReadDeadline(time.Now().Add(timeout))
-
-	// DialContext only covers the dial; a blocking Read afterwards does not
-	// observe ctx cancellation on its own. Closing the connection when ctx
-	// is done unblocks it immediately instead of waiting out the deadline —
-	// the same reason cmd/enodia wires SIGINT/SIGTERM into its root context.
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
-		select {
-		case <-ctx.Done():
-			conn.Close()
-		case <-done:
-		}
-	}()
+	defer cleanup()
 
 	version, err := readMySQLHandshakeVersion(conn)
 	if err != nil {
-		if ctx.Err() != nil {
-			return obs, fmt.Errorf("%w: %w", ErrUnreachable, ctx.Err())
-		}
-		return obs, err
+		return obs, tcpErr(ctx, err)
 	}
 
 	obs.Version = version
 	obs.Endpoint = addr
 	obs.DurationMS = time.Since(start).Milliseconds()
 	return obs, nil
-}
-
-// mysqlAddress defaults the port. Raw TCP targets carry no scheme, so
-// probe.HasScheme-style resolution does not apply here.
-func mysqlAddress(addr string) string {
-	addr = strings.TrimPrefix(addr, "tcp://")
-	if _, _, err := net.SplitHostPort(addr); err != nil {
-		return net.JoinHostPort(addr, mysqlDefaultPort)
-	}
-	return addr
 }
 
 // readMySQLHandshakeVersion reads one MySQL packet and extracts the version
