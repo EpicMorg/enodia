@@ -77,7 +77,10 @@ Not dates. Order of work, and what each step unblocks.
 - Non-HTTP probes: redis, postgresql, mysql, ssh banner. These validate D10;
   MySQL is the interesting one — the version arrives before authentication
 - `serve` mode, snapshot-only, behind a reverse proxy
-- CVE correlation via OSV.dev
+- CVE correlation via OSV.dev — blocked, see DECISIONS.md D18: OSV's query
+  API doesn't reliably cover any probe enodia has today (Atlassian has zero
+  coverage, and the open-source ones report upstream versions that don't
+  match OSV's distro-package version format)
 - Historical tracking — a directory of dated inventories is already most of it
 
 ## Deliberately not planned
