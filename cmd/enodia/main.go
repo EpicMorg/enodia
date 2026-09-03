@@ -1,11 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Command enodia is the CLI entry point.
-//
-// Deliberately a stub: the roadmap builds internal/config, internal/resolver
-// and internal/evaluate before wiring a real CLI on top of them (see
-// docs/ROADMAP.md, "Then — CLI"). This exists so the module builds and
-// `make check` runs end to end in the meantime.
+// Command enodia is the CLI entry point: collect, check, export, config
+// path|validate|resolve, products, version. completion comes free from
+// cobra.
 package main
 
-func main() {}
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+func main() {
+	os.Exit(run())
+}
+
+func run() int {
+	// Cancels in-flight probes on ctrl-C/SIGTERM instead of leaving the
+	// process to hang until every target's timeout elapses.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	err := rootCmd.ExecuteContext(ctx)
+	if err != nil && err.Error() != "" {
+		fmt.Fprintln(os.Stderr, "enodia:", err)
+	}
+	return exitCode(err)
+}
