@@ -12,7 +12,10 @@ func TestRunVersionCmd(t *testing.T) {
 	if err := runVersionCmd(cmd, nil); err != nil {
 		t.Fatalf("runVersionCmd: %v", err)
 	}
-	if got := strings.TrimSpace(stdout.String()); got != buildVersion {
-		t.Fatalf("got %q, want %q", got, buildVersion)
+	got := strings.TrimSpace(stdout.String())
+	for _, want := range []string{buildVersion, buildCommit, buildDate} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("got %q, want it to contain %q", got, want)
+		}
 	}
 }
