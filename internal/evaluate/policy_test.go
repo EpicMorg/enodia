@@ -107,3 +107,15 @@ func TestOverallSeverityIsTheMax(t *testing.T) {
 		t.Fatalf("got %v, want warn", got)
 	}
 }
+
+func TestMaxPicksMoreSevere(t *testing.T) {
+	if got := Max(SeverityNone, SeverityWarn); got != SeverityWarn {
+		t.Fatalf("got %v, want warn", got)
+	}
+	if got := Max(SeverityFail, SeverityWarn); got != SeverityFail {
+		t.Fatalf("got %v, want fail", got)
+	}
+	if got := Max(SeverityInfo, SeverityInfo); got != SeverityInfo {
+		t.Fatalf("got %v, want info", got)
+	}
+}
