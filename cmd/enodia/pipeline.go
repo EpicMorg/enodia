@@ -14,6 +14,7 @@ import (
 	"github.com/EpicMorg/enodia/internal/evaluate"
 	"github.com/EpicMorg/enodia/internal/inventory"
 	"github.com/EpicMorg/enodia/internal/probe"
+	"github.com/EpicMorg/enodia/internal/render"
 	"github.com/EpicMorg/enodia/internal/resolver"
 )
 
@@ -139,6 +140,18 @@ func worstSeverity(assessments []evaluate.Assessment) evaluate.Severity {
 		worst = evaluate.Max(worst, a.OverallSeverity())
 	}
 	return worst
+}
+
+// buildReport wraps an evaluated inventory as the input every internal/render
+// output function shares.
+func buildReport(inv *inventory.File, assessments []evaluate.Assessment) render.Report {
+	return render.Report{
+		GeneratedAt:  time.Now().UTC(),
+		AsOf:         inv.Header.CollectedAt,
+		Tool:         "enodia/" + buildVersion,
+		Observations: inv.Observations,
+		Assessments:  assessments,
+	}
 }
 
 // severityExitCode maps a worst-case severity onto the exit codes
