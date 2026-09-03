@@ -67,7 +67,7 @@ func FetchHTTP(ctx context.Context, t Target, r Request) (*http.Response, error)
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrUnreachable, err)
+		return nil, fmt.Errorf("%w: %w", ErrUnreachable, err)
 	}
 	if r.Accept != "" {
 		req.Header.Set("Accept", r.Accept)
@@ -93,7 +93,7 @@ func FetchHTTP(ctx context.Context, t Target, r Request) (*http.Response, error)
 		if errors.As(err, &ue) && ue.Timeout() {
 			return nil, fmt.Errorf("%w: timeout after %s", ErrUnreachable, t.Timeout)
 		}
-		return nil, fmt.Errorf("%w: %v", ErrUnreachable, err)
+		return nil, fmt.Errorf("%w: %w", ErrUnreachable, err)
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
@@ -116,7 +116,7 @@ func FetchHTTP(ctx context.Context, t Target, r Request) (*http.Response, error)
 func ReadBody(resp *http.Response) ([]byte, error) {
 	b, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrUnreachable, err)
+		return nil, fmt.Errorf("%w: %w", ErrUnreachable, err)
 	}
 	return b, nil
 }
@@ -163,7 +163,7 @@ func normalizeAddress(addr, defScheme string) (*url.URL, error) {
 	}
 	u, err := url.Parse(addr)
 	if err != nil {
-		return nil, fmt.Errorf("%w: bad address %q: %v", ErrUnreachable, addr, err)
+		return nil, fmt.Errorf("%w: bad address %q: %w", ErrUnreachable, addr, err)
 	}
 	if u.Host == "" {
 		return nil, fmt.Errorf("%w: address %q has no host", ErrUnreachable, addr)
@@ -212,10 +212,15 @@ func NewHTTPClient(s TLSSettings, timeout time.Duration) (*http.Client, error) {
 			want[strings.ToLower(strings.ReplaceAll(p, ":", ""))] = true
 		}
 		// Pinning replaces chain verification: we trust this exact leaf.
+		//
+		// VerifyConnection, not VerifyPeerCertificate: the latter is skipped
+		// on a resumed TLS session, which would let a pinned connection skip
+		// the pin check after the first handshake. VerifyConnection runs on
+		// every connection, resumed or not.
 		cfg.InsecureSkipVerify = true //nolint:gosec // superseded by the pin check below
-		cfg.VerifyPeerCertificate = func(raw [][]byte, _ [][]*x509.Certificate) error {
-			for _, der := range raw {
-				sum := sha256.Sum256(der)
+		cfg.VerifyConnection = func(cs tls.ConnectionState) error {
+			for _, cert := range cs.PeerCertificates {
+				sum := sha256.Sum256(cert.Raw)
 				if want[hex.EncodeToString(sum[:])] {
 					return nil
 				}
