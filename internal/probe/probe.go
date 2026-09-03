@@ -67,7 +67,12 @@ type Meta struct {
 	Summary         string
 	DefaultResolver ResolverRef
 	Auth            AuthSpec
-	DefaultScheme   string // "https" unless the product is plaintext by nature
+	// DefaultScheme is "https" unless the product is plaintext by nature.
+	// Empty means this probe's addresses have no URL scheme concept at all —
+	// a raw TCP protocol like mysql (D10) — so collect skips the missing-
+	// scheme warning entirely rather than telling the user to make explicit
+	// a scheme that doesn't apply.
+	DefaultScheme string
 }
 
 // Credentials carries one target's secret. It must never be logged, embedded
