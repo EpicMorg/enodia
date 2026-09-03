@@ -47,12 +47,12 @@ func runExportCmd(cmd *cobra.Command, _ []string) error {
 			`format %q is not supported; use "json", "prometheus", or "html"`, exportFormatFlag)}
 	}
 
-	inv, err := loadInventory(cmd, exportFromFlag)
+	inv, err := loadInventory(cmd.Context(), cmd, exportFromFlag)
 	if err != nil {
 		return &ExitError{Code: 1, Err: err}
 	}
 	policy := evaluate.Policy{WarnDays: exportWarnDaysFlag, FailOn: exportFailOnFlag}
-	assessments := assess(cmd, inv, policy, buildResolver(cmd))
+	assessments := assess(cmd.Context(), inv, policy, buildResolver(cmd))
 
 	out := cmd.OutOrStdout()
 	if exportOutputFlag != "" && exportOutputFlag != "-" {

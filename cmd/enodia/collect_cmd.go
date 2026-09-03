@@ -28,7 +28,7 @@ func init() {
 }
 
 func runCollectCmd(cmd *cobra.Command, _ []string) error {
-	_, observations, err := collectObservations(cmd)
+	_, observations, err := collectObservations(cmd.Context(), cmd)
 	if err != nil {
 		return &ExitError{Code: 1, Err: err}
 	}
