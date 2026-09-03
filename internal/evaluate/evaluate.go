@@ -129,24 +129,24 @@ type Input struct {
 
 // Assessment is the verdict for one target as of one point in time.
 type Assessment struct {
-	ID      string
-	Name    string
-	Product string
+	ID      string `json:"id"`
+	Name    string `json:"name,omitempty"`
+	Product string `json:"product,omitempty"`
 
-	Patch     Patch
-	Lifecycle Lifecycle
-	Branch    Branch
-	Reason    Reason
+	Patch     Patch     `json:"patch"`
+	Lifecycle Lifecycle `json:"lifecycle"`
+	Branch    Branch    `json:"branch"`
+	Reason    Reason    `json:"reason,omitempty"`
 
-	MatchedCycle  string // the release branch the observed version matched, if any
-	LatestInCycle string // the latest release published in MatchedCycle
-	EOLDate       *time.Time
-	SupportEnds   *time.Time // when active support ends (security-only begins)
+	MatchedCycle  string     `json:"matchedCycle,omitempty"`  // the release branch the observed version matched, if any
+	LatestInCycle string     `json:"latestInCycle,omitempty"` // the latest release published in MatchedCycle
+	EOLDate       *time.Time `json:"eolDate,omitempty"`
+	SupportEnds   *time.Time `json:"supportEnds,omitempty"` // when active support ends (security-only begins)
 
-	PatchSeverity     Severity
-	LifecycleSeverity Severity
-	BranchSeverity    Severity
-	ReasonSeverity    Severity
+	PatchSeverity     Severity `json:"patchSeverity"`
+	LifecycleSeverity Severity `json:"lifecycleSeverity"`
+	BranchSeverity    Severity `json:"branchSeverity"`
+	ReasonSeverity    Severity `json:"reasonSeverity"`
 }
 
 // OverallSeverity is the worst of the four per-axis severities, for callers
