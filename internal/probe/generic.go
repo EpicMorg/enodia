@@ -90,7 +90,7 @@ func (g genericProbe) Probe(ctx context.Context, t Target) (Observation, error) 
 	if ps.CleanRegex != "" {
 		re, err := regexp.Compile(ps.CleanRegex)
 		if err != nil {
-			return obs, fmt.Errorf("%w: bad cleanRegex: %v", ErrUnparseable, err)
+			return obs, fmt.Errorf("%w: bad cleanRegex: %w", ErrUnparseable, err)
 		}
 		if m := re.FindStringSubmatch(raw); m != nil {
 			if len(m) > 1 {
@@ -125,7 +125,7 @@ func parseBody(body []byte, ps ParserSpec) (string, error) {
 			if line != "" {
 				return line, nil
 			}
-			return "", fmt.Errorf("%w: not JSON: %v", ErrUnparseable, err)
+			return "", fmt.Errorf("%w: not JSON: %w", ErrUnparseable, err)
 		}
 		got, ok := jsonPath(v, ps.Key)
 		if !ok {
@@ -150,7 +150,7 @@ func parseBody(body []byte, ps ParserSpec) (string, error) {
 	case "regex":
 		re, err := regexp.Compile(ps.Regex)
 		if err != nil {
-			return "", fmt.Errorf("%w: bad regex: %v", ErrUnparseable, err)
+			return "", fmt.Errorf("%w: bad regex: %w", ErrUnparseable, err)
 		}
 		m := re.FindSubmatch(body)
 		if m == nil {
