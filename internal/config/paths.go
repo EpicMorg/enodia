@@ -65,6 +65,7 @@ func mustExist(path string) (string, error) {
 }
 
 func fileExists(path string) bool {
+	//nolint:gosec // path is --config/$ENODIA_CONFIG or a fixed search candidate the operator controls, not untrusted input
 	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()
 }
