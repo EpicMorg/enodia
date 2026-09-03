@@ -19,6 +19,9 @@ var builtin = []Probe{
 	genericProbe{},
 	&atlassianProbe{product: "jira", typeID: "jira", resolver: "jira-software", summary: "Atlassian Jira (Data Center)"},
 	mysqlProbe{},
+	postgresProbe{},
+	redisProbe{},
+	sshProbe{},
 }
 
 var byProduct = func() map[string]Probe {
