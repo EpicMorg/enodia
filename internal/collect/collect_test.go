@@ -16,7 +16,7 @@ import (
 const manifest = `<?xml version="1.0"?><applinks-manifest><typeId>jira</typeId><version>10.3.2</version></applinks-manifest>`
 
 func TestRunPreservesOrderAndNormalises(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(manifest))
 	}))
 	defer srv.Close()
@@ -46,7 +46,7 @@ func TestRunPreservesOrderAndNormalises(t *testing.T) {
 // hammers production for nothing.
 func TestNoRetryOnAuthFailure(t *testing.T) {
 	var hits atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		hits.Add(1)
 		w.WriteHeader(401)
 	}))
@@ -66,7 +66,7 @@ func TestNoRetryOnAuthFailure(t *testing.T) {
 
 func TestRetriesTransientFailure(t *testing.T) {
 	var hits atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if hits.Add(1) < 3 {
 			w.WriteHeader(503)
 			return
@@ -98,7 +98,7 @@ func TestMissingRequiredCredentialsSkips(t *testing.T) {
 
 func TestWarnsOnMissingScheme(t *testing.T) {
 	var warned bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(manifest))
 	}))
 	defer srv.Close()
