@@ -44,6 +44,15 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON writes the date back out the same way it was read. Without
+// this, json.Marshal would fall back to time.Time's own MarshalJSON
+// (RFC 3339, with a time-of-day and zone), which UnmarshalJSON above cannot
+// parse — breaking the on-disk cache's round trip the moment it wrote back
+// anything with a release date.
+func (d Date) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.Format(dateLayout))
+}
+
 // Flag is a lifecycle-API value that is either a plain boolean or a date:
 // endoflife.date reports fields like eol, support and lts as false ("does
 // not apply / not yet"), true ("yes, but no specific date is published"), or
@@ -75,6 +84,17 @@ func (f *Flag) UnmarshalJSON(data []byte) error {
 	f.IsDate = true
 	f.Bool = true
 	return nil
+}
+
+// MarshalJSON writes back whichever form was read: a date string if IsDate,
+// otherwise the plain bool. Same reasoning as Date.MarshalJSON — without
+// this, the default struct marshaling (Bool/Date/IsDate as separate fields)
+// would not round-trip through UnmarshalJSON at all.
+func (f Flag) MarshalJSON() ([]byte, error) {
+	if f.IsDate {
+		return json.Marshal(f.Date.Format(dateLayout))
+	}
+	return json.Marshal(f.Bool)
 }
 
 // Cycle is one release branch's lifecycle facts, as published by a
