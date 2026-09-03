@@ -68,7 +68,7 @@ func Run(ctx context.Context, targets []probe.Target, opts Options) []probe.Obse
 func one(ctx context.Context, t probe.Target, opts Options) probe.Observation {
 	p, err := probe.Get(t.Product)
 	if err != nil {
-		return failed(t, fmt.Errorf("%w: %v", probe.ErrNotSupported, err))
+		return failed(t, fmt.Errorf("%w: %w", probe.ErrNotSupported, err))
 	}
 	meta := p.Meta()
 
