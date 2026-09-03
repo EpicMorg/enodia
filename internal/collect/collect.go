@@ -81,9 +81,12 @@ func one(ctx context.Context, t probe.Target, opts Options) probe.Observation {
 		return obs
 	}
 
-	if !probe.HasScheme(t.Address) {
+	// An empty DefaultScheme means this probe's addresses have no URL scheme
+	// concept at all (raw TCP, e.g. mysql) — D10. There is nothing to make
+	// explicit, so there is nothing to warn about.
+	if meta.DefaultScheme != "" && !probe.HasScheme(t.Address) {
 		opts.Warn(t, fmt.Sprintf("address %q has no scheme; assuming %s — run `enodia config resolve` to make this explicit",
-			t.Address, schemeOr(meta.DefaultScheme)))
+			t.Address, meta.DefaultScheme))
 	}
 	if t.TLS.Insecure && len(t.TLS.PinSHA256) == 0 {
 		opts.Warn(t, "TLS verification is disabled for this service")
@@ -130,11 +133,4 @@ func failed(t probe.Target, err error) probe.Observation {
 		CollectedAt: time.Now().UTC(),
 		Error:       err.Error(), ErrorKind: probe.Kind(err),
 	}
-}
-
-func schemeOr(s string) string {
-	if s == "" {
-		return "https"
-	}
-	return s
 }
