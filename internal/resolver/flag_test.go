@@ -69,3 +69,64 @@ func TestDateUnmarshalInvalid(t *testing.T) {
 		t.Fatal("expected an error for a non-ISO date")
 	}
 }
+
+func TestDateMarshalRoundTrips(t *testing.T) {
+	var d Date
+	if err := json.Unmarshal([]byte(`"2025-01-22"`), &d); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(d)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if got, want := string(raw), `"2025-01-22"`; got != want {
+		t.Fatalf("got %s, want %s (must stay YYYY-MM-DD, not time.Time's default RFC3339)", got, want)
+	}
+
+	var back Date
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatalf("round-trip Unmarshal failed: %v", err)
+	}
+	if !back.Equal(d.Time) {
+		t.Fatalf("got %v, want %v", back.Time, d.Time)
+	}
+}
+
+func TestFlagMarshalRoundTripsBool(t *testing.T) {
+	for _, b := range []bool{true, false} {
+		f := Flag{Bool: b}
+		raw, err := json.Marshal(f)
+		if err != nil {
+			t.Fatalf("Marshal: %v", err)
+		}
+		var back Flag
+		if err := json.Unmarshal(raw, &back); err != nil {
+			t.Fatalf("round-trip Unmarshal failed for %v: %v", raw, err)
+		}
+		if back != f {
+			t.Fatalf("got %+v, want %+v", back, f)
+		}
+	}
+}
+
+func TestFlagMarshalRoundTripsDate(t *testing.T) {
+	var f Flag
+	if err := json.Unmarshal([]byte(`"2026-10-28"`), &f); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(f)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if got, want := string(raw), `"2026-10-28"`; got != want {
+		t.Fatalf("got %s, want %s (must stay YYYY-MM-DD, not time.Time's default RFC3339)", got, want)
+	}
+
+	var back Flag
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatalf("round-trip Unmarshal failed: %v", err)
+	}
+	if !back.IsDate || !back.Date.Equal(f.Date) {
+		t.Fatalf("got %+v, want %+v", back, f)
+	}
+}
