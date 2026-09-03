@@ -348,3 +348,51 @@ thing to register, host, keep TLS current on, and go stale if forgotten).
 name will change; the config will need a rename (not a redesign) when
 goreleaser v3 ships. The GitHub Action rebuilds enodia from source on every
 invocation rather than reusing a published image.
+
+---
+
+## D18 — CVE correlation via OSV.dev is deferred
+
+**Decided (for now).** Not implemented. The roadmap bullet stays on the
+"Later" list, blocked pending a workable data source — reopening this needs
+a new source or mapping, not just picking the work back up.
+
+OSV.dev's documented, stable query surface (`POST /v1/query`: package +
+ecosystem + version) is built for language package registries (npm, PyPI,
+Go, Maven, ...) and Linux distro package managers (Debian, Alpine, ...).
+Neither shape fits what enodia's probes report, checked against the live
+API rather than assumed:
+
+- Atlassian products (jira/confluence/bitbucket/bamboo) have zero coverage:
+  they are not open source, so there is no ecosystem entry point at all.
+  Confirmed by looking up a real, well-known CVE directly by ID —
+  CVE-2023-22515, the 2023 Confluence broken-access-control RCE — which
+  returns 404, not found.
+- mysql/postgresql/redis/ssh (openssh) are open source, but the version a
+  probe reports is the upstream one (e.g. "7.4.11"), not the
+  distro-packaged version OSV's Debian/Alpine ecosystem entries key on
+  (e.g. "5:7.0.15-1", carrying an epoch and a packaging revision).
+  Comparing one against the other is not merely imprecise: Debian version
+  ordering sorts on epoch first, so a bare upstream version (implicit epoch
+  0) sorts below any entry with a nonzero epoch regardless of what the
+  actual numbers are — every "fixed in this version" range would look
+  unfixed. Confirmed concretely: CVE-2024-31449 (a real Redis Lua-sandbox
+  RCE) exists in OSV, but its clean range data is keyed by git commit, not
+  version; the only version numbers present live in a
+  `database_specific.extracted_events` field that is explicitly outside
+  OSV's stable schema, CPE-derived, and visibly noisy (an
+  `"introduced": "7.4.0-NA"` entry among them).
+
+**Rules out:** wiring `product + probed version` straight into `/v1/query`
+as the roadmap bullet originally imagined. For every probe enodia has
+today, that would either always return empty (Atlassian) or risk a wrong
+verdict (the distro-ecosystem epoch mismatch) — exactly the failure mode
+D6/D7 already exist to prevent, applied to a new axis: "has a known CVE" vs
+"we know nothing about CVEs for this" must not collapse into each other.
+
+**Cost accepted:** the roadmap bullet stays unimplemented. Revisiting it
+needs either a per-product mapping from probed version to a queryable
+distro/ecosystem identity (fragile, and still leaves Atlassian uncovered),
+or a different data source entirely — NVD's CPE-based CVE API 2.0 covers
+commercial software like Atlassian's, at the cost of being a second,
+differently-shaped external dependency, not evaluated here.
