@@ -96,47 +96,17 @@ func TestReadMySQLHandshakeVersionERRPacket(t *testing.T) {
 	}
 }
 
-func TestMySQLAddressDefaultsPort(t *testing.T) {
-	if got, want := mysqlAddress("db.example.com"), "db.example.com:3306"; got != want {
+func TestMySQLProbeDefaultsPort(t *testing.T) {
+	// defaultPort itself is tested in tcp_test.go; this just confirms the
+	// probe actually uses it with the right default.
+	if got, want := defaultPort("db.example.com", mysqlDefaultPort), "db.example.com:3306"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
-}
-
-func TestMySQLAddressKeepsExplicitPort(t *testing.T) {
-	if got, want := mysqlAddress("db.example.com:3307"), "db.example.com:3307"; got != want {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-}
-
-func TestMySQLAddressStripsTCPScheme(t *testing.T) {
-	if got, want := mysqlAddress("tcp://db.example.com:3306"), "db.example.com:3306"; got != want {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-}
-
-// mysqlTestServer replays raw over one accepted connection.
-func mysqlTestServer(t *testing.T, raw []byte) string {
-	t.Helper()
-	ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { ln.Close() })
-
-	go func() {
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-		_, _ = conn.Write(raw)
-	}()
-	return ln.Addr().String()
 }
 
 func TestMySQLProbeEndToEnd(t *testing.T) {
 	raw := loadMySQLFixture(t, "mysql_8.0.46.bin")
-	addr := mysqlTestServer(t, raw)
+	addr := rawTCPTestServer(t, raw)
 
 	p := mysqlProbe{}
 	obs, err := p.Probe(context.Background(), Target{ID: "x", Product: "mysql", Address: addr, Timeout: 2 * time.Second})
