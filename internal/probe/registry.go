@@ -18,6 +18,7 @@ var builtin = []Probe{
 	&atlassianProbe{product: "confluence", typeID: "confluence", resolver: "confluence", summary: "Atlassian Confluence (Data Center)"},
 	genericProbe{},
 	&atlassianProbe{product: "jira", typeID: "jira", resolver: "jira-software", summary: "Atlassian Jira (Data Center)"},
+	mysqlProbe{},
 }
 
 var byProduct = func() map[string]Probe {
