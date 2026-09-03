@@ -103,6 +103,11 @@ func maxSeverity(a, b Severity) Severity {
 	return a
 }
 
+// Max returns whichever of a and b is more severe. Exported for callers
+// (the CLI's exit code, a summary line) that need to fold many Assessments
+// into one worst case.
+func Max(a, b Severity) Severity { return maxSeverity(a, b) }
+
 // Input bundles the facts Evaluate needs. Nothing here is a judgement.
 type Input struct {
 	Observation probe.Observation
