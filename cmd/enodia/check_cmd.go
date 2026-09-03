@@ -42,13 +42,13 @@ func init() {
 }
 
 func runCheckCmd(cmd *cobra.Command, _ []string) error {
-	inv, err := loadInventory(cmd, checkFromFlag)
+	inv, err := loadInventory(cmd.Context(), cmd, checkFromFlag)
 	if err != nil {
 		return &ExitError{Code: 1, Err: err}
 	}
 
 	policy := evaluate.Policy{WarnDays: checkWarnDaysFlag, FailOn: checkFailOnFlag}
-	assessments := assess(cmd, inv, policy, buildResolver(cmd))
+	assessments := assess(cmd.Context(), inv, policy, buildResolver(cmd))
 
 	if err := render.Table(cmd.OutOrStdout(), render.View(checkViewFlag), buildReport(inv, assessments)); err != nil {
 		return &ExitError{Code: 2, Err: err}

@@ -46,7 +46,7 @@ targets:
 	withConfigFlag(t, path)
 
 	cmd, _, _ := testCmd(t)
-	cfg, observations, err := collectObservations(cmd)
+	cfg, observations, err := collectObservations(cmd.Context(), cmd)
 	if err != nil {
 		t.Fatalf("collectObservations: %v", err)
 	}
@@ -61,7 +61,7 @@ targets:
 func TestCollectObservationsPropagatesConfigError(t *testing.T) {
 	withConfigFlag(t, filepath.Join(t.TempDir(), "does-not-exist.yaml"))
 	cmd, _, _ := testCmd(t)
-	if _, _, err := collectObservations(cmd); err == nil {
+	if _, _, err := collectObservations(cmd.Context(), cmd); err == nil {
 		t.Fatal("expected an error for a missing config file")
 	}
 }
@@ -73,7 +73,7 @@ func TestLoadInventoryFromFile(t *testing.T) {
 {"kind":"observation","id":"x","product":"jira","version":"10.3.2","normalized":"10.3.2","collectedAt":"2026-01-01T00:00:00Z"}
 `)
 	cmd, _, _ := testCmd(t)
-	inv, err := loadInventory(cmd, path)
+	inv, err := loadInventory(cmd.Context(), cmd, path)
 	if err != nil {
 		t.Fatalf("loadInventory: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestLoadInventoryFromFile(t *testing.T) {
 
 func TestLoadInventoryFromFileMissingErrors(t *testing.T) {
 	cmd, _, _ := testCmd(t)
-	if _, err := loadInventory(cmd, filepath.Join(t.TempDir(), "nope.jsonl")); err == nil {
+	if _, err := loadInventory(cmd.Context(), cmd, filepath.Join(t.TempDir(), "nope.jsonl")); err == nil {
 		t.Fatal("expected an error for a missing --from file")
 	}
 }
@@ -108,7 +108,7 @@ targets:
 	withConfigFlag(t, path)
 
 	cmd, _, _ := testCmd(t)
-	inv, err := loadInventory(cmd, "")
+	inv, err := loadInventory(cmd.Context(), cmd, "")
 	if err != nil {
 		t.Fatalf("loadInventory: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestAssessNoResolverForProductWithoutOne(t *testing.T) {
 	}
 	cmd, _, _ := testCmd(t)
 	res := &resolver.Resolver{}
-	got := assess(cmd, inv, evaluate.Policy{}, res)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, res)
 	if len(got) != 1 || got[0].Reason != evaluate.ReasonNoResolver {
 		t.Fatalf("got %+v", got)
 	}
@@ -146,7 +146,7 @@ func TestAssessUsesResolverForProductWithOne(t *testing.T) {
 			"endoflife": fakeSource{cycles: []resolver.Cycle{{Cycle: "10.3", Latest: "10.3.2"}}},
 		},
 	}
-	got := assess(cmd, inv, evaluate.Policy{}, res)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, res)
 	if len(got) != 1 {
 		t.Fatalf("got %+v", got)
 	}
@@ -168,7 +168,7 @@ func TestAssessResolverErrorBecomesReason(t *testing.T) {
 			"endoflife": fakeSource{err: resolver.ErrUnreachable},
 		},
 	}
-	got := assess(cmd, inv, evaluate.Policy{}, res)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, res)
 	if len(got) != 1 || got[0].Reason != evaluate.ReasonResolverError {
 		t.Fatalf("got %+v", got)
 	}

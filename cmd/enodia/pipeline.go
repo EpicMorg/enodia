@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -33,7 +34,7 @@ func targetWarnPrinter(cmd *cobra.Command) func(probe.Target, string) {
 // collectObservations loads the config from --config and probes every
 // target. Shared by `collect` (which just writes the result) and
 // loadInventory (which wraps it in an inventory.File for `check`/`export`).
-func collectObservations(cmd *cobra.Command) (*config.Config, []probe.Observation, error) {
+func collectObservations(ctx context.Context, cmd *cobra.Command) (*config.Config, []probe.Observation, error) {
 	path, err := config.Locate(configFlag)
 	if err != nil {
 		return nil, nil, err
@@ -47,7 +48,7 @@ func collectObservations(cmd *cobra.Command) (*config.Config, []probe.Observatio
 		return nil, nil, err
 	}
 
-	observations := collect.Run(cmd.Context(), targets, collect.Options{
+	observations := collect.Run(ctx, targets, collect.Options{
 		Concurrency: cfg.Defaults.Concurrency,
 		Retries:     cfg.Defaults.Retries,
 		Backoff:     time.Duration(cfg.Defaults.Backoff),
@@ -60,7 +61,7 @@ func collectObservations(cmd *cobra.Command) (*config.Config, []probe.Observatio
 // otherwise a fresh collect run. Per D4, the no-`--from` path is the same
 // two phases (collect, then evaluate) composed in one process, not a second
 // code path.
-func loadInventory(cmd *cobra.Command, fromPath string) (*inventory.File, error) {
+func loadInventory(ctx context.Context, cmd *cobra.Command, fromPath string) (*inventory.File, error) {
 	if fromPath != "" {
 		f, err := os.Open(fromPath)
 		if err != nil {
@@ -70,7 +71,7 @@ func loadInventory(cmd *cobra.Command, fromPath string) (*inventory.File, error)
 		return inventory.Read(f)
 	}
 
-	_, observations, err := collectObservations(cmd)
+	_, observations, err := collectObservations(ctx, cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +109,7 @@ func newLiveResolver(cmd *cobra.Command) *resolver.Resolver {
 // assess evaluates every observation in inv against its product's lifecycle
 // calendar (via res), per policy, as of inv's own collection time — D8
 // forbids reaching for time.Now() here.
-func assess(cmd *cobra.Command, inv *inventory.File, policy evaluate.Policy, res *resolver.Resolver) []evaluate.Assessment {
+func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, res *resolver.Resolver) []evaluate.Assessment {
 	asOf := inv.Header.CollectedAt
 	out := make([]evaluate.Assessment, 0, len(inv.Observations))
 	for _, o := range inv.Observations {
@@ -120,7 +121,7 @@ func assess(cmd *cobra.Command, inv *inventory.File, policy evaluate.Policy, res
 		var cycles []resolver.Cycle
 		var resolveErr error
 		if ref.Type != "" {
-			cycles, resolveErr = res.Resolve(cmd.Context(), ref)
+			cycles, resolveErr = res.Resolve(ctx, ref)
 		}
 
 		out = append(out, evaluate.Evaluate(evaluate.Input{

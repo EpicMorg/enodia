@@ -62,6 +62,7 @@ internal/config/     config schema, env interpolation, credential store
 internal/resolver/   lifecycle data sources (endoflife.date, GitHub releases)
 internal/evaluate/   patch/cycle/major axes, policy, severity
 internal/render/     table, JSON, HTML, Prometheus
+internal/serve/      snapshot-only HTTP server (D14): ticker collects, handlers only read
 ```
 
 Layers depend downward only. `internal/probe` must not import `internal/config`
