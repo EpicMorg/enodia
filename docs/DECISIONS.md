@@ -294,3 +294,57 @@ commercial licensing. There is no third option.
 BSL and Elastic License were rejected: not OSI-approved, therefore blocked by
 some corporate policies and absent from distribution repositories, which matters
 for a tool meant to be installed *inside* corporate networks.
+
+---
+
+## D17 — Cosign keyless signing, dockers_v2, install script on raw GitHub
+
+**Decided.** `.goreleaser.yaml` (v2 schema, verified against
+`goreleaser.com/static/schema.json` and goreleaser's own production config
+rather than assumed).
+
+**Signing is cosign keyless (Sigstore), not a GPG key.** The CI job's GitHub
+OIDC token *is* the signing identity — nothing is generated, stored as a
+repository secret, or can leak. Verification is
+`cosign verify-blob --certificate-identity-regexp` against the public
+transparency log, not a key someone has to fetch and trust first. The
+checksums file is signed once rather than every archive individually; the
+pushed container is signed the same way, against its digest.
+
+**Container multi-arch build is `dockers_v2`, not `dockers` + `docker_manifests`.**
+Upstream marks `dockers_v2`'s name provisional — it becomes plain `dockers`
+in goreleaser v3 — but it is the actively maintained path (goreleaser
+releases itself with it) and needs one block instead of one per architecture
+plus a manifest-merge step. `dockerfile.md`'s own build-context contract
+(`$TARGETPLATFORM/<binary>`) is why `Dockerfile` looks the way it does: a
+`scratch` image that only copies a CA bundle and the pre-built binary,
+never a Go build — goreleaser already cross-compiled every target, and
+compiling again in the container would silently make cross-compilation
+pointless and slow every release down.
+
+**The GitHub Action wrapper (`action.yml`) is a second, separate Dockerfile**
+(`action.Dockerfile`) that *does* build from source and keeps a shell.
+`Dockerfile` has neither, on purpose (D15's non-daemon, minimal-surface
+container), and `action.yml`'s entrypoint needs `sh -c` to turn its single
+`args` string input into argv. Reusing the release image would need a
+version-synced `image:` pin updated on every tag; building from source on
+each Action run is slower per-invocation but has no moving parts to get out
+of sync.
+
+**The install script needs no dedicated host.** `curl -sSL
+https://raw.githubusercontent.com/EpicMorg/enodia/master/install.sh | sh`
+already satisfies "served from a path, never the site root, never
+User-Agent-dependent": raw.githubusercontent.com serves the literal file
+identically to every client, with no server-side logic at all. All OS/arch
+decisions happen inside the script via `uname`, not on a server.
+
+**Rules out:** GPG-based release signing (a private key to generate, rotate,
+and protect becomes part of the project's own attack surface — precisely
+what D12/D13's TLS handling and D16's licensing already went out of their
+way to avoid taking on elsewhere). A dedicated install domain (one more
+thing to register, host, keep TLS current on, and go stale if forgotten).
+
+**Cost accepted:** `dockers_v2` is explicitly provisional upstream and its
+name will change; the config will need a rename (not a redesign) when
+goreleaser v3 ships. The GitHub Action rebuilds enodia from source on every
+invocation rather than reusing a published image.
