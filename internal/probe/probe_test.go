@@ -22,7 +22,7 @@ func serveFile(t *testing.T, path, fixture, ctype string, status int) *httptest.
 		t.Fatalf("fixture: %v", err)
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(path, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", ctype)
 		w.WriteHeader(status)
 		_, _ = w.Write(body)
@@ -117,7 +117,7 @@ func TestErrorClassification(t *testing.T) {
 
 func TestUnparseableIsOurBug(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/rest/applinks/1.0/manifest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/rest/applinks/1.0/manifest", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`<applinks-manifest><typeId>jira</typeId></applinks-manifest>`))
 	})
 	srv := httptest.NewServer(mux)
@@ -167,7 +167,7 @@ func TestGenericProbe(t *testing.T) {
 // readable without credentials.
 func TestGenericHeaderOn403(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("X-Jenkins", "2.492.1")
 		w.WriteHeader(403)
 	})
@@ -238,7 +238,7 @@ func TestRegistryHasNoDuplicates(t *testing.T) {
 
 func TestContextCancellation(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/rest/applinks/1.0/manifest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/rest/applinks/1.0/manifest", func(_ http.ResponseWriter, _ *http.Request) {
 		time.Sleep(2 * time.Second)
 	})
 	srv := httptest.NewServer(mux)
