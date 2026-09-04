@@ -26,6 +26,7 @@ var builtin = []Probe{
 	sonarqubeProbe{},
 	sshProbe{},
 	teamcityProbe{},
+	vaultProbe{},
 }
 
 var byProduct = func() map[string]Probe {

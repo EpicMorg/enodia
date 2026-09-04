@@ -1,0 +1,16 @@
+{
+  "initialized": true,
+  "sealed": false,
+  "standby": false,
+  "performance_standby": false,
+  "replication_performance_mode": "disabled",
+  "replication_dr_mode": "disabled",
+  "server_time_utc": 1700000000,
+  "version": "2.1.0",
+  "enterprise": false,
+  "cluster_name": "vault-cluster-00000000",
+  "cluster_id": "00000000-0000-0000-0000-000000000000",
+  "echo_duration_ms": 0,
+  "clock_skew_ms": 0,
+  "replication_primary_canary_age_ms": 0
+}
