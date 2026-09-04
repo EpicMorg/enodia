@@ -6,7 +6,18 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT) -X main.buildDate=$(DATE)
 
-.PHONY: all build enodia vet test fmt fmt-check lint check tidy clean
+WINDRES_AMD64 ?= x86_64-w64-mingw32-windres
+RES_SRC       := build/windows
+RES_PKG       := cmd/enodia
+
+# Best-effort FILEVERSION/PRODUCTVERSION quad from VERSION (e.g.
+# "v1.2.3-4-gabc123" -> "1,2,3,0"). Anything that isn't vMAJOR.MINOR.PATCH
+# (a bare "dev", a detached commit) falls back to 0,0,0,0 — the embedded
+# resource is metadata, not something worth failing a build over.
+VERSION_CSV := $(shell echo $(VERSION) | sed -n 's/^v\?\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\).*/\1,\2,\3,0/p')
+VERSION_CSV := $(if $(VERSION_CSV),$(VERSION_CSV),0,0,0,0)
+
+.PHONY: all build enodia windows-resources windows-resources-clean windows-exe vet test fmt fmt-check lint check tidy clean
 
 all: check
 
@@ -18,6 +29,38 @@ build:
 # sets at release time (see .goreleaser.yaml).
 enodia:
 	$(GO) build -ldflags "$(LDFLAGS)" -o enodia ./cmd/enodia
+
+# Compiles build/windows/{meta.rc.in,manifest.manifest,enodia.ico} into
+# cmd/enodia/resource_windows_amd64.syso, so a windows/amd64 build carries
+# a real icon and version info instead of the bare default. Go only links a
+# .syso when it sits in the directory of the package being built, hence
+# writing it straight into cmd/enodia rather than build/windows — it is
+# generated, not committed (see .gitignore).
+#
+# windows/arm64 (also built by goreleaser) has no equivalent here: Debian's
+# mingw-w64 package ships no aarch64-w64-mingw32-windres, only i686 and
+# x86_64 — an ARM64 resource file would need llvm-mingw instead, not
+# evaluated. That build stays icon-less until this is revisited.
+#
+# Missing windres is a skip, not a failure: a future multiplatform build
+# (see ROADMAP.md) covers plenty of non-Windows targets that must not be
+# blocked by an absent cross-compiler.
+windows-resources:
+	@command -v $(WINDRES_AMD64) >/dev/null 2>&1 || { echo "skip windows-resources: $(WINDRES_AMD64) not found (apt install mingw-w64)"; exit 0; }
+	sed -e 's/@VERSION_CSV@/$(VERSION_CSV)/g' -e 's/@VERSION_STR@/$(VERSION)/g' $(RES_SRC)/meta.rc.in > $(RES_SRC)/meta.rc
+	cd $(RES_SRC) && $(WINDRES_AMD64) -i meta.rc -O coff -o ../../$(RES_PKG)/resource_windows_amd64.syso
+
+windows-resources-clean:
+	rm -f $(RES_SRC)/meta.rc $(RES_PKG)/resource_windows_amd64.syso
+
+# Manual convenience for testing the Windows build locally, mirroring
+# `make enodia`. Note the deliberate absence of -H=windowsgui: that flag
+# hides the console window, which is right for a GUI app but would make a
+# CLI tool's stdout/stderr invisible — enodia must keep the console
+# subsystem.
+windows-exe: windows-resources
+	GOOS=windows GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o enodia_windows_amd64.exe ./cmd/enodia
+	$(MAKE) windows-resources-clean
 
 vet:
 	$(GO) vet ./...

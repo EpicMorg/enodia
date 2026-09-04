@@ -32,6 +32,15 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # windows/amd64's icon + version resource (.goreleaser.yaml's
+      # before.hooks, Makefile's windows-resources) needs windres from
+      # mingw-w64. Its absence only degrades that one artifact, so this
+      # step failing must not fail the whole release — hence continue-on-error
+      # rather than making package availability a release blocker.
+      - name: Install mingw-w64 (Windows resource embedding)
+        continue-on-error: true
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+
       - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
