@@ -25,8 +25,12 @@ type atlassianProbe struct {
 	summary  string
 }
 
+// The root element is <manifest>, not <applinks-manifest> as an earlier,
+// unverified version of this probe assumed — confirmed live against three
+// real production instances (Jira, Confluence, Bitbucket) that all agreed
+// on the same root name, none of them <applinks-manifest>.
 type applinksManifest struct {
-	XMLName     xml.Name `xml:"applinks-manifest"`
+	XMLName     xml.Name `xml:"manifest"`
 	TypeID      string   `xml:"typeId"`
 	Version     string   `xml:"version"`
 	BuildNumber string   `xml:"buildNumber"`
