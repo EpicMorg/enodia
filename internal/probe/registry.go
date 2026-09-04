@@ -22,6 +22,7 @@ var builtin = []Probe{
 	postgresProbe{},
 	redisProbe{},
 	sshProbe{},
+	teamcityProbe{},
 }
 
 var byProduct = func() map[string]Probe {
