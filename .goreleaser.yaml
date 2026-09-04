@@ -12,12 +12,13 @@ project_name: enodia
 before:
   hooks:
     - go mod tidy
-    # Bakes an icon + version resource into the windows/amd64 build (see
-    # Makefile's windows-resources and build/windows/). Skips silently if
-    # mingw-w64 isn't installed on the runner — see release.yml — rather
-    # than failing every platform's release over a Windows-only extra.
-    # windows/arm64 below has no equivalent: Debian's mingw-w64 ships no
-    # aarch64-w64-mingw32-windres, only i686/x86_64.
+    # Bakes an icon + version resource into the windows/amd64 and
+    # windows/386 builds (see Makefile's windows-resources and
+    # build/windows/). Skips silently if mingw-w64 isn't installed on the
+    # runner — see release.yml — rather than failing every platform's
+    # release over a Windows-only extra. windows/arm64 below has no
+    # equivalent: Debian's mingw-w64 ships no aarch64-w64-mingw32-windres,
+    # only i686/x86_64.
     - sh -c 'make windows-resources || true'
 
 builds:
@@ -41,8 +42,32 @@ builds:
       - -X main.buildCommit={{ .Commit }}
       - -X main.buildDate={{ .Date }}
 
+  # 386 is its own build, not appended to enodia's goarch list above: Go
+  # has never supported darwin/386 (32-bit Intel Mac support was dropped
+  # years before this project existed), so a shared goarch list would
+  # break the darwin build the moment 386 was added to it.
+  - id: enodia-windows-386
+    main: ./cmd/enodia
+    binary: enodia
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - "386"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.buildVersion={{ .Version }}
+      - -X main.buildCommit={{ .Commit }}
+      - -X main.buildDate={{ .Date }}
+
 archives:
   - id: enodia
+    ids:
+      - enodia
+      - enodia-windows-386
     name_template: "enodia_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
