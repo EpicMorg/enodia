@@ -1,0 +1,17 @@
+{
+  "name": "es-node-0",
+  "cluster_name": "docker-cluster",
+  "cluster_uuid": "00000000000000000000000000",
+  "version": {
+    "number": "9.5.3",
+    "build_flavor": "default",
+    "build_type": "docker",
+    "build_hash": "367ec317ec5f668dd864d41be06052a567102fec",
+    "build_date": "2026-09-01T16:11:59.322249404Z",
+    "build_snapshot": false,
+    "lucene_version": "10.5.1",
+    "minimum_wire_compatibility_version": "8.19.0",
+    "minimum_index_compatibility_version": "8.0.0"
+  },
+  "tagline": "You Know, for Search"
+}
