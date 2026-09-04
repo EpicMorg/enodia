@@ -427,3 +427,57 @@ distro/ecosystem identity (fragile, and still leaves Atlassian uncovered),
 or a different data source entirely — NVD's CPE-based CVE API 2.0 covers
 commercial software like Atlassian's, at the cost of being a second,
 differently-shaped external dependency, not evaluated here.
+
+---
+
+## D19 — Display settings are a separate file; HTML export stays offline by default
+
+**Decided.** A new `settings.yaml` (own resolution order mirroring
+`internal/config/paths.go`: `--settings`, `$ENODIA_SETTINGS`,
+`./enodia.settings.yaml`, `./.enodia.settings.yaml`,
+`$XDG_CONFIG_HOME/enodia/settings.yaml`, `/etc/enodia/settings.yaml`),
+not a new section in `enodia.yaml`.
+
+`enodia.yaml` is shared, often version-controlled, prod-facing data:
+targets and the credentials to reach them. Display preferences — default
+`--view`, whether HTML export pulls Bootstrap from a CDN, which Bootswatch
+theme — are per-operator, per-workstation choices with no bearing on what
+gets probed. Folding them into one file means either document changes
+every time someone changes their preferred table view, or an operator's
+personal taste leaks into a file other people read to find out what
+infrastructure is being monitored. A missing `settings.yaml` is not an
+error, exactly like a missing `enodia.yaml` config section falls back to
+built-in defaults — this file is entirely optional.
+
+The single-file HTML export (`internal/render/html.go`) is currently
+inline-CSS-only with zero external resources, so it renders identically
+inside a closed network with no path to any CDN. Adding Bootstrap +
+Bootswatch theming is worth doing, but only as an explicit opt-in
+(`html.assets: cdn` in settings, default stays `inline`) — flipping the
+default would silently break every existing closed-network deployment the
+first time someone regenerates a report. When `cdn` is chosen, the
+generated HTML file itself must carry a visible warning that it needs
+internet access, not just a note printed to the CLI at export time, since
+the file gets copied and opened somewhere else entirely.
+
+HTML view selection reuses the existing `render.View` type
+(compact/lifecycle/drift/fleet) rather than inventing a parallel
+"HTML views" vocabulary — `export --format html` gains a `--view` flag the
+same shape as the table renderer's, so "just the fleet table" is the
+existing fleet view, not a new concept. The fleet view needs a
+reachability/health column added (from `Observation` errors, per D7 —
+facts, not judgement) to fully cover "table of versions + which are up",
+since that case was the original motivation for touching HTML rendering
+at all.
+
+**Rules out:** a `settings:` block inside `enodia.yaml`. A refresh/live
+theme-fetch mechanism — Bootswatch CSS is fetched by the browser viewing
+the exported file, same as any other CDN asset in `cdn` mode; enodia never
+fetches it itself (D14 still holds: no network calls outside collection).
+
+**Cost accepted:** two optional config files to resolve and document
+instead of one. `html.theme` is meaningless dead configuration whenever
+`html.assets: inline` (the default), which is an acceptable amount of
+"the setting only matters if you opted into the other setting" — the
+alternative (nesting theme under assets in the schema) was judged not
+worth the added schema depth for a single dependent field.
