@@ -33,6 +33,7 @@ var builtin = []Probe{
 	sonarqubeProbe{},
 	sshProbe{},
 	teamcityProbe{},
+	testrailProbe{},
 	vaultProbe{},
 }
 
