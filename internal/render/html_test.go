@@ -10,19 +10,28 @@ import (
 	"github.com/EpicMorg/enodia/internal/evaluate"
 )
 
+// "Self-contained" means no auto-fetched external resource: no
+// stylesheet/script src pointing off-page, and no inline <script> at all
+// (inline mode has none — CDN mode's script is what races/applies a
+// theme). A plain <a href> in the footer is not a resource load — the
+// page still renders fully offline, the link just sits there inert until
+// a viewer with internet clicks it — so it does not belong on this list.
 func TestHTMLIsSelfContained(t *testing.T) {
 	var buf bytes.Buffer
 	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
-	for _, forbidden := range []string{"http://", "https://", "<script"} {
+	for _, forbidden := range []string{`<link rel="stylesheet" href="http`, "<script src=", "<script>"} {
 		if strings.Contains(out, forbidden) {
 			t.Errorf("output contains %q; the default inline report must be self-contained (D19)", forbidden)
 		}
 	}
 	if !strings.Contains(out, "<style>") {
 		t.Fatal("expected inline CSS")
+	}
+	if !strings.Contains(out, "github.com/EpicMorg/enodia") {
+		t.Fatal("expected the footer's link back to the project")
 	}
 }
 
@@ -196,6 +205,85 @@ func TestHTMLCDNThemePickerListsNoneAndDefaultFirst(t *testing.T) {
 	}
 	if noneIdx >= defaultIdx || defaultIdx >= lumenIdx {
 		t.Fatalf("expected None then Default then the real themes, got:\n%s", out)
+	}
+}
+
+func TestHTMLCDNWarningAlertIsDismissible(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `class="alert alert-dismissible alert-warning"`) {
+		t.Fatalf("expected a dismissible warning alert, got:\n%s", out)
+	}
+	if !strings.Contains(out, `class="btn-close" data-bs-dismiss="alert"`) {
+		t.Fatalf("expected a close button on the warning alert, got:\n%s", out)
+	}
+	if !strings.Contains(out, `.btn-close[data-bs-dismiss="alert"]`) {
+		t.Fatal("expected the script to wire up the close button (no bootstrap.bundle.js is loaded to do it for us)")
+	}
+}
+
+func TestHTMLCDNThemeNoneOmitsWarningAlertEntirely(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: ThemeNone}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if strings.Contains(buf.String(), "alert-dismissible") {
+		t.Fatal("ThemeNone loads nothing, so there is nothing to warn about")
+	}
+}
+
+func TestHTMLFootersCreditTheProject(t *testing.T) {
+	for _, opts := range []HTMLOptions{{}, {Assets: AssetsCDN}} {
+		var buf bytes.Buffer
+		if err := HTML(&buf, sampleReport(), opts); err != nil {
+			t.Fatalf("HTML(%+v): %v", opts, err)
+		}
+		out := buf.String()
+		if !strings.Contains(out, "<footer") {
+			t.Fatalf("opts=%+v: expected a <footer>, got:\n%s", opts, out)
+		}
+		if !strings.Contains(out, `href="https://github.com/EpicMorg/enodia"`) {
+			t.Fatalf("opts=%+v: expected a link back to the project, got:\n%s", opts, out)
+		}
+		if !strings.Contains(out, "AGPL-3.0-or-later") {
+			t.Fatalf("opts=%+v: expected the license named in the footer, got:\n%s", opts, out)
+		}
+	}
+}
+
+func TestHTMLCDNFooterCreditsBootstrapAndBootswatch(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: "lumen"}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{`href="https://getbootstrap.com/"`, `href="https://bootswatch.com/"`, "MIT License"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected %q in the footer, got:\n%s", want, out)
+		}
+	}
+}
+
+func TestHTMLCDNThemeNoneFooterSkipsBootstrapCredit(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: ThemeNone}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if strings.Contains(buf.String(), "getbootstrap.com") {
+		t.Fatal("ThemeNone loads neither Bootstrap nor Bootswatch, so crediting them would be false")
+	}
+}
+
+func TestHTMLInlineFooterHasNoBootstrapCredit(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if strings.Contains(buf.String(), "getbootstrap.com") {
+		t.Fatal("inline mode never loads Bootstrap; nothing to credit")
 	}
 }
 

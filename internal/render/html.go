@@ -194,6 +194,7 @@ func htmlInline(w io.Writer, r Report, sections []htmlViewSection) error {
 		writeHTMLSection(ew, s.title, headers, rows, nil, "")
 	}
 
+	writeHTMLFooterInline(ew, r)
 	ew.printf("</body></html>\n")
 	return ew.err
 }
@@ -252,10 +253,13 @@ func htmlCDN(w io.Writer, r Report, sections []htmlViewSection, theme, cdn strin
 	ew.printf("</select>\n</div>\n</div>\n")
 
 	if theme != ThemeNone {
-		ew.printf("<div class=\"alert alert-warning\" role=\"alert\">This report loads Bootstrap and its theme " +
-			"from a CDN — it needs internet access in the browser to render correctly. Generate with the " +
-			"default inline assets (<code>html.assets: inline</code>) for a fully offline report, or " +
-			"<code>html.theme: none</code> for unstyled Bootstrap-class markup with no CDN load at all.</div>\n")
+		ew.printf("<div class=\"alert alert-dismissible alert-warning\" role=\"alert\">This report loads " +
+			"Bootstrap and its theme from a CDN — it needs internet access in the browser to render " +
+			"correctly. Generate with the default inline assets (<code>html.assets: inline</code>) for a " +
+			"fully offline report, or <code>html.theme: none</code> for unstyled Bootstrap-class markup " +
+			"with no CDN load at all." +
+			"<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\" aria-label=\"Close\"></button>" +
+			"</div>\n")
 	}
 
 	for _, s := range sections {
@@ -263,10 +267,36 @@ func htmlCDN(w io.Writer, r Report, sections []htmlViewSection, theme, cdn strin
 		writeHTMLSection(ew, s.title, headers, rows, tones, "table table-striped table-hover table-sm align-middle")
 	}
 
+	writeHTMLFooterCDN(ew, r, theme != ThemeNone)
 	ew.printf("</div>\n")
-	ew.printf("<script>%s</script>\n", themePickerScript(theme, cdn))
+	ew.printf("<script>%s</script>\n", cdnModeScript(theme, cdn))
 	ew.printf("</body></html>\n")
 	return ew.err
+}
+
+// writeHTMLFooterInline and writeHTMLFooterCDN both credit the project and
+// link back to it — requested alongside the CDN theming work. The CDN
+// variant also credits Bootstrap/Bootswatch by name with a link to each
+// project and a note that both are MIT licensed, since CDN mode is the one
+// case where this report actually depends on their code at view time (see
+// README.md's "Third-party assets"); creditBootstrap is false for
+// ThemeNone, which loads neither.
+func writeHTMLFooterInline(ew *errWriter, r Report) {
+	ew.printf("<footer>\n<p>enodia &middot; <a href=\"https://github.com/EpicMorg/enodia\">"+
+		"github.com/EpicMorg/enodia</a> &middot; &copy; %d EpicMorg &middot; AGPL-3.0-or-later</p>\n</footer>\n",
+		r.GeneratedAt.Year())
+}
+
+func writeHTMLFooterCDN(ew *errWriter, r Report, creditBootstrap bool) {
+	ew.printf("<footer class=\"mt-5 pt-3 border-top text-body-secondary small\">\n")
+	ew.printf("<p class=\"mb-1\">enodia &middot; <a href=\"https://github.com/EpicMorg/enodia\">"+
+		"github.com/EpicMorg/enodia</a> &middot; &copy; %d EpicMorg &middot; AGPL-3.0-or-later</p>\n",
+		r.GeneratedAt.Year())
+	if creditBootstrap {
+		ew.printf("<p class=\"mb-0\">Styled with <a href=\"https://getbootstrap.com/\">Bootstrap</a> and " +
+			"<a href=\"https://bootswatch.com/\">Bootswatch</a> (MIT License).</p>\n")
+	}
+	ew.printf("</footer>\n")
 }
 
 // pickerThemes is the theme <select>'s full option list: None and Default
@@ -306,10 +336,16 @@ func themeLabel(theme string) string {
 	return strings.ToUpper(theme[:1]) + theme[1:]
 }
 
-// themePickerScript is the only inline JS this report ever carries, and
-// only in CDN mode: it reads a per-viewer theme choice back from
+// cdnModeScript is the only inline JS this report ever carries, and only
+// in CDN mode. It does two unrelated things in one IIFE rather than two
+// separate <script> tags, purely to keep the page down to one script
+// block: (1) theme handling — reads a per-viewer theme choice back from
 // localStorage, applies it, races cdn's two mirrors when cdn is "" or
-// CDNAuto, and writes back any change the picker makes.
+// CDNAuto, and writes back any change the picker makes; (2) dismissing the
+// CDN warning alert on its close button click — Bootstrap's own Alert
+// component needs bootstrap.bundle.min.js to do this, and pulling in a JS
+// bundle just for one button's click handler isn't worth it when four
+// lines of vanilla JS do the same thing.
 //
 // bakedTheme is the theme this exact report was generated with — an
 // unrecognised or corrupted stored value resets to that, not to a
@@ -317,7 +353,7 @@ func themeLabel(theme string) string {
 // the theme choice is remembered per viewer; which CDN(s) serve it is an
 // operator setting (settings.yaml's html.cdn), not something a picker in
 // the page exposes.
-func themePickerScript(bakedTheme, cdn string) string {
+func cdnModeScript(bakedTheme, cdn string) string {
 	known := make([]string, 0, len(bootswatchThemes)+2)
 	known = append(known, ThemeNone, ThemeDefault)
 	known = append(known, bootswatchThemes...)
@@ -384,6 +420,13 @@ picker.addEventListener("change", function() {
   apply(theme);
   try { window.localStorage.setItem(KEY, theme); } catch (e) {}
 });
+var closeButtons = document.querySelectorAll('.alert .btn-close[data-bs-dismiss="alert"]');
+for (var i = 0; i < closeButtons.length; i++) {
+  closeButtons[i].addEventListener("click", function(e) {
+    var alertEl = e.currentTarget.closest(".alert");
+    if (alertEl) { alertEl.remove(); }
+  });
+}
 })();`, knownJSON, bakedTheme, racing, bootstrapVersion, bootstrapVersion, bootswatchVersion, bootswatchVersion)
 }
 
@@ -456,6 +499,7 @@ table { border-collapse: collapse; width: 100%; }
 th, td { text-align: left; padding: 0.35rem 0.75rem; border-bottom: 1px solid #ccc; }
 th { border-bottom: 2px solid #888; }
 .empty { color: #888; font-style: italic; }
+footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ccc; color: #666; font-size: 0.85em; }
 `
 
 // htmlCDNExtraCSS is small styling Bootstrap/Bootswatch don't cover on
