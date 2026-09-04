@@ -21,6 +21,7 @@ var builtin = []Probe{
 	grafanaProbe{},
 	jenkinsProbe{},
 	&atlassianProbe{product: "jira", typeID: "jira", resolver: "jira-software", summary: "Atlassian Jira (Data Center)"},
+	keycloakProbe{},
 	mysqlProbe{},
 	postgresProbe{},
 	redisProbe{},
