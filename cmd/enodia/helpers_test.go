@@ -36,6 +36,17 @@ func withConfigFlag(t *testing.T, path string) {
 	t.Cleanup(func() { configFlag = prev })
 }
 
+// withSettingsFlag points the --settings global at path for the duration of
+// the test, restoring the previous value afterwards — settingsFlag is a
+// package var shared with the real CLI wiring, same pattern as
+// withConfigFlag.
+func withSettingsFlag(t *testing.T, path string) {
+	t.Helper()
+	prev := settingsFlag
+	settingsFlag = path
+	t.Cleanup(func() { settingsFlag = prev })
+}
+
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/EpicMorg/enodia/internal/evaluate"
 	"github.com/EpicMorg/enodia/internal/render"
+	"github.com/EpicMorg/enodia/internal/settings"
 )
 
 var (
@@ -27,7 +28,8 @@ lifecycle resolver.
 
 --view selects the table focus: compact (default), lifecycle, drift, or
 fleet — the offline-only view of version spread across a product's
-instances.`,
+instances. When --view is not passed, settings.yaml's render.default_view
+applies instead of the compact default, if set.`,
 	Args: cobra.NoArgs,
 	RunE: runCheckCmd,
 }
@@ -47,10 +49,21 @@ func runCheckCmd(cmd *cobra.Command, _ []string) error {
 		return &ExitError{Code: 1, Err: err}
 	}
 
+	view := checkViewFlag
+	if !cmd.Flags().Changed("view") {
+		st, err := settings.Resolve(settingsFlag)
+		if err != nil {
+			return &ExitError{Code: 1, Err: err}
+		}
+		if st.Render.DefaultView != "" {
+			view = st.Render.DefaultView
+		}
+	}
+
 	policy := evaluate.Policy{WarnDays: checkWarnDaysFlag, FailOn: checkFailOnFlag}
 	assessments := assess(cmd.Context(), inv, policy, buildResolver(cmd))
 
-	if err := render.Table(cmd.OutOrStdout(), render.View(checkViewFlag), buildReport(inv, assessments)); err != nil {
+	if err := render.Table(cmd.OutOrStdout(), render.View(view), buildReport(inv, assessments)); err != nil {
 		return &ExitError{Code: 2, Err: err}
 	}
 
