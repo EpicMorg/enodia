@@ -34,5 +34,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&configFlag, "config", "",
 		"path to enodia.yaml (default: search standard locations)")
 
-	rootCmd.AddCommand(collectCmd, checkCmd, exportCmd, serveCmd, historyCmd, configCmd, productsCmd, versionCmd)
+	rootCmd.AddCommand(collectCmd, checkCmd, exportCmd, serveCmd, historyCmd, configCmd, productsCmd, versionCmd, aboutCmd)
 }
