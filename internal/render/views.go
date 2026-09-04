@@ -50,18 +50,30 @@ func driftRows(r Report) (headers []string, rows [][]string) {
 	return headers, rows
 }
 
-// fleetRows groups observations by product and installed version, so an
-// operator can see version spread across a fleet at a glance. Deliberately
-// built from Observations alone, not Assessments: this is the one view that
-// still works with zero lifecycle-resolver connectivity.
+// fleetRows groups observations by product, installed version and status,
+// so an operator can see both version spread and reachability across a
+// fleet at a glance — "table of versions + which are up" is this view,
+// not a separate one. Deliberately built from Observations alone, not
+// Assessments (D7: reachability is a fact collect already recorded, not a
+// verdict): this is the one view that still works with zero
+// lifecycle-resolver connectivity.
+//
+// STATUS is grouped alongside product+version, not folded into a single
+// "(unknown)" bucket: two failed instances of the same product with
+// different ErrorKinds (say, one unreachable, one auth) are different
+// operational situations and must not be merged into one row.
 func fleetRows(r Report) (headers []string, rows [][]string) {
-	headers = []string{"PRODUCT", "VERSION", "COUNT", "INSTANCES"}
+	headers = []string{"PRODUCT", "VERSION", "STATUS", "COUNT", "INSTANCES"}
 
-	type key struct{ product, version string }
+	type key struct{ product, version, status string }
 	groups := map[key][]string{}
 	for _, o := range r.Observations {
 		version := firstNonEmpty(o.Normalized, o.Version, "(unknown)")
-		k := key{o.Product, version}
+		status := "ok"
+		if !o.OK() {
+			status = firstNonEmpty(o.ErrorKind, "error")
+		}
+		k := key{o.Product, version, status}
 		groups[k] = append(groups[k], o.ID)
 	}
 
@@ -73,13 +85,16 @@ func fleetRows(r Report) (headers []string, rows [][]string) {
 		if keys[i].product != keys[j].product {
 			return keys[i].product < keys[j].product
 		}
-		return keys[i].version < keys[j].version
+		if keys[i].version != keys[j].version {
+			return keys[i].version < keys[j].version
+		}
+		return keys[i].status < keys[j].status
 	})
 
 	for _, k := range keys {
 		ids := groups[k]
 		sort.Strings(ids)
-		rows = append(rows, []string{k.product, k.version, strconv.Itoa(len(ids)), strings.Join(ids, ", ")})
+		rows = append(rows, []string{k.product, k.version, k.status, strconv.Itoa(len(ids)), strings.Join(ids, ", ")})
 	}
 	return headers, rows
 }

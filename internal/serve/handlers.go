@@ -38,7 +38,7 @@ func (s *store) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := render.HTML(w, report); err != nil {
+	if err := render.HTML(w, report, render.HTMLOptions{}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

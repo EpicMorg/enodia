@@ -481,3 +481,17 @@ instead of one. `html.theme` is meaningless dead configuration whenever
 "the setting only matters if you opted into the other setting" — the
 alternative (nesting theme under assets in the schema) was judged not
 worth the added schema depth for a single dependent field.
+
+**Implemented** as `internal/settings` + `internal/render`'s `HTMLOptions`.
+One detail worth being explicit about, since an earlier draft of this
+decision got it backwards: the theme-picker script's fallback target for a
+missing/unrecognised `localStorage` value is the *resolved* theme this
+exact page was generated with (`settings.EffectiveTheme()` — the
+operator's own `html.theme`, or Bootswatch's "default" only when they
+never set one) — never a hardcoded theme independent of what the operator
+configured. An operator who sets `html.theme: lumen` gets reports that
+always settle back on lumen; the "default" fallback only ever shows up for
+an operator who genuinely never configured a theme at all. The same
+resolved value is both the page's initial `<link>` href and the script's
+`DEFAULT` constant, so there is exactly one source of truth for it, not
+two that could drift apart.

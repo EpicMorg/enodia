@@ -81,6 +81,62 @@ func TestRunExportCmdHTML(t *testing.T) {
 	}
 }
 
+func TestRunExportCmdHTMLUsesSettingsCDNAndTheme(t *testing.T) {
+	dir := t.TempDir()
+	invPath := filepath.Join(dir, "inv.jsonl")
+	writeFile(t, invPath, `{"kind":"inventory","schemaVersion":1,"collectedAt":"2026-01-01T00:00:00Z","tool":"test"}
+{"kind":"observation","id":"x","product":"generic","version":"1.0","normalized":"1.0","collectedAt":"2026-01-01T00:00:00Z"}
+`)
+	withFakeResolver(t, fakeSource{})
+	setExportFlags(t, invPath, "html", "-")
+
+	settingsPath := filepath.Join(dir, "settings.yaml")
+	writeFile(t, settingsPath, "schemaVersion: 1\nhtml:\n  assets: cdn\n  theme: lumen\n")
+	withSettingsFlag(t, settingsPath)
+
+	cmd, stdout, _ := testCmd(t)
+	if err := runExportCmd(cmd, nil); err != nil {
+		t.Fatalf("runExportCmd: %v", err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "dist/lumen/bootstrap.min.css") {
+		t.Fatalf("expected settings.yaml's html.theme: lumen to apply, got:\n%s", out)
+	}
+	if !strings.Contains(out, "needs internet access") {
+		t.Fatal("expected the CDN-mode warning banner")
+	}
+}
+
+func TestRunExportCmdHTMLViewFlagRestrictsToOneSection(t *testing.T) {
+	dir := t.TempDir()
+	invPath := filepath.Join(dir, "inv.jsonl")
+	writeFile(t, invPath, `{"kind":"inventory","schemaVersion":1,"collectedAt":"2026-01-01T00:00:00Z","tool":"test"}
+{"kind":"observation","id":"x","product":"generic","version":"1.0","normalized":"1.0","collectedAt":"2026-01-01T00:00:00Z"}
+`)
+	withFakeResolver(t, fakeSource{})
+	setExportFlags(t, invPath, "html", "-")
+
+	prevView := exportViewFlag
+	exportViewFlag = "fleet"
+	t.Cleanup(func() { exportViewFlag = prevView })
+
+	cmd, stdout, _ := testCmd(t)
+	cmd.Flags().String("view", "", "")
+	if err := cmd.Flags().Set("view", "fleet"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runExportCmd(cmd, nil); err != nil {
+		t.Fatalf("runExportCmd: %v", err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "<h2>Fleet</h2>") {
+		t.Fatalf("expected only the Fleet section, got:\n%s", out)
+	}
+	if strings.Contains(out, "<h2>Compact</h2>") {
+		t.Fatalf("--view=fleet still rendered Compact, got:\n%s", out)
+	}
+}
+
 func TestRunExportCmdUnsupportedFormatIsBadArgument(t *testing.T) {
 	setExportFlags(t, "", "yaml", "-")
 
