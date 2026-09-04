@@ -62,10 +62,13 @@ Not dates. Order of work, and what each step unblocks.
 - `internal/settings` — `settings.yaml`, personal display defaults kept
   separate from `enodia.yaml` (DECISIONS.md D19). Same resolution pattern
   as config (`internal/config/paths.go`): `--settings`, `$ENODIA_SETTINGS`,
-  `./enodia.settings.yaml`, `./.enodia.settings.yaml`,
-  `$XDG_CONFIG_HOME/enodia/settings.yaml`, `/etc/enodia/settings.yaml` —
-  but unlike config, nothing found is not an error (`settings.Resolve`
-  falls back to all-built-in defaults). `render.default_view` applies to
+  `./enodia.settings.{yaml,yml}`, `./.enodia.settings.{yaml,yml}`,
+  `$XDG_CONFIG_HOME/enodia/settings.{yaml,yml}`,
+  `/etc/enodia/settings.{yaml,yml}` (`.yml` is checked too, both here and
+  in `enodia.yaml`'s own search — equally common in the wild, `.yaml` wins
+  ties at the same location, location still beats extension) — but unlike
+  config, nothing found is not an error (`settings.Resolve` falls back to
+  all-built-in defaults). `render.default_view` applies to
   `check`'s `--view` whenever the flag itself wasn't passed
   (`cmd.Flags().Changed("view")`, not just "is it the zero value", since
   the flag's own cobra default is already "compact"); `html.view` does the
