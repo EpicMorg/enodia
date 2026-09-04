@@ -1,0 +1,46 @@
+{
+  "version": "2026.2 (build 238924)",
+  "versionMajor": 2026,
+  "versionMinor": 2,
+  "startTime": "20260101T000000+0000",
+  "currentTime": "20260101T010000+0000",
+  "buildNumber": "238924",
+  "buildDate": "20260901T000000+0000",
+  "internalId": "00000000-0000-0000-0000-000000000000",
+  "role": "main_node",
+  "webUrl": "http://localhost:8111",
+  "projects": {
+    "href": "/app/rest/projects"
+  },
+  "vcsRoots": {
+    "href": "/app/rest/vcs-roots"
+  },
+  "builds": {
+    "href": "/app/rest/builds"
+  },
+  "users": {
+    "href": "/app/rest/users"
+  },
+  "userGroups": {
+    "href": "/app/rest/userGroups"
+  },
+  "agents": {
+    "href": "/app/rest/agents"
+  },
+  "buildQueue": {
+    "href": "/app/rest/buildQueue"
+  },
+  "agentPools": {
+    "href": "/app/rest/agentPools"
+  },
+  "investigations": {
+    "href": "/app/rest/investigations"
+  },
+  "mutes": {
+    "href": "/app/rest/mutes"
+  },
+  "artifactsUrl": "",
+  "nodes": {
+    "href": "/app/rest/server/nodes"
+  }
+}
