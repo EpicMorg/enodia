@@ -131,8 +131,8 @@ func htmlInline(w io.Writer, r Report, sections []htmlViewSection) error {
 		html.EscapeString(r.AsOf.Format(time.RFC3339)))
 
 	for _, s := range sections {
-		headers, rows, _ := viewRows(s.view, r) // s.view is always one of the known constants
-		writeHTMLSection(ew, s.title, headers, rows, "")
+		headers, rows, _, _ := viewRows(s.view, r) // s.view is always one of the known constants
+		writeHTMLSection(ew, s.title, headers, rows, nil, "")
 	}
 
 	ew.printf("</body></html>\n")
@@ -179,8 +179,8 @@ func htmlCDN(w io.Writer, r Report, sections []htmlViewSection, theme string) er
 		"with the default inline assets (<code>html.assets: inline</code>) for a fully offline report.</div>\n")
 
 	for _, s := range sections {
-		headers, rows, _ := viewRows(s.view, r)
-		writeHTMLSection(ew, s.title, headers, rows, "table table-striped table-hover table-sm align-middle")
+		headers, rows, tones, _ := viewRows(s.view, r)
+		writeHTMLSection(ew, s.title, headers, rows, tones, "table table-striped table-hover table-sm align-middle")
 	}
 
 	ew.printf("</div>\n")
@@ -251,7 +251,32 @@ picker.addEventListener("change", function() {
 })();`, knownJSON, bakedDefault, bootswatchVersion)
 }
 
-func writeHTMLSection(ew *errWriter, title string, headers []string, rows [][]string, tableClass string) {
+// toneClass maps a RowTone to the Bootstrap contextual table class that
+// carries the same meaning in every Bootswatch theme: table-success/-info/
+// -warning/-danger are part of Bootstrap's own standardised variable set,
+// not something each theme redefines independently, so a chosen theme's
+// red/yellow/green always come out looking like that theme's palette, not
+// enodia's own guess at the colors. Only meaningful in CDN mode — inline
+// mode never has Bootstrap loaded to interpret these classes at all.
+func toneClass(t RowTone) string {
+	switch t {
+	case ToneGood:
+		return "table-success"
+	case ToneInfo:
+		return "table-info"
+	case ToneWarn:
+		return "table-warning"
+	case ToneBad:
+		return "table-danger"
+	default:
+		return ""
+	}
+}
+
+// writeHTMLSection writes one view's table. tones may be nil (inline mode,
+// which has no Bootstrap loaded to give table-* classes any meaning) or
+// aligned one-to-one with rows.
+func writeHTMLSection(ew *errWriter, title string, headers []string, rows [][]string, tones []RowTone, tableClass string) {
 	ew.printf("<section>\n<h2>%s</h2>\n", html.EscapeString(title))
 	if len(rows) == 0 {
 		ew.printf("<p class=\"empty\">no data</p>\n</section>\n")
@@ -267,8 +292,16 @@ func writeHTMLSection(ew *errWriter, title string, headers []string, rows [][]st
 		ew.printf("<th>%s</th>", html.EscapeString(h))
 	}
 	ew.printf("</tr></thead>\n<tbody>\n")
-	for _, row := range rows {
-		ew.printf("<tr>")
+	for i, row := range rows {
+		rowClass := ""
+		if i < len(tones) {
+			rowClass = toneClass(tones[i])
+		}
+		if rowClass != "" {
+			ew.printf("<tr class=\"%s\">", rowClass)
+		} else {
+			ew.printf("<tr>")
+		}
 		for _, cell := range row {
 			ew.printf("<td>%s</td>", html.EscapeString(cell))
 		}
