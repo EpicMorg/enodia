@@ -7,6 +7,7 @@ DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT) -X main.buildDate=$(DATE)
 
 WINDRES_AMD64 ?= x86_64-w64-mingw32-windres
+WINDRES_386   ?= i686-w64-mingw32-windres
 RES_SRC       := build/windows
 RES_PKG       := cmd/enodia
 
@@ -18,7 +19,7 @@ VERSION_CSV := $(shell echo $(VERSION) | sed -n 's/^v\?\([0-9]\+\)\.\([0-9]\+\)\
 VERSION_CSV := $(if $(VERSION_CSV),$(VERSION_CSV),0,0,0,0)
 
 DIST_DIR     := dist
-DIST_TARGETS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
+DIST_TARGETS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64 windows/386
 
 .PHONY: all build enodia windows-resources windows-resources-clean windows-exe dist vet test fmt fmt-check lint check tidy clean
 
@@ -34,8 +35,8 @@ enodia:
 	$(GO) build -ldflags "$(LDFLAGS)" -o enodia ./cmd/enodia
 
 # Compiles build/windows/{meta.rc.in,manifest.manifest,enodia.ico} into
-# cmd/enodia/resource_windows_amd64.syso, so a windows/amd64 build carries
-# a real icon and version info instead of the bare default. Go only links a
+# cmd/enodia/resource_windows_{amd64,386}.syso, so those builds carry a
+# real icon and version info instead of the bare default. Go only links a
 # .syso when it sits in the directory of the package being built, hence
 # writing it straight into cmd/enodia rather than build/windows — it is
 # generated, not committed (see .gitignore).
@@ -45,16 +46,17 @@ enodia:
 # x86_64 — an ARM64 resource file would need llvm-mingw instead, not
 # evaluated. That build stays icon-less until this is revisited.
 #
-# Missing windres is a skip, not a failure: a future multiplatform build
-# (see ROADMAP.md) covers plenty of non-Windows targets that must not be
-# blocked by an absent cross-compiler.
+# Each architecture's windres is checked independently, and a missing one
+# is a skip, not a failure: a future multiplatform build (see ROADMAP.md)
+# covers plenty of targets that must not be blocked by one absent
+# cross-compiler, and amd64/386 must not depend on each other.
 windows-resources:
-	@command -v $(WINDRES_AMD64) >/dev/null 2>&1 || { echo "skip windows-resources: $(WINDRES_AMD64) not found (apt install mingw-w64)"; exit 0; }
 	sed -e 's/@VERSION_CSV@/$(VERSION_CSV)/g' -e 's/@VERSION_STR@/$(VERSION)/g' $(RES_SRC)/meta.rc.in > $(RES_SRC)/meta.rc
-	cd $(RES_SRC) && $(WINDRES_AMD64) -i meta.rc -O coff -o ../../$(RES_PKG)/resource_windows_amd64.syso
+	@command -v $(WINDRES_AMD64) >/dev/null 2>&1 && (cd $(RES_SRC) && $(WINDRES_AMD64) -i meta.rc -O coff -o ../../$(RES_PKG)/resource_windows_amd64.syso) || echo "skip windows-resources (amd64): $(WINDRES_AMD64) not found (apt install mingw-w64)"
+	@command -v $(WINDRES_386) >/dev/null 2>&1 && (cd $(RES_SRC) && $(WINDRES_386) -i meta.rc -O coff -o ../../$(RES_PKG)/resource_windows_386.syso) || echo "skip windows-resources (386): $(WINDRES_386) not found (apt install mingw-w64)"
 
 windows-resources-clean:
-	rm -f $(RES_SRC)/meta.rc $(RES_PKG)/resource_windows_amd64.syso
+	rm -f $(RES_SRC)/meta.rc $(RES_PKG)/resource_windows_amd64.syso $(RES_PKG)/resource_windows_386.syso
 
 # Manual convenience for testing the Windows build locally, mirroring
 # `make enodia`. Note the deliberate absence of -H=windowsgui: that flag
@@ -66,12 +68,13 @@ windows-exe: windows-resources
 	$(MAKE) windows-resources-clean
 
 # Dev stopgap ahead of goreleaser (ROADMAP.md, "Then — packaging:
-# multiplatform builds"): the same six targets .goreleaser.yaml releases,
-# built locally without needing a tag or CI. No CGO anywhere in this tree,
-# so this is a plain GOOS/GOARCH matrix loop — nothing here should diverge
-# from what goreleaser already does; if it needs to grow, grow that config
-# instead. windows/amd64 gets the icon/version resource via
-# windows-resources; windows/arm64 does not (see that target's comment).
+# multiplatform builds"): the same seven targets .goreleaser.yaml
+# releases, built locally without needing a tag or CI. No CGO anywhere in
+# this tree, so this is a plain GOOS/GOARCH matrix loop — nothing here
+# should diverge from what goreleaser already does; if it needs to grow,
+# grow that config instead. windows/amd64 and windows/386 get the
+# icon/version resource via windows-resources; windows/arm64 does not (see
+# that target's comment).
 dist: windows-resources
 	@mkdir -p $(DIST_DIR)
 	@for t in $(DIST_TARGETS); do \
