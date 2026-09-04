@@ -390,8 +390,39 @@ verdict (the distro-ecosystem epoch mismatch) — exactly the failure mode
 D6/D7 already exist to prevent, applied to a new axis: "has a known CVE" vs
 "we know nothing about CVEs for this" must not collapse into each other.
 
-**Cost accepted:** the roadmap bullet stays unimplemented. Revisiting it
-needs either a per-product mapping from probed version to a queryable
+**Revisited and reconfirmed** after being asked to check
+`github.com/google/osv-scanner/v2/pkg/osvscanner` and cve.org as possible
+ways around this:
+
+- `osvscanner.DoScan`/`DoContainerScan` take lockfile paths, directories or
+  a container image — a dependency-manifest scanner, not a
+  product-plus-version lookup. The client it uses underneath,
+  `osv.dev/bindings/go/osvdev`, is a typed wrapper over the same
+  `POST /v1/query` already tested above; it adds no version-matching logic
+  of its own, so it inherits the same problem.
+- cve.org is the CNA registry a CVE ID's canonical text comes from — it
+  carries no machine-checkable affected-version ranges at all. That
+  matching layer is exactly what OSV/NVD exist to add on top of it, so it
+  does not change the picture either.
+- The epoch problem was re-verified live and turned out sharper than
+  originally stated: querying OSV's `Debian` ecosystem for `redis` with an
+  impossible version (`999.999.999`, chosen to be obviously unaffected by
+  anything) still returned 99 findings — every single Debian-ecosystem
+  Redis record OSV has. `DEBIAN-CVE-2013-0178` fixed at `2:2.6.0-1`
+  illustrates why: Debian orders by epoch first, `999.999.999` carries an
+  implicit epoch of 0, and `0 < 2` regardless of what follows — so *any*
+  bare upstream version any enodia probe could ever report reads as
+  "still affected" by that record. This is not a rare edge case in the
+  data; it is how the comparison always behaves once a record's fixed
+  version carries a nonzero epoch. Querying with `ecosystem: ""` is worse,
+  not better: it returns results (171 of them, for the same impossible
+  version) by matching on package name across every ecosystem at once,
+  without applying a real version filter at all.
+
+**Cost accepted:** the roadmap bullet stays unimplemented, and the bar to
+reopen it is now confirmed higher than "use OSV's official Go client
+instead of raw HTTP" — that path is closed, not merely untried. Revisiting
+this needs either a per-product mapping from probed version to a queryable
 distro/ecosystem identity (fragile, and still leaves Atlassian uncovered),
 or a different data source entirely — NVD's CPE-based CVE API 2.0 covers
 commercial software like Atlassian's, at the cost of being a second,
