@@ -139,14 +139,63 @@ func TestHTMLCDNLoadsBootswatchTheme(t *testing.T) {
 	}
 }
 
-func TestHTMLCDNEmptyThemeDefaultsToDefault(t *testing.T) {
+// ThemeDefault is plain Bootstrap from the bootstrap package, not a
+// "default" folder in bootswatch's own package — that folder doesn't
+// exist (confirmed live against the real CDN, see html.go's comment on
+// ThemeDefault). An earlier version of this test asserted the wrong,
+// nonexistent path and would have passed against a 404.
+func TestHTMLCDNEmptyThemeDefaultsToPlainBootstrap(t *testing.T) {
 	var buf bytes.Buffer
 	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "dist/default/bootstrap.min.css") {
-		t.Fatalf("expected the default Bootswatch theme, got:\n%s", out)
+	if !strings.Contains(out, "bootstrap@"+bootstrapVersion+"/dist/css/bootstrap.min.css") {
+		t.Fatalf("expected plain Bootstrap from the bootstrap package, got:\n%s", out)
+	}
+	if strings.Contains(out, "bootswatch@"+bootswatchVersion+"/dist/default/") {
+		t.Fatalf("bootswatch has no \"default\" folder; this URL 404s, got:\n%s", out)
+	}
+}
+
+func TestHTMLCDNThemeNoneLoadsNoStylesheetAndNoWarning(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: ThemeNone}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	// The <link> tag itself must carry no href — nothing is fetched on a
+	// normal page load. The inline script mentioning CDN domains at all
+	// is fine and expected: it still needs to know how to build a URL for
+	// whatever theme a viewer picks next from the dropdown.
+	if !strings.Contains(out, `<link id="enodia-theme-css" rel="stylesheet">`) {
+		t.Fatalf("expected the theme <link> with no href in ThemeNone, got:\n%s", out)
+	}
+	if strings.Contains(out, `<link id="enodia-theme-css" rel="stylesheet" href=`) {
+		t.Fatalf("ThemeNone must not set an href that would trigger a CDN fetch, got:\n%s", out)
+	}
+	if strings.Contains(out, "needs internet access") {
+		t.Fatal("ThemeNone loads nothing, so the internet-access warning would be false — must not appear")
+	}
+	if !strings.Contains(out, `<option value="none" selected>None</option>`) {
+		t.Fatalf("expected \"none\" preselected in the theme picker, got:\n%s", out)
+	}
+}
+
+func TestHTMLCDNThemePickerListsNoneAndDefaultFirst(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	noneIdx := strings.Index(out, `value="none"`)
+	defaultIdx := strings.Index(out, `value="default"`)
+	lumenIdx := strings.Index(out, `value="lumen"`)
+	if noneIdx == -1 || defaultIdx == -1 || lumenIdx == -1 {
+		t.Fatalf("expected none, default and lumen options, got:\n%s", out)
+	}
+	if noneIdx >= defaultIdx || defaultIdx >= lumenIdx {
+		t.Fatalf("expected None then Default then the real themes, got:\n%s", out)
 	}
 }
 
@@ -155,6 +204,45 @@ func TestHTMLCDNUnknownThemeErrors(t *testing.T) {
 	err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: "not-a-real-theme"})
 	if err == nil {
 		t.Fatal("expected an error for an unknown Bootswatch theme")
+	}
+}
+
+func TestHTMLCDNUnknownCDNErrors(t *testing.T) {
+	var buf bytes.Buffer
+	err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, CDN: "not-a-real-cdn"})
+	if err == nil {
+		t.Fatal("expected an error for an unknown CDN option")
+	}
+}
+
+func TestHTMLCDNExplicitCDNPinsOneSourceNoRace(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: "lumen", CDN: "cdnjs"}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/`+bootswatchVersion+`/lumen/bootstrap.min.css"`) {
+		t.Fatalf("expected the initial <link> to point straight at cdnjs, got:\n%s", out)
+	}
+	if !strings.Contains(out, "var RACE = false;") {
+		t.Fatalf("expected racing disabled when a CDN is pinned explicitly, got:\n%s", out)
+	}
+}
+
+func TestHTMLCDNAutoRacesByDefault(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: "lumen"}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="https://cdn.jsdelivr.net/npm/bootswatch@`+bootswatchVersion+`/dist/lumen/bootstrap.min.css"`) {
+		t.Fatalf("expected the initial (pre-race) <link> to point at jsdelivr, got:\n%s", out)
+	}
+	if !strings.Contains(out, "var RACE = true;") {
+		t.Fatalf("expected racing enabled by default, got:\n%s", out)
+	}
+	if !strings.Contains(out, "cdnjs.cloudflare.com/ajax/libs/bootswatch/"+bootswatchVersion+"/") {
+		t.Fatal("expected the script to also know the cdnjs mirror URL to race against")
 	}
 }
 
@@ -201,7 +289,7 @@ func TestHTMLCDNScriptResetsToBakedTheme(t *testing.T) {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, `var DEFAULT = "darkly"`) {
+	if !strings.Contains(out, `var BAKED = "darkly"`) {
 		t.Fatalf("expected the script's fallback constant to be the baked theme (darkly), got:\n%s", out)
 	}
 }

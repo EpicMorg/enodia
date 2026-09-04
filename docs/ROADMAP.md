@@ -76,16 +76,36 @@ Not dates. Order of work, and what each step unblocks.
   independent of `check`'s
 - `html.assets: inline|cdn` — `inline` (default) is byte-for-byte today's
   original fully offline single file (verified: zero `http(s)://` or
-  `<script` in output); `cdn` instead loads Bootstrap + a pinned Bootswatch
-  version from jsdelivr and renders a visible in-page warning that it
-  needs internet access — not just a CLI-side note. `html.theme` picks
-  which of Bootswatch's 27 themes; empty resolves to `"default"`. The
-  resolved theme is baked in as both the page's initial stylesheet *and*
-  the fallback target its own inline theme-picker script resets to when a
-  viewer's stored `localStorage` choice is missing or names an unrecognised
-  theme — an operator who set `html.theme: lumen` gets reports that always
-  settle back on lumen, never on a hardcoded name unrelated to what they
-  configured. Assets/theme are settings.yaml-only (no CLI flag): D19 treats
+  `<script` in output); `cdn` instead loads Bootstrap/Bootswatch and
+  renders a visible in-page warning that it needs internet access — not
+  just a CLI-side note (skipped for `html.theme: none`, see below, since
+  that mode loads nothing). `html.theme` is `none` (no stylesheet at all —
+  the markup still carries Bootstrap/RowTone classes, for embedding into a
+  page that already loads its own Bootstrap), `default` (plain Bootstrap,
+  pinned to `bootstrapVersion`), or one of Bootswatch's 26 real themes
+  (pinned to `bootswatchVersion` — kept equal to `bootstrapVersion` since
+  Bootswatch tags a release for every Bootstrap release; both bumped to
+  5.3.8 together after a live bug: the initially-pinned 5.3.3 predates the
+  "brite" theme entirely, 404ing it, and there never was a "default" folder
+  in bootswatch's own package at any version — bootswatch.com's site just
+  links "Default" straight to plain Bootstrap, which is what `ThemeDefault`
+  now actually does instead of guessing a nonexistent bootswatch path).
+  Empty `html.theme` resolves to `default`. The resolved theme is baked in
+  as both the page's initial stylesheet *and* the fallback target its own
+  inline theme-picker script resets to when a viewer's stored
+  `localStorage` choice is missing or names an unrecognised theme — an
+  operator who set `html.theme: lumen` gets reports that always settle
+  back on lumen, never on a hardcoded name unrelated to what they
+  configured. `html.cdn` picks the CDN(s): empty/`auto` (default) races
+  jsdelivr and cdnjs — both mirror the identical Bootstrap/Bootswatch
+  files — with a `HEAD` request each via `Promise.any` and uses whichever
+  answers first, so one CDN being blocked or slow on a given network
+  doesn't take styling down with it; `jsdelivr` or `cdnjs` pins one
+  explicitly (no race, a plain synchronous `<link>`, exactly like before
+  racing existed). The very first paint (and anyone with JavaScript
+  disabled) always sees jsdelivr's URL — racing only ever *upgrades* the
+  stylesheet after the fact, it never delays or changes the initial
+  render. Assets/theme/cdn are settings.yaml-only (no CLI flag): D19 treats
   them as a once-per-operator default, not a per-export choice
 - `fleet` view gained a STATUS column (grouped alongside PRODUCT/VERSION,
   not folded into a shared bucket — two failed instances with different
