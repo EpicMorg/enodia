@@ -15,12 +15,22 @@ import (
 // There is no anonymous access by default: a fresh instance answered 401
 // with WWW-Authenticate: Basic and Bearer challenges (guest login is off by
 // default), confirmed against a live jetbrains/teamcity-server container
-// rather than assumed. Only AuthBasic is offered here: TeamCity's own
-// documented superuser pattern — empty username, an access token used as
-// the password — was confirmed working this way; the same bootstrap token
-// sent as a bare `Authorization: Bearer` was tried too and rejected, even
-// though the server advertises Bearer as a supported scheme, so this probe
-// does not claim to support it.
+// rather than assumed.
+//
+// Both AuthBasic and AuthBearer are offered, because TeamCity has two
+// distinct kinds of token with opposite behavior, both confirmed live:
+//   - The one-time superuser bootstrap token a fresh server logs on first
+//     start only works as Basic (empty username, the token as password) —
+//     the same bootstrap token sent as a bare `Authorization: Bearer` was
+//     tried against a fresh container and rejected.
+//   - A normal user's personal access token (Profile > Access Tokens, the
+//     way real long-lived automation actually authenticates) is the
+//     opposite: confirmed against seven real production instances, it
+//     works as `Authorization: Bearer` and is flatly rejected as Basic —
+//     "Incorrect username or password" even with an empty username. An
+//     earlier version of this probe generalized from the bootstrap-token
+//     case alone and refused to offer Bearer at all, which would have
+//     rejected the credential shape real deployments actually use.
 type teamcityProbe struct{}
 
 func (teamcityProbe) Meta() Meta {
@@ -28,7 +38,7 @@ func (teamcityProbe) Meta() Meta {
 		Product:       "teamcity",
 		Summary:       "JetBrains TeamCity",
 		DefaultScheme: "https",
-		Auth:          AuthSpec{Required: false, Kinds: []AuthKind{AuthBasic}},
+		Auth:          AuthSpec{Required: false, Kinds: []AuthKind{AuthBasic, AuthBearer}},
 		// No DefaultResolver: endoflife.date has no teamcity calendar
 		// (confirmed: GET .../api/teamcity.json is a 404).
 	}

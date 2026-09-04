@@ -107,10 +107,10 @@ func TestTeamCityProbeMeta(t *testing.T) {
 		t.Fatal("credentials are not always required: a target might allow guest access")
 	}
 	if !m.Auth.Accepts(AuthBasic) {
-		t.Fatal("expected AuthBasic to be accepted")
+		t.Fatal("expected AuthBasic to be accepted: the bootstrap superuser token needs it")
 	}
-	if m.Auth.Accepts(AuthBearer) {
-		t.Fatal("Bearer was tried live against the bootstrap token and rejected; this probe must not claim to support it")
+	if !m.Auth.Accepts(AuthBearer) {
+		t.Fatal("expected AuthBearer to be accepted: a real user's access token, confirmed live against production, needs it")
 	}
 	if m.DefaultResolver.Type != "" {
 		t.Fatalf("got resolver %+v, want none (endoflife.date has no teamcity calendar)", m.DefaultResolver)
