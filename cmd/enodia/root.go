@@ -19,6 +19,12 @@ var (
 // the standard locations.
 var configFlag string
 
+// settingsFlag is the --settings persistent flag: same rule as configFlag
+// when set explicitly (see internal/settings.Locate), but unlike config an
+// entirely missing settings.yaml is normal, not an error (D19) — it just
+// means every display default stays built-in.
+var settingsFlag string
+
 var rootCmd = &cobra.Command{
 	Use:   "enodia",
 	Short: "Service inventory and lifecycle (EOL) monitoring",
@@ -33,6 +39,8 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configFlag, "config", "",
 		"path to enodia.yaml (default: search standard locations)")
+	rootCmd.PersistentFlags().StringVar(&settingsFlag, "settings", "",
+		"path to settings.yaml (default: search standard locations; missing is not an error)")
 
 	rootCmd.AddCommand(collectCmd, checkCmd, exportCmd, serveCmd, historyCmd, configCmd, productsCmd, versionCmd, aboutCmd)
 }

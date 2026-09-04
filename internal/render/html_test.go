@@ -10,13 +10,13 @@ import (
 
 func TestHTMLIsSelfContained(t *testing.T) {
 	var buf bytes.Buffer
-	if err := HTML(&buf, sampleReport()); err != nil {
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
 	for _, forbidden := range []string{"http://", "https://", "<script"} {
 		if strings.Contains(out, forbidden) {
-			t.Errorf("output contains %q; the report must be self-contained (D14)", forbidden)
+			t.Errorf("output contains %q; the default inline report must be self-contained (D19)", forbidden)
 		}
 	}
 	if !strings.Contains(out, "<style>") {
@@ -26,7 +26,7 @@ func TestHTMLIsSelfContained(t *testing.T) {
 
 func TestHTMLIsWellFormedEnough(t *testing.T) {
 	var buf bytes.Buffer
-	if err := HTML(&buf, sampleReport()); err != nil {
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
@@ -45,7 +45,7 @@ func TestHTMLIsWellFormedEnough(t *testing.T) {
 
 func TestHTMLContainsAllFourSections(t *testing.T) {
 	var buf bytes.Buffer
-	if err := HTML(&buf, sampleReport()); err != nil {
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
@@ -62,7 +62,7 @@ func TestHTMLEscapesCellContent(t *testing.T) {
 	r.Observations = nil // keep the drift/fleet views simple for this check
 
 	var buf bytes.Buffer
-	if err := HTML(&buf, r); err != nil {
+	if err := HTML(&buf, r, HTMLOptions{}); err != nil {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
@@ -76,11 +76,97 @@ func TestHTMLEscapesCellContent(t *testing.T) {
 
 func TestHTMLEmptyReportRendersNoDataSections(t *testing.T) {
 	var buf bytes.Buffer
-	if err := HTML(&buf, Report{}); err != nil {
+	if err := HTML(&buf, Report{}, HTMLOptions{}); err != nil {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
 	if strings.Count(out, "no data") != 4 {
 		t.Fatalf("expected all four sections to report \"no data\", got:\n%s", out)
+	}
+}
+
+func TestHTMLViewOptionRestrictsToOneSection(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{View: ViewFleet}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "<h2>Fleet</h2>") {
+		t.Fatal("expected the Fleet section")
+	}
+	for _, title := range []string{"Compact", "Lifecycle", "Drift"} {
+		if strings.Contains(out, "<h2>"+title+"</h2>") {
+			t.Errorf("View: ViewFleet still rendered the %q section", title)
+		}
+	}
+}
+
+func TestHTMLUnknownViewOptionErrors(t *testing.T) {
+	var buf bytes.Buffer
+	err := HTML(&buf, sampleReport(), HTMLOptions{View: View("bogus")})
+	if err == nil {
+		t.Fatal("expected an error for an unknown View option")
+	}
+}
+
+func TestHTMLUnknownAssetsErrors(t *testing.T) {
+	var buf bytes.Buffer
+	err := HTML(&buf, sampleReport(), HTMLOptions{Assets: "bogus"})
+	if err == nil {
+		t.Fatal("expected an error for an unknown Assets option")
+	}
+}
+
+func TestHTMLCDNLoadsBootswatchTheme(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: "lumen"}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "bootswatch@"+bootswatchVersion+"/dist/lumen/bootstrap.min.css") {
+		t.Fatalf("expected the lumen Bootswatch stylesheet, got:\n%s", out)
+	}
+	if !strings.Contains(out, `<option value="lumen" selected>Lumen</option>`) {
+		t.Fatalf("expected lumen preselected in the theme picker, got:\n%s", out)
+	}
+	if !strings.Contains(out, "needs internet access") {
+		t.Fatal("expected a visible warning that CDN mode needs internet access")
+	}
+	if !strings.Contains(out, "<script>") {
+		t.Fatal("expected the theme-picker script in CDN mode")
+	}
+}
+
+func TestHTMLCDNEmptyThemeDefaultsToDefault(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "dist/default/bootstrap.min.css") {
+		t.Fatalf("expected the default Bootswatch theme, got:\n%s", out)
+	}
+}
+
+func TestHTMLCDNUnknownThemeErrors(t *testing.T) {
+	var buf bytes.Buffer
+	err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: "not-a-real-theme"})
+	if err == nil {
+		t.Fatal("expected an error for an unknown Bootswatch theme")
+	}
+}
+
+// The theme picker's fallback-on-invalid-localStorage target must be this
+// report's own baked theme, not a hardcoded name unrelated to it (D19): an
+// operator who configured "lumen" as their default gets reports that reset
+// back to lumen, never silently to Bootswatch's own "Default".
+func TestHTMLCDNScriptResetsToBakedTheme(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: "darkly"}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `var DEFAULT = "darkly"`) {
+		t.Fatalf("expected the script's fallback constant to be the baked theme (darkly), got:\n%s", out)
 	}
 }

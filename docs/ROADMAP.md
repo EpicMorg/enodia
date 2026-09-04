@@ -59,46 +59,39 @@ Not dates. Order of work, and what each step unblocks.
   something to design around
 - CVE correlation via OSV.dev — investigated twice, deferred both times;
   see DECISIONS.md D18
+- `internal/settings` — `settings.yaml`, personal display defaults kept
+  separate from `enodia.yaml` (DECISIONS.md D19). Same resolution pattern
+  as config (`internal/config/paths.go`): `--settings`, `$ENODIA_SETTINGS`,
+  `./enodia.settings.yaml`, `./.enodia.settings.yaml`,
+  `$XDG_CONFIG_HOME/enodia/settings.yaml`, `/etc/enodia/settings.yaml` —
+  but unlike config, nothing found is not an error (`settings.Resolve`
+  falls back to all-built-in defaults). `render.default_view` applies to
+  `check`'s `--view` whenever the flag itself wasn't passed
+  (`cmd.Flags().Changed("view")`, not just "is it the zero value", since
+  the flag's own cobra default is already "compact"); `html.view` does the
+  same for `export --format html`, which also gained its own `--view` flag
+  independent of `check`'s
+- `html.assets: inline|cdn` — `inline` (default) is byte-for-byte today's
+  original fully offline single file (verified: zero `http(s)://` or
+  `<script` in output); `cdn` instead loads Bootstrap + a pinned Bootswatch
+  version from jsdelivr and renders a visible in-page warning that it
+  needs internet access — not just a CLI-side note. `html.theme` picks
+  which of Bootswatch's 27 themes; empty resolves to `"default"`. The
+  resolved theme is baked in as both the page's initial stylesheet *and*
+  the fallback target its own inline theme-picker script resets to when a
+  viewer's stored `localStorage` choice is missing or names an unrecognised
+  theme — an operator who set `html.theme: lumen` gets reports that always
+  settle back on lumen, never on a hardcoded name unrelated to what they
+  configured. Assets/theme are settings.yaml-only (no CLI flag): D19 treats
+  them as a once-per-operator default, not a per-export choice
+- `fleet` view gained a STATUS column (grouped alongside PRODUCT/VERSION,
+  not folded into a shared bucket — two failed instances with different
+  ErrorKinds are different operational situations) built straight from
+  `Observation.OK()`/`ErrorKind`, not Assessments (D7) — "table of versions
+  + which are up" is this view now, not a separate one
 - Tests on recorded fixtures, offline, `-race` clean; every new probe
   live-verified against a real instance (Docker or the user's own
   production) before being written, not just against hand-built fixtures
-
-## Next — settings.yaml
-
-`internal/settings`. Personal display defaults, separate from `enodia.yaml`
-(see DECISIONS.md D19 for why: targets/credentials are shared prod data,
-display prefs are per-operator).
-
-- Same resolution pattern as config (`internal/config/paths.go`):
-  `--settings`, `$ENODIA_SETTINGS`, `./enodia.settings.yaml`,
-  `./.enodia.settings.yaml`, `$XDG_CONFIG_HOME/enodia/settings.yaml`,
-  `/etc/enodia/settings.yaml`. Missing file is not an error — same as no
-  config: fall back to built-in defaults.
-- `render.default_view` — compact/lifecycle/drift/fleet, used by `check`
-  and `export` when `--view` is not passed. Precedence: flag > settings >
-  built-in default (`compact`)
-- `html.assets`: `inline` (default, today's fully offline single file) or
-  `cdn` (Bootstrap + Bootswatch from jsdelivr). Defaulting to `inline`
-  preserves the closed-network guarantee; `cdn` is opt-in only, and the
-  generated file must carry its own visible warning that it needs internet
-  access, not just a note in the CLI output
-- `html.view` — reuse the existing `View` type (compact/lifecycle/drift/
-  fleet) instead of inventing a second vocabulary; `export --format html`
-  gains a `--view` flag exactly like the table renderer already has,
-  defaulting to all four stacked sections (today's behaviour) when unset
-- `fleet` view gains a reachability/health column (built from Observation
-  errors, not Assessments — D7) so "table of versions + which are up" is a
-  single view, not a new one
-- `html.theme` — a Bootswatch theme name, meaningful only when
-  `html.assets: cdn`. This is the default baked into every page generated
-  with that settings.yaml (so an operator sets it once for themselves in
-  settings.yaml, defaulting to Bootswatch's own "Default" theme when
-  unset), rendered as the page's initial stylesheet. A `<select>` in the
-  page then lets a given *viewer* override it for themselves, writing the
-  choice to that browser's `localStorage` — read back and applied on
-  every later load. If the stored value is missing, corrupted, or no
-  longer names a real Bootswatch theme, it resets to "Default" (never the
-  settings-baked value, and never an error) exactly as asked
 
 ## Later
 

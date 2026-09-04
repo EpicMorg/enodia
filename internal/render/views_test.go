@@ -101,8 +101,16 @@ func TestFleetRowsGroupsByProductAndVersion(t *testing.T) {
 	if unknown == nil {
 		t.Fatalf("expected a (unknown) version bucket for the failed probe, got %+v", jiraRows)
 	}
-	if unknown[2] != "1" || unknown[3] != "down" {
+	if unknown[2] != "unreachable" || unknown[3] != "1" || unknown[4] != "down" {
 		t.Fatalf("got %+v", unknown)
+	}
+}
+
+func TestFleetRowsStatusColumnDistinguishesOKFromFailed(t *testing.T) {
+	_, rows := fleetRows(sampleReport())
+	ok := findRow(rows, 0, "confluence")
+	if ok == nil || ok[2] != "ok" {
+		t.Fatalf("expected confluence's successful observation to have STATUS ok, got %+v", ok)
 	}
 }
 
