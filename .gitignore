@@ -38,9 +38,14 @@ prod.enodia.yaml
 
 # Build artifacts
 /dist/
-/build/
 /enodia
 /enodia.exe
+
+# Windows resource pipeline (see build/windows/ and `make windows-resources`):
+# meta.rc.in is the committed template, meta.rc is generated from it per
+# build; the .syso must land in cmd/enodia for `go build` to pick it up.
+/build/windows/meta.rc
+/cmd/enodia/resource_windows_*.syso
 
 # Local configuration and secrets — MUST NOT be committed
 credentials.yaml
