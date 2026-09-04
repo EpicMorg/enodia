@@ -28,8 +28,10 @@ Not dates. Order of work, and what each step unblocks.
   baked in via `-ldflags`
 - Windows resource embedding — `build/windows/` (icon, version-info `.rc`
   template, manifest) compiled by `make windows-resources`/`windows-exe`
-  into `cmd/enodia/resource_windows_amd64.syso` via mingw-w64's windres;
-  wired into `.goreleaser.yaml`'s `before.hooks` and the release workflow
+  into `cmd/enodia/resource_windows_{amd64,386}.syso` via mingw-w64's
+  windres (x86_64 and i686 flavors, checked independently — one missing
+  doesn't block the other); wired into `.goreleaser.yaml`'s `before.hooks`
+  and the release workflow
   (mingw-w64 installed there with `continue-on-error`, so its absence
   degrades only that one artifact). Verified end-to-end: real multi-size
   icon and version block land in a real cross-compiled `.exe`, console
@@ -37,14 +39,20 @@ Not dates. Order of work, and what each step unblocks.
   would hide this CLI's own stdout/stderr). windows/arm64 has no
   equivalent yet — Debian's mingw-w64 ships no aarch64-w64-mingw32-windres
 - `make dist` — `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`,
-  `windows/{amd64,arm64}`, same `-ldflags` as `make enodia`, windows/amd64
-  picking up the icon/version resource via `windows-resources`. Verified:
-  all six binaries have the right file type (ELF/Mach-O/PE32+), the
-  windows/amd64 `.exe` carries the resource and windows/arm64 correctly
-  doesn't. macOS ships unsigned — no Apple Developer Program membership
-  needed for this; `.goreleaser.yaml` already builds darwin the same way,
-  and the project's existing cosign signature over `checksums.txt` (D17)
-  already gives independent supply-chain verification for every platform,
+  `windows/{amd64,arm64,386}`, same `-ldflags` as `make enodia`,
+  windows/amd64 and windows/386 picking up the icon/version resource via
+  `windows-resources` (both mingw-w64 windres flavors are just an
+  `apt install mingw-w64` away, unlike arm64's). `.goreleaser.yaml` gained
+  a second build (`enodia-windows-386`, since Go never supported
+  darwin/386 — it can't share enodia's goarch list) folded into the same
+  archives. Verified with a real `goreleaser check` and a
+  `--snapshot --clean --skip=docker,sign,publish` run, not just `make
+  dist`: all seven binaries have the right file type (ELF/Mach-O/
+  PE32/PE32+), the resource lands correctly in windows/amd64 and
+  windows/386 and is correctly absent from windows/arm64. macOS ships
+  unsigned — no Apple Developer Program membership needed for this; the
+  project's existing cosign signature over `checksums.txt` (D17) already
+  gives independent supply-chain verification for every platform,
   Apple-signed or not. A first Gatekeeper launch will still warn
   "unidentified developer" (routine for curl/browser-downloaded CLI tools,
   cleared via `xattr -d com.apple.quarantine` or right-click → Open) — not
