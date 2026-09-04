@@ -55,16 +55,19 @@ type RenderSettings struct {
 	DefaultView string `yaml:"default_view,omitempty"`
 }
 
-// HTMLSettings controls `export --format html`. What the two Assets values
-// mean, and what View/Theme do, is documented on internal/render's
-// HTMLOptions — this struct is only the on-disk shape; it does not
-// interpret its own fields; that is left to render, so this package does
-// not need to enum-validate values render itself will reject clearly at
-// export time.
+// HTMLSettings controls `export --format html`. What Assets/View/Theme/CDN
+// each mean is documented on internal/render's HTMLOptions — this struct
+// is only the on-disk shape; it does not interpret its own fields; that is
+// left to render, so this package does not need to enum-validate values
+// render itself will reject clearly at export time.
 type HTMLSettings struct {
 	Assets string `yaml:"assets,omitempty"`
 	View   string `yaml:"view,omitempty"`
 	Theme  string `yaml:"theme,omitempty"`
+	// CDN picks which CDN(s) serve Theme's stylesheet: empty or "auto"
+	// races jsdelivr and cdnjs and uses whichever answers first, "jsdelivr"
+	// or "cdnjs" pins one explicitly.
+	CDN string `yaml:"cdn,omitempty"`
 }
 
 // Default returns the all-built-in-defaults Settings: what's used when no
