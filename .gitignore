@@ -30,6 +30,7 @@ go.work.sumы
 # One-off local scratch files carrying real internal data — never committed
 poc.config.from.puthon.yml
 .tmp.secrets.from.poc.env
+prod.enodia.yaml
 
 # Editor/IDE
 # .idea/
