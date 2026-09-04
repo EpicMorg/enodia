@@ -106,6 +106,37 @@ func TestLocateFindsCwdDotfileWhenPlainOneAbsent(t *testing.T) {
 	}
 }
 
+func TestLocateFindsCwdSettingsYML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "enodia.settings.yml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "enodia.settings.yml" {
+		t.Fatalf("got %q, want %q", got, "enodia.settings.yml")
+	}
+}
+
+func TestLocateYAMLBeatsYMLAtSameLocation(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "enodia.settings.yaml"), "schemaVersion: 1\n")
+	writeFile(t, filepath.Join(dir, "enodia.settings.yml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "enodia.settings.yaml" {
+		t.Fatalf("got %q, want %q (.yaml should win over .yml at the same location)", got, "enodia.settings.yaml")
+	}
+}
+
 func TestLocateFindsXDGConfigHome(t *testing.T) {
 	clearSearchEnv(t)
 	dir := t.TempDir()
