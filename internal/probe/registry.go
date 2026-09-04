@@ -18,6 +18,7 @@ var builtin = []Probe{
 	&atlassianProbe{product: "confluence", typeID: "confluence", resolver: "confluence", summary: "Atlassian Confluence (Data Center)"},
 	genericProbe{},
 	gitlabProbe{},
+	grafanaProbe{},
 	jenkinsProbe{},
 	&atlassianProbe{product: "jira", typeID: "jira", resolver: "jira-software", summary: "Atlassian Jira (Data Center)"},
 	mysqlProbe{},
