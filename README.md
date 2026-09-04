@@ -144,6 +144,13 @@ polls your entire fleet on every click is a self-inflicted denial of service.
 Collection runs on a schedule; the page shows the latest snapshot and states
 plainly when it was taken.
 
+An optional `settings.yaml` (same search path as `enodia.yaml`, but never an
+error if it's missing) holds personal display defaults: which table view
+`check`/`export` use when `--view` isn't passed, and whether the HTML export
+stays the default fully offline single file or pulls Bootstrap and a
+Bootswatch theme from a CDN (`html.assets: cdn`, `html.theme: <name>`) — see
+`docs/DECISIONS.md` D19.
+
 ## Security
 
 Enodia holds credentials to your infrastructure. Consequences, all deliberate:
