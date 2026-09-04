@@ -42,22 +42,29 @@ You describe your services once. Enodia handles the rest.
 ## Example:
 
 ```yaml
-services:
-  - name: Jira Main
+schemaVersion: 1
+targets:
+  - id: jira-main
     product: jira
-    url: https://jira.example.com
+    address: https://jira.example.com
 
-  - name: TeamCity Build
-    product: teamcity
-    url: https://tc.example.com
-    auth: { kind: bearer, value: "${TEAMCITY_TOKEN}" }
+  - id: gitlab-main
+    product: gitlab
+    address: https://gitlab.example.com
+    credentials: gitlab-token
+
+credentials:
+  gitlab-token:
+    kind: token-header
+    header: PRIVATE-TOKEN
+    value: "${GITLAB_TOKEN}"
 ```
 
 ```console
 $ enodia check
-SERVICE          PRODUCT     LOCAL      CYCLE   PATCH    LIFECYCLE   NEWER
-Jira Main        jira        10.3.2     10.3    current  active      11.0
-TeamCity Build   teamcity    2025.03.1  2025.03 behind   active      —
+ID           PRODUCT  PATCH   LIFECYCLE  BRANCH     SEVERITY  REASON
+jira-main    jira     behind  active     newer_lts  warn      -
+gitlab-main  gitlab   behind  eol        newer      fail      -
 ```
 
 ## Why not something else
@@ -88,7 +95,7 @@ For air-gapped environments this is the whole point:
 
 ```console
 # inside the closed network — no internet needed
-enodia collect -c config.yaml -o inventory.jsonl
+enodia collect --config config.yaml -o inventory.jsonl
 
 # anywhere else — no access to your services needed
 enodia check --from inventory.jsonl
