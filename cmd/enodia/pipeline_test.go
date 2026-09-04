@@ -16,7 +16,7 @@ import (
 	"github.com/EpicMorg/enodia/internal/resolver"
 )
 
-const jiraManifest = `<?xml version="1.0"?><applinks-manifest><typeId>jira</typeId><version>10.3.2</version></applinks-manifest>`
+const jiraManifest = `<?xml version="1.0"?><manifest><typeId>jira</typeId><version>10.3.2</version></manifest>`
 
 type fakeSource struct {
 	cycles []resolver.Cycle

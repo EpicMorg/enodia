@@ -13,7 +13,7 @@ import (
 	"github.com/EpicMorg/enodia/internal/probe"
 )
 
-const manifest = `<?xml version="1.0"?><applinks-manifest><typeId>jira</typeId><version>10.3.2</version></applinks-manifest>`
+const manifest = `<?xml version="1.0"?><manifest><typeId>jira</typeId><version>10.3.2</version></manifest>`
 
 func TestRunPreservesOrderAndNormalises(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
