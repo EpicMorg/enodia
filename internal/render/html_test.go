@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/EpicMorg/enodia/internal/evaluate"
 )
 
 func TestHTMLIsSelfContained(t *testing.T) {
@@ -160,6 +162,39 @@ func TestHTMLCDNUnknownThemeErrors(t *testing.T) {
 // report's own baked theme, not a hardcoded name unrelated to it (D19): an
 // operator who configured "lumen" as their default gets reports that reset
 // back to lumen, never silently to Bootswatch's own "Default".
+// table-success/-warning/-danger are Bootstrap's own standardised
+// contextual classes: every Bootswatch theme redefines the same variables
+// for them, so a chosen theme's palette drives the actual colors, not a
+// hardcoded hex enodia would otherwise have to pick and maintain per theme.
+func TestHTMLCDNRowsCarryBootstrapContextualClasses(t *testing.T) {
+	r := sampleReport()
+	r.Assessments[0].PatchSeverity = evaluate.SeverityFail // jira-a: force a bad row to exercise table-danger
+
+	var buf bytes.Buffer
+	if err := HTML(&buf, r, HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	for _, class := range []string{"table-danger", "table-warning", "table-success"} {
+		if !strings.Contains(out, `class="`+class+`"`) {
+			t.Errorf("expected a row with class %q, got:\n%s", class, out)
+		}
+	}
+}
+
+func TestHTMLInlineRowsCarryNoBootstrapClasses(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	for _, class := range []string{"table-danger", "table-warning", "table-success", "table-info"} {
+		if strings.Contains(out, class) {
+			t.Errorf("inline mode has no Bootstrap loaded; found stray class %q", class)
+		}
+	}
+}
+
 func TestHTMLCDNScriptResetsToBakedTheme(t *testing.T) {
 	var buf bytes.Buffer
 	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: "darkly"}); err != nil {

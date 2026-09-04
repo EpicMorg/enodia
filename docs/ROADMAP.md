@@ -89,6 +89,21 @@ Not dates. Order of work, and what each step unblocks.
   ErrorKinds are different operational situations) built straight from
   `Observation.OK()`/`ErrorKind`, not Assessments (D7) — "table of versions
   + which are up" is this view now, not a separate one
+- CDN-mode row highlighting — every view function now also returns a
+  `RowTone` per row (`ToneGood`/`ToneInfo`/`ToneWarn`/`ToneBad`, or
+  `ToneNone`), which CDN-mode HTML maps to Bootstrap's own standardised
+  contextual table classes (`table-success`/`-info`/`-warning`/`-danger`)
+  — the same class names carry the right color in every Bootswatch theme,
+  so a chosen theme's own red/yellow/green apply, not a hardcoded hex enodia
+  would otherwise have to pick and maintain per theme. `compact` tones by
+  `OverallSeverity()`; `lifecycle`/`drift` deliberately tone by their own
+  axis's severity (`LifecycleSeverity`/`PatchSeverity`), not the overall
+  one, so a lifecycle row is red because *its* lifecycle boundary is
+  critical, not because an unrelated branch finding was worse; `fleet`
+  tones ToneGood/ToneBad only, straight from `Observation.OK()` — a fact,
+  never a policy `Severity` (D7), even though it drives the same visual
+  vocabulary. Inline mode ignores tones entirely (no Bootstrap loaded to
+  give the classes meaning); `Table` (plain text) ignores them too.
 - Tests on recorded fixtures, offline, `-race` clean; every new probe
   live-verified against a real instance (Docker or the user's own
   production) before being written, not just against hand-built fixtures
