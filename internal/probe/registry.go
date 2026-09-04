@@ -39,6 +39,7 @@ var builtin = []Probe{
 	vaultProbe{},
 	bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden"},
 	vcenterProbe{},
+	zouProbe{},
 }
 
 var byProduct = func() map[string]Probe {
