@@ -1,0 +1,9 @@
+{
+  "Version": "11.7.2",
+  "BuildNumber": "26431767452",
+  "BuildDate": "Tue May 26 04:16:29 UTC 2026",
+  "BuildHash": "70c68d0cf6357e2b5c6b66bcc6ffc03bd13d1910",
+  "BuildEnterpriseReady": "true",
+  "SiteURL": "https://mattermost.example.com",
+  "EnableOpenServer": "false"
+}
