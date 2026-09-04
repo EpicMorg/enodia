@@ -495,3 +495,18 @@ an operator who genuinely never configured a theme at all. The same
 resolved value is both the page's initial `<link>` href and the script's
 `DEFAULT` constant, so there is exactly one source of truth for it, not
 two that could drift apart.
+
+**Also implemented:** row highlighting in CDN mode, by request once the
+theme picker existed — a row's `RowTone` (`ToneGood`/`ToneInfo`/`ToneWarn`/
+`ToneBad`) maps to Bootstrap's own `table-success`/`-info`/`-warning`/
+`-danger` classes, which every Bootswatch theme redefines consistently, so
+the exact same class name reads as that theme's own red/yellow/green
+instead of a color enodia would have to hardcode and re-tune per theme.
+`RowTone` is deliberately its own type, not a reuse of `evaluate.Severity`:
+the fleet view's tone comes from `Observation.OK()`, a fact per D7, and
+giving a fact a type named "Severity" would blur exactly the line D7
+exists to keep, even though both end up picking the same visual class.
+`lifecycle` and `drift` tone by their own axis's severity rather than
+`OverallSeverity()`, for the same reason those views show their own axis's
+data rather than everything at once: a row there is red because that row's
+own focus is critical, not because some other, unrelated axis was worse.
