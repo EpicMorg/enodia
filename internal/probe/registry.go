@@ -23,6 +23,7 @@ var builtin = []Probe{
 	mysqlProbe{},
 	postgresProbe{},
 	redisProbe{},
+	sonarqubeProbe{},
 	sshProbe{},
 	teamcityProbe{},
 }
