@@ -493,7 +493,7 @@ configured. An operator who sets `html.theme: lumen` gets reports that
 always settle back on lumen; the "default" fallback only ever shows up for
 an operator who genuinely never configured a theme at all. The same
 resolved value is both the page's initial `<link>` href and the script's
-`DEFAULT` constant, so there is exactly one source of truth for it, not
+`BAKED` constant, so there is exactly one source of truth for it, not
 two that could drift apart.
 
 **Also implemented:** row highlighting in CDN mode, by request once the
@@ -510,3 +510,31 @@ exists to keep, even though both end up picking the same visual class.
 `OverallSeverity()`, for the same reason those views show their own axis's
 data rather than everything at once: a row there is red because that row's
 own focus is critical, not because some other, unrelated axis was worse.
+
+**Bug found and fixed:** the initially-pinned `bootswatchVersion` (5.3.3)
+was already stale by the time this shipped — Bootswatch's "brite" theme
+didn't exist in that release yet, so choosing it 404'd. Worse, `"default"`
+404'd at *every* version tried, including the current one: there is no
+`default` folder in bootswatch's own npm/CDN package at all (confirmed
+live via jsdelivr's package file listing) — bootswatch.com's own site
+lists "Default" as if it were a theme, but it's actually just a link
+straight to plain Bootstrap. `ThemeDefault` now reproduces that correctly,
+loading the `bootstrap` package directly instead of guessing a bootswatch
+path that never existed. Both `bootswatchVersion` and the new
+`bootstrapVersion` are bumped to 5.3.8 and kept as one Go constant equal to
+the other, since Bootswatch tags a release for every Bootstrap release it
+tracks — there is no scenario where they should legitimately diverge.
+
+**Also added:** `ThemeNone` (no stylesheet at all — the internet-access
+warning is skipped too, since it would be false) for embedding the report
+into a page that already loads its own Bootstrap; and CDN racing —
+`html.cdn: auto` (the default) fires a `HEAD` request at both jsdelivr and
+cdnjs (identical mirrors of the same files) and upgrades to whichever
+answers first via `Promise.any`, so one CDN being blocked or slow on a
+given network doesn't take the report's styling down with it.
+`html.cdn: jsdelivr`/`cdnjs` opts out of racing entirely, back to a plain
+synchronous `<link>`. The very first paint, and any viewer with JavaScript
+disabled, always gets jsdelivr's URL — racing only ever upgrades the
+stylesheet after that initial render, it never blocks or changes it. This
+is a `settings.yaml`-only knob, same as assets/theme: a once-per-operator
+default, not a per-export flag.

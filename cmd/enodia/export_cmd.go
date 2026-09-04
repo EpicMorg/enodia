@@ -102,11 +102,11 @@ var exportFormats = map[string]func(io.Writer, render.Report) error{
 	"prometheus": render.Prometheus,
 }
 
-// htmlExportOptions resolves export --format html's asset mode, view and
-// theme: --view (if passed) beats settings.yaml's html.view, which beats
-// "" (all four sections, the original behaviour). Assets and theme come
-// from settings.yaml only, no flag — D19 treats them as a per-operator
-// default to set once, not a per-export choice.
+// htmlExportOptions resolves export --format html's asset mode, view,
+// theme and CDN: --view (if passed) beats settings.yaml's html.view, which
+// beats "" (all four sections, the original behaviour). Assets/theme/CDN
+// come from settings.yaml only, no flag — D19 treats them as a
+// per-operator default to set once, not a per-export choice.
 func htmlExportOptions(cmd *cobra.Command) (render.HTMLOptions, error) {
 	st, err := settings.Resolve(settingsFlag)
 	if err != nil {
@@ -122,5 +122,6 @@ func htmlExportOptions(cmd *cobra.Command) (render.HTMLOptions, error) {
 		Assets: st.HTML.Assets,
 		View:   render.View(view),
 		Theme:  st.EffectiveTheme(),
+		CDN:    st.HTML.CDN,
 	}, nil
 }
