@@ -26,6 +26,7 @@ var builtin = []Probe{
 	keycloakProbe{},
 	mysqlProbe{},
 	nextcloudProbe{},
+	perforceSwarmProbe{},
 	portainerProbe{},
 	postgresProbe{},
 	redisProbe{},
