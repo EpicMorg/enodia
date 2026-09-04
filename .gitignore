@@ -27,6 +27,10 @@ go.work.sumы
 # env file
 .env
 
+# One-off local scratch files carrying real internal data — never committed
+poc.config.from.puthon.yml
+.tmp.secrets.from.poc.env
+
 # Editor/IDE
 # .idea/
 # .vscode/
