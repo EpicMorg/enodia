@@ -8,10 +8,13 @@ import (
 	"path/filepath"
 )
 
-// candidateName is the file name used inside the directory-based search
-// locations (XDG, /etc). ./enodia.settings.yaml and ./.enodia.settings.yaml
-// are checked by their own literal names instead — see Locate.
-const candidateName = "settings.yaml"
+// candidateNames are the file names checked inside each directory-based
+// search location (XDG, /etc), .yaml before .yml — both are equally common
+// in the wild, and this package has no reason to prefer one, so ties are
+// broken purely by which the search tries first. ./enodia.settings.{yaml,yml}
+// and ./.enodia.settings.{yaml,yml} are checked by their own literal names
+// instead — see Locate.
+var candidateNames = []string{"settings.yaml", "settings.yml"}
 
 // Locate finds the settings file to load, in this order:
 //
@@ -21,15 +24,21 @@ const candidateName = "settings.yaml"
 //     fall-through to built-in defaults.
 //  2. $ENODIA_SETTINGS. Same rule.
 //  3. ./enodia.settings.yaml
-//  4. ./.enodia.settings.yaml
-//  5. $XDG_CONFIG_HOME/enodia/settings.yaml, defaulting to
+//  4. ./enodia.settings.yml
+//  5. ./.enodia.settings.yaml
+//  6. ./.enodia.settings.yml
+//  7. $XDG_CONFIG_HOME/enodia/settings.yaml, defaulting to
 //     ~/.config/enodia/settings.yaml per the XDG basedir spec when the
 //     variable is unset.
-//  6. /etc/enodia/settings.yaml
+//  8. $XDG_CONFIG_HOME/enodia/settings.yml (same fallback)
+//  9. /etc/enodia/settings.yaml
+//  10. /etc/enodia/settings.yml
 //
-// Unlike config.Locate, finding nothing at steps 3-6 is not an error: this
+// Unlike config.Locate, finding nothing at steps 3-10 is not an error: this
 // file is entirely optional (D19). Locate returns ("", nil) in that case,
-// and Resolve falls back to Default.
+// and Resolve falls back to Default. Precedence is by location first (cwd,
+// then XDG, then /etc), and only .yaml vs .yml within the same location —
+// a cwd .yml still beats an XDG .yaml.
 func Locate(explicit string) (string, error) {
 	if explicit != "" {
 		return mustExist(explicit)
@@ -39,15 +48,23 @@ func Locate(explicit string) (string, error) {
 	}
 
 	candidates := []string{
-		"enodia.settings.yaml",
-		".enodia.settings.yaml",
+		"enodia.settings.yaml", "enodia.settings.yml",
+		".enodia.settings.yaml", ".enodia.settings.yml",
 	}
+
+	var dirs []string
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		candidates = append(candidates, filepath.Join(xdg, "enodia", candidateName))
+		dirs = append(dirs, filepath.Join(xdg, "enodia"))
 	} else if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, ".config", "enodia", candidateName))
+		dirs = append(dirs, filepath.Join(home, ".config", "enodia"))
 	}
-	candidates = append(candidates, filepath.Join("/etc", "enodia", candidateName))
+	dirs = append(dirs, filepath.Join("/etc", "enodia"))
+
+	for _, dir := range dirs {
+		for _, name := range candidateNames {
+			candidates = append(candidates, filepath.Join(dir, name))
+		}
+	}
 
 	for _, c := range candidates {
 		if fileExists(c) {

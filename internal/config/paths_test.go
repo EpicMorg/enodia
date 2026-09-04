@@ -160,6 +160,75 @@ func TestLocatePlainEnodiaYAMLBeatsDotfile(t *testing.T) {
 	}
 }
 
+func TestLocateFindsCwdEnodiaYML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "enodia.yml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "enodia.yml" {
+		t.Fatalf("got %q, want %q", got, "enodia.yml")
+	}
+}
+
+func TestLocateYAMLBeatsYMLAtSameLocation(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "enodia.yaml"), "schemaVersion: 1\n")
+	writeFile(t, filepath.Join(dir, "enodia.yml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "enodia.yaml" {
+		t.Fatalf("got %q, want %q (.yaml should win over .yml at the same location)", got, "enodia.yaml")
+	}
+}
+
+func TestLocateYMLBeatsYAMLAtAWorseLocation(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "enodia.yml"), "schemaVersion: 1\n# cwd .yml\n")
+
+	xdg := t.TempDir()
+	writeFile(t, filepath.Join(xdg, "enodia", "enodia.yaml"), "schemaVersion: 1\n# xdg .yaml\n")
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "enodia.yml" {
+		t.Fatalf("got %q, want %q (location beats extension: cwd .yml should still beat XDG .yaml)", got, "enodia.yml")
+	}
+}
+
+func TestLocateFindsXDGConfigHomeYML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	xdg := t.TempDir()
+	want := filepath.Join(xdg, "enodia", "enodia.yml")
+	writeFile(t, want, "schemaVersion: 1\n")
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
 func TestLocateFindsXDGConfigHome(t *testing.T) {
 	clearSearchEnv(t)
 	dir := t.TempDir()
