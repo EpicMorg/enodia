@@ -36,6 +36,7 @@ var builtin = []Probe{
 	teamcityProbe{},
 	testrailProbe{},
 	vaultProbe{},
+	vcenterProbe{},
 }
 
 var byProduct = func() map[string]Probe {
