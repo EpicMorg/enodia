@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<applinks-manifest>
+<manifest>
     <id>4c1e5a90-0000-0000-0000-0b1c2d3e4f5a</id>
     <name>Bitbucket</name>
     <typeId>stash</typeId>
     <version>8.19.4</version>
     <buildNumber>8019004</buildNumber>
-</applinks-manifest>
+</manifest>
