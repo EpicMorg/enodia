@@ -67,6 +67,12 @@ jira-main    jira     behind  active     newer_lts  warn      -
 gitlab-main  gitlab   behind  eol        newer      fail      -
 ```
 
+Save this as `enodia.yaml` (or `enodia.yml` — both work; `.yaml` wins if both
+exist in the same place) in the current directory, `$XDG_CONFIG_HOME/enodia/`,
+or `/etc/enodia/`. `--config <path>` or `$ENODIA_CONFIG` point at an exact
+file instead, and a typo there is always an error, never a silent fall
+through to some other config with different credentials.
+
 ## Why not something else
 
 | Tool | Tracks upstream releases | Knows what you deployed | Lifecycle dates |
@@ -144,12 +150,53 @@ polls your entire fleet on every click is a self-inflicted denial of service.
 Collection runs on a schedule; the page shows the latest snapshot and states
 plainly when it was taken.
 
-An optional `settings.yaml` (same search path as `enodia.yaml`, but never an
-error if it's missing) holds personal display defaults: which table view
-`check`/`export` use when `--view` isn't passed, and whether the HTML export
-stays the default fully offline single file or pulls Bootstrap and a
-Bootswatch theme from a CDN (`html.assets: cdn`, `html.theme: <name>`) — see
-`docs/DECISIONS.md` D19.
+An optional `settings.yaml` (or `.yml`; same search path and naming rules as
+`enodia.yaml` above, but a missing settings file is never an error — every
+field just falls back to its built-in default) holds personal display
+defaults: which table view `check`/`export` use when `--view` isn't passed,
+and how `export --format html` renders. For example:
+
+```yaml
+schemaVersion: 1
+
+render:
+  # compact (default) | lifecycle | drift | fleet
+  default_view: fleet
+
+html:
+  # inline (default, fully offline) | cdn (loads Bootstrap/Bootswatch)
+  assets: cdn
+
+  # none (no stylesheet at all) | default (plain Bootstrap) | any of
+  # Bootswatch's 26 real themes: brite, cerulean, cosmo, cyborg, darkly,
+  # flatly, journal, litera, lumen, lux, materia, minty, morph, pulse,
+  # quartz, sandstone, simplex, sketchy, slate, solar, spacelab,
+  # superhero, united, vapor, yeti, zephyr
+  theme: lumen
+
+  # auto (default: races jsdelivr and cdnjs, uses whichever answers
+  # first) | jsdelivr | cdnjs
+  cdn: auto
+
+  # optional: restrict the export to one view instead of all four
+  # view: fleet
+```
+
+Every `html.*` field here only matters for `export --format html`; the
+default `enodia check` table is unaffected by any of them except
+`render.default_view`. See `docs/DECISIONS.md` D19 for the full reasoning,
+including why a corrupted or unrecognised theme saved in a viewer's browser
+resets to *this* file's `html.theme`, not to some hardcoded name.
+
+## Third-party assets
+
+`html.assets: cdn` loads Bootstrap and, unless `html.theme: none`, a
+Bootswatch theme of it — both MIT licensed — from jsdelivr or cdnjs at the
+moment someone opens the report in a browser. Neither is bundled into this
+repository or into any release artifact; every CDN-mode report credits both
+by name with a link to their license in its own footer. The default
+`html.assets: inline` mode loads nothing external at all — see "Reporting"
+above.
 
 ## Security
 

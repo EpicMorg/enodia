@@ -538,3 +538,24 @@ disabled, always gets jsdelivr's URL — racing only ever upgrades the
 stylesheet after that initial render, it never blocks or changes it. This
 is a `settings.yaml`-only knob, same as assets/theme: a once-per-operator
 default, not a per-export flag.
+
+**Also added:** every report (inline and CDN alike) now ends with a
+`<footer>` crediting the project and linking back to
+`github.com/EpicMorg/enodia`; CDN-mode reports add a second line crediting
+Bootstrap and Bootswatch by name with a link to each and a note that both
+are MIT licensed — this repository never bundles their code (it is only
+ever loaded from a CDN, at view time, by whoever opens the report), so this
+footer line is the actual point of compliance/courtesy, not the license
+files of a dependency that isn't vendored. `ThemeNone` skips this credit
+line too, matching the internet-access warning it already skips: neither
+Bootstrap nor Bootswatch is loaded in that mode, so crediting them would be
+false. See README.md's "Third-party assets" for the same reasoning aimed
+at a human reader rather than at this file's usual future-maintainer
+audience.
+
+The CDN warning alert also became `alert-dismissible` with a working close
+button, deliberately without pulling in `bootstrap.bundle.min.js`:
+Bootstrap's own Alert component needs that whole JS bundle to dismiss
+itself, and the four-line vanilla-JS click handler already living in this
+report's one `<script>` tag (see `cdnModeScript`) does the same thing
+without adding a second CDN fetch just for one button.
