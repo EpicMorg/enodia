@@ -12,6 +12,13 @@ project_name: enodia
 before:
   hooks:
     - go mod tidy
+    # Bakes an icon + version resource into the windows/amd64 build (see
+    # Makefile's windows-resources and build/windows/). Skips silently if
+    # mingw-w64 isn't installed on the runner — see release.yml — rather
+    # than failing every platform's release over a Windows-only extra.
+    # windows/arm64 below has no equivalent: Debian's mingw-w64 ships no
+    # aarch64-w64-mingw32-windres, only i686/x86_64.
+    - sh -c 'make windows-resources || true'
 
 builds:
   - id: enodia
