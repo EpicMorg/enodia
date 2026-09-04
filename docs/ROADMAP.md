@@ -36,6 +36,19 @@ Not dates. Order of work, and what each step unblocks.
   subsystem kept intact (no `-H=windowsgui` — that's for GUI apps, and
   would hide this CLI's own stdout/stderr). windows/arm64 has no
   equivalent yet — Debian's mingw-w64 ships no aarch64-w64-mingw32-windres
+- `make dist` — `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`,
+  `windows/{amd64,arm64}`, same `-ldflags` as `make enodia`, windows/amd64
+  picking up the icon/version resource via `windows-resources`. Verified:
+  all six binaries have the right file type (ELF/Mach-O/PE32+), the
+  windows/amd64 `.exe` carries the resource and windows/arm64 correctly
+  doesn't. macOS ships unsigned — no Apple Developer Program membership
+  needed for this; `.goreleaser.yaml` already builds darwin the same way,
+  and the project's existing cosign signature over `checksums.txt` (D17)
+  already gives independent supply-chain verification for every platform,
+  Apple-signed or not. A first Gatekeeper launch will still warn
+  "unidentified developer" (routine for curl/browser-downloaded CLI tools,
+  cleared via `xattr -d com.apple.quarantine` or right-click → Open) — not
+  something to design around
 - CVE correlation via OSV.dev — investigated twice, deferred both times;
   see DECISIONS.md D18
 - Tests on recorded fixtures, offline, `-race` clean; every new probe
@@ -79,20 +92,20 @@ display prefs are per-operator).
   longer names a real Bootswatch theme, it resets to "Default" (never the
   settings-baked value, and never an error) exactly as asked
 
-## Then — packaging: multiplatform builds
-
-- `make dist`: cross-compile `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`,
-  `windows/{amd64,arm64}` with the same `-ldflags` as `make enodia`. No
-  CGO anywhere in the tree, so this is a plain `GOOS`/`GOARCH` matrix loop
-- Treat this as the pre-goreleaser stopgap, not a permanent parallel path —
-  `.goreleaser.yaml` already owns cross-platform release artifacts plus
-  checksums/signing (D17); `make dist` should stay a thin dev convenience
-  that goreleaser's config can absorb later rather than diverge from
-
 ## Later
 
-- windows/arm64 resource embedding — needs llvm-mingw (or another
-  aarch64-capable resource compiler) in place of mingw-w64; not evaluated
+- CI: build inside the user's own `epicmorg/debian:trixie-develop` image
+  (already carries Go + mingw-w64) instead of `apt-get install mingw-w64`
+  in release.yml. Scope still open — pending decision is whether this
+  replaces only the windows-resources step (a plain `docker run` before
+  `goreleaser-action`, no risk to the existing native `go build`/docker
+  buildx/cosign steps) or the whole release job runs inside the image
+  (needs docker-in-docker for buildx/push and confirmation cosign's OIDC
+  flow still works from inside a container) — explicitly deferred, not
+  decided
+- windows/arm64 resource embedding — blocked on the same image gaining
+  llvm-mingw (aarch64-capable; Debian's mingw-w64 package isn't), which
+  the user plans to add to `epicmorg/debian:trixie-develop` later
 - Revisit CVE correlation via OSV.dev if a workable data source appears —
   see DECISIONS.md D18 for exactly what was tried and why it's closed, not
   just deferred

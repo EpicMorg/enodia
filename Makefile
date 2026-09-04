@@ -17,7 +17,10 @@ RES_PKG       := cmd/enodia
 VERSION_CSV := $(shell echo $(VERSION) | sed -n 's/^v\?\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\).*/\1,\2,\3,0/p')
 VERSION_CSV := $(if $(VERSION_CSV),$(VERSION_CSV),0,0,0,0)
 
-.PHONY: all build enodia windows-resources windows-resources-clean windows-exe vet test fmt fmt-check lint check tidy clean
+DIST_DIR     := dist
+DIST_TARGETS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
+
+.PHONY: all build enodia windows-resources windows-resources-clean windows-exe dist vet test fmt fmt-check lint check tidy clean
 
 all: check
 
@@ -59,7 +62,25 @@ windows-resources-clean:
 # CLI tool's stdout/stderr invisible — enodia must keep the console
 # subsystem.
 windows-exe: windows-resources
-	GOOS=windows GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o enodia_windows_amd64.exe ./cmd/enodia
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o enodia_windows_amd64.exe ./cmd/enodia
+	$(MAKE) windows-resources-clean
+
+# Dev stopgap ahead of goreleaser (ROADMAP.md, "Then — packaging:
+# multiplatform builds"): the same six targets .goreleaser.yaml releases,
+# built locally without needing a tag or CI. No CGO anywhere in this tree,
+# so this is a plain GOOS/GOARCH matrix loop — nothing here should diverge
+# from what goreleaser already does; if it needs to grow, grow that config
+# instead. windows/amd64 gets the icon/version resource via
+# windows-resources; windows/arm64 does not (see that target's comment).
+dist: windows-resources
+	@mkdir -p $(DIST_DIR)
+	@for t in $(DIST_TARGETS); do \
+		os=$${t%/*}; arch=$${t#*/}; \
+		ext=""; [ "$$os" = "windows" ] && ext=".exe"; \
+		out=$(DIST_DIR)/enodia_$${os}_$${arch}$$ext; \
+		echo "  GOOS=$$os GOARCH=$$arch -> $$out"; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "$(LDFLAGS)" -o $$out ./cmd/enodia || exit 1; \
+	done
 	$(MAKE) windows-resources-clean
 
 vet:
