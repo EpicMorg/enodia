@@ -77,6 +77,37 @@ checksum:
   name_template: "checksums.txt"
   algorithm: sha256
 
+# .deb/.rpm for linux/amd64+arm64 (the "enodia" build only — .deb/.rpm are
+# meaningless for darwin/windows, and the separate windows-386 build has
+# nothing to do with either format). nfpm is a pure-Go package builder, not
+# a wrapper around dpkg-deb/rpmbuild, so this needs nothing extra installed
+# on the runner — goreleaser links it in directly.
+nfpms:
+  - id: enodia
+    ids:
+      - enodia
+    package_name: enodia
+    file_name_template: "enodia_{{ .Os }}_{{ .Arch }}"
+    vendor: EpicMorg
+    homepage: https://github.com/EpicMorg/enodia
+    maintainer: "EpicMorg <developer@epicm.org>"
+    description: Service inventory and lifecycle (EOL) monitoring
+    license: AGPL-3.0-or-later
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      # An empty, correctly-permissioned directory for enodia.yaml/
+      # settings.yaml/credentials.yaml — the package never writes a config
+      # into it: a missing enodia.yaml is meant to be a loud error (see
+      # internal/config.Locate), not something papered over with a sample
+      # file nobody asked for.
+      - dst: /etc/enodia
+        type: dir
+        file_info:
+          mode: 0755
+
 # Cosign keyless signing (Sigstore): the CI job's GitHub OIDC identity IS the
 # signing key, so there is no private key to generate, store as a secret, or
 # ever leak. Anyone can verify the binary was built by this repo's release

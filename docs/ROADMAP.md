@@ -26,6 +26,22 @@ Not dates. Order of work, and what each step unblocks.
   Prometheus textfile, single-file HTML
 - Packaging — `.goreleaser.yaml`, `make enodia` with version/commit/date
   baked in via `-ldflags`
+- `.deb`/`.rpm` packages (linux/amd64+arm64 only — meaningless for darwin/
+  windows) via `.goreleaser.yaml`'s `nfpms:`. nfpm is a pure-Go package
+  builder, not a wrapper around `dpkg-deb`/`rpmbuild`, so nothing extra
+  needs installing anywhere this runs. Binary at `/usr/bin/enodia`; an
+  empty, correctly-permissioned `/etc/enodia/` is created for
+  `enodia.yaml`/`settings.yaml`/`credentials.yaml`, but the package never
+  writes a config into it — a missing `enodia.yaml` staying a loud error
+  (`internal/config.Locate`) matters more than an out-of-the-box "just
+  works" that could paper over the wrong file being picked up. Verified
+  with a real snapshot build: `dpkg-deb -c`/`rpm2cpio | cpio -tv` both show
+  exactly those two paths with the right permissions, and `dist/
+  artifacts.json` tags them `"Linux Package"` — the same artifact class as
+  archives/checksums, so they're published to the GitHub Release
+  automatically, no separate upload config needed. `develop.yml`/`pr.yml`
+  gained four more `actions/upload-artifact` steps (amd64/arm64 × deb/rpm)
+  for the same reason every other platform already gets its own artifact
 - Windows resource embedding — `build/windows/` (icon, version-info `.rc`
   template, manifest) compiled by `make windows-resources`/`windows-exe`
   into `cmd/enodia/resource_windows_{amd64,386,arm64}.syso`. amd64/386 use
