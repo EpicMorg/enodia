@@ -349,6 +349,58 @@ name will change; the config will need a rename (not a redesign) when
 goreleaser v3 ships. The GitHub Action rebuilds enodia from source on every
 invocation rather than reusing a published image.
 
+**Revisited:** `release.yml`'s job now runs inside the user's own
+`epicmorg/debian:trixie-develop` image via `jobs.<id>.container:`, not bare
+`ubuntu-latest` with `apt-get install mingw-w64`. That image already
+carries Go, mingw-w64 (windows/amd64 and windows/386's resource icons —
+see ROADMAP.md's Windows resource embedding entry), and llvm-mingw
+(windows/arm64's, which Debian's own mingw-w64 package cannot produce at
+all), so this is what actually gets real tagged releases the arm64 icon,
+not just local/manual runs. It is a sibling-container setup, not
+docker-in-docker: the job's container bind-mounts the runner's existing
+`/var/run/docker.sock` and talks to it directly, the same daemon the
+runner itself would have used — confirmed live, no `--privileged` needed,
+because the image already runs as root by default. The image ships no
+`docker` CLI or buildx plugin at all, so those get `apt-get install`ed as
+an explicit step; everything else (`docker/setup-qemu-action`,
+`setup-buildx-action`, `sigstore/cosign-installer`, `docker/login-action`,
+`goreleaser-action`) is unchanged, since JS actions running inside a
+`container:` job is itself a well-supported, ordinary GitHub Actions
+feature, not something specific to this setup.
+
+Release now fires only for a tag actually reachable from `origin/master`
+(`git merge-base --is-ancestor`), not merely one shaped like a release tag
+pushed from anywhere — the `on.push.tags` glob alone can express the
+tag's shape but not where it came from.
+
+Tags became `MAJOR.MINOR.PATCH+BUILD` with no `v` prefix (e.g. `1.2.3+4`),
+not the originally-requested `MAJOR.MINOR.PATCH.BUILD`: confirmed live
+that goreleaser hard-fails release ("invalid semantic version") on a
+literal four-dot tag unless `--skip=validate` is passed — and that flag
+also disables goreleaser's dirty-worktree check, which is not something to
+run permanently in a release pipeline just to tolerate one tag's shape.
+`+BUILD` is valid semver build metadata and parses cleanly with no skip
+flags at all; `.Version` renders as the full `1.2.3+4` string, which
+Makefile's `VERSION_CSV` now parses into all four FILEVERSION components
+(a three-part tag, or none at all, still falls back the way it always
+did). The one place this "+" needed handling rather than just working: an
+OCI/Docker tag reference flatly disallows the character (confirmed:
+`docker tag foo:1.2.3+4` — "invalid reference format"), so
+`dockers_v2.tags` renders it through goreleaser's `replace` template
+function first; the `org.opencontainers.image.version` annotation keeps
+the raw `+4` since annotations carry no such restriction and losing it
+there would be a pointless loss of information.
+
+**Verified, and what wasn't:** the docker-socket mount, installing
+`docker.io`/`docker-buildx` inside the image, goreleaser accepting
+`1.2.3+4` tags (both with and without a `v` prefix) with no skip flags,
+`VERSION_CSV`'s four-part extraction, and the `replace` template function
+itself (via a real local archive-name build) were all exercised directly.
+An actual push to `ghcr.io/epicmorg/enodia` or a real GitHub Release
+creation were not — reproducing those locally needs real credentials
+against the project's live infrastructure, which is not something to fake
+one's way into just to finish testing a workflow file.
+
 ---
 
 ## D18 — CVE correlation via OSV.dev is deferred

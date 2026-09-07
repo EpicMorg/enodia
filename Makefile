@@ -26,11 +26,20 @@ WINDRES_ARM64 ?= $(if $(LLVM_MINGW_HOST_DIR),$(LLVM_MINGW_HOST_DIR)/bin/aarch64-
 RES_SRC := build/windows
 RES_PKG := cmd/enodia
 
-# Best-effort FILEVERSION/PRODUCTVERSION quad from VERSION (e.g.
-# "v1.2.3-4-gabc123" -> "1,2,3,0"). Anything that isn't vMAJOR.MINOR.PATCH
-# (a bare "dev", a detached commit) falls back to 0,0,0,0 — the embedded
-# resource is metadata, not something worth failing a build over.
-VERSION_CSV := $(shell echo $(VERSION) | sed -n 's/^v\?\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\).*/\1,\2,\3,0/p')
+# Best-effort FILEVERSION/PRODUCTVERSION quad from VERSION. Release tags
+# are MAJOR.MINOR.PATCH+BUILD (no "v", "+" instead of a fourth dot —
+# BUILD.PATCH.MAJOR.MINOR would otherwise not be valid semver, which
+# goreleaser requires: confirmed live that it hard-fails release on a
+# literal "X.Y.Z.B" tag, "invalid semantic version", while "X.Y.Z+B"
+# parses cleanly with no --skip=validate needed). Tries the four-part form
+# first (e.g. "1.2.3+4-2-gabc123" -> "1,2,3,4", git-describe's own
+# "-N-gHASH" suffix past an exact tag ignored by the trailing .*), then
+# falls back to MAJOR.MINOR.PATCH with a zero fourth part (an older
+# three-part tag, or one with a "v" prefix), then to 0,0,0,0 for anything
+# else (a bare "dev", a detached commit) — the embedded resource is
+# metadata, not something worth failing a build over.
+VERSION_CSV := $(shell echo $(VERSION) | sed -n 's/^v\?\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\)+\([0-9]\+\).*/\1,\2,\3,\4/p')
+VERSION_CSV := $(if $(VERSION_CSV),$(VERSION_CSV),$(shell echo $(VERSION) | sed -n 's/^v\?\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\).*/\1,\2,\3,0/p'))
 VERSION_CSV := $(if $(VERSION_CSV),$(VERSION_CSV),0,0,0,0)
 
 DIST_DIR     := dist
