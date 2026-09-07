@@ -107,6 +107,17 @@ Not dates. Order of work, and what each step unblocks.
   `/releases/latest/download/` alias `build/docker/Dockerfile` already
   uses — one fewer API call, no rate-limit exposure, and no `curl`+`grep`+
   `sed` chain to keep in sync with GitHub's JSON shape
+- Fixed: `install.ps1` persisted the install dir to the `User` PATH via
+  `[Environment]::SetEnvironmentVariable(..., "User")`, but that only
+  writes the registry (`HKCU\Environment`) — a shell already running when
+  the installer is invoked via `irm ... | iex` never re-reads it, so
+  `enodia` stayed "not recognized" in that same window even though the
+  install had just "succeeded". Now also patches the invoking process's
+  own `$env:Path` directly, so the binary is runnable immediately, no new
+  terminal required — the registry write still happens too, for every
+  shell opened afterward. Also fixed a minor rough edge while touching
+  this: a brand new Windows account with no `User` PATH set yet produced
+  a leading empty entry (`;C:\...\enodia`) in the persisted value
 - `build/docker/Dockerfile` — a second, alternate runtime image on the
   user's own `ghcr.io/epicmorg/debian:trixie-light` base, installing the
   released `.deb` via `apt` instead of copying a raw binary into `scratch`

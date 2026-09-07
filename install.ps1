@@ -68,10 +68,21 @@ try {
 	Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# Persist to the registry (HKCU\Environment) so every future shell has it...
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if (($userPath -split ";") -notcontains $installDir) {
-	Write-Host "install.ps1: adding $installDir to your user PATH (restart your shell to pick it up)"
-	[Environment]::SetEnvironmentVariable("Path", "$userPath;$installDir", "User")
+if ((($userPath -split ";") | Where-Object { $_ }) -notcontains $installDir) {
+	Write-Host "install.ps1: adding $installDir to your user PATH"
+	$newUserPath = if ($userPath) { "$userPath;$installDir" } else { $installDir }
+	[Environment]::SetEnvironmentVariable("Path", $newUserPath, "User")
+}
+
+# ...and also patch this process's own $env:Path: SetEnvironmentVariable above
+# only changes the registry, which an already-running shell (this one, if
+# invoked via "irm ... | iex") never re-reads — without this, `enodia` stays
+# "not recognized" until a brand new terminal is opened, even though the
+# install just "succeeded".
+if ((($env:Path -split ";") | Where-Object { $_ }) -notcontains $installDir) {
+	$env:Path = "$env:Path;$installDir"
 }
 
 $installed = & (Join-Path $installDir "enodia.exe") version
