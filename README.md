@@ -1,23 +1,3 @@
-
-<div align="center">
-
-![Enodia Logo](.github/img/512x256.png?raw=true "Enodia Logo")
-
-**Know what you are running, and how long it has left.**
-
- [![Activity](https://img.shields.io/github/commit-activity/m/EpicMorg/enodia?label=commits&style=flat-square)](https://github.com/EpicMorg/enodia/commits) [![GitHub issues](https://img.shields.io/github/issues/EpicMorg/enodia.svg?style=popout-square)](https://github.com/EpicMorg/enodia/issues) [![GitHub forks](https://img.shields.io/github/forks/EpicMorg/enodia.svg?style=popout-square)](https://github.com/EpicMorg/enodia/network) [![GitHub stars](https://img.shields.io/github/stars/EpicMorg/enodia.svg?style=popout-square)](https://github.com/EpicMorg/enodia/stargazers)  [![Size](https://img.shields.io/github/repo-size/EpicMorg/enodia?label=size&style=flat-square)](https://github.com/EpicMorg/enodia/archive/master.zip) [![Release](https://img.shields.io/github/v/release/EpicMorg/enodia?style=flat-square)](https://github.com/EpicMorg/enodia/releases) [![License: AGPL v3](https://img.shields.io/github/license/EpicMorg/enodia?style=flat-square&color=fedcba
-)](LICENSE)
-
-</div>
-
-> **Status: pre-1.0.** The full pipeline (collect → inventory → evaluate →
-> render), 29 probes, `settings.yaml`, and the release/packaging pipeline are
-> all implemented and used against real production infrastructure — but no
-> tagged release exists yet, and the config schema may still change before
-> one does.
-
----
-
 ## What it does
 
 ```
@@ -41,6 +21,23 @@ already dead, what is dying, and where your fleet has drifted apart.
 
 You describe your services once. Enodia handles the rest.
 ```
+
+<div align="center">
+
+**Know what you are running, and how long it has left.**
+
+ [![Activity](https://img.shields.io/github/commit-activity/m/EpicMorg/enodia?label=commits&style=flat-square)](https://github.com/EpicMorg/enodia/commits) [![GitHub issues](https://img.shields.io/github/issues/EpicMorg/enodia.svg?style=popout-square)](https://github.com/EpicMorg/enodia/issues) [![GitHub forks](https://img.shields.io/github/forks/EpicMorg/enodia.svg?style=popout-square)](https://github.com/EpicMorg/enodia/network) [![GitHub stars](https://img.shields.io/github/stars/EpicMorg/enodia.svg?style=popout-square)](https://github.com/EpicMorg/enodia/stargazers)  [![Size](https://img.shields.io/github/repo-size/EpicMorg/enodia?label=size&style=flat-square)](https://github.com/EpicMorg/enodia/archive/master.zip) [![Release](https://img.shields.io/github/v/release/EpicMorg/enodia?style=flat-square)](https://github.com/EpicMorg/enodia/releases) [![License: AGPL v3](https://img.shields.io/github/license/EpicMorg/enodia?style=flat-square&color=fedcba
+)](LICENSE)
+
+</div>
+
+> **Status: pre-1.0.** The full pipeline (collect → inventory → evaluate →
+> render), 29 probes, `settings.yaml`, and the release/packaging pipeline are
+> all implemented and used against real production infrastructure — but no
+> tagged release exists yet, and the config schema may still change before
+> one does.
+
+---
 
 ## Example:
 
