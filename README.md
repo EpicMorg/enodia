@@ -10,8 +10,11 @@
 
 </div>
 
-> **Status: pre-alpha.** Architecture is settled, implementation is starting.
-> Nothing here is stable yet.
+> **Status: pre-1.0.** The full pipeline (collect → inventory → evaluate →
+> render), 29 probes, `settings.yaml`, and the release/packaging pipeline are
+> all implemented and used against real production infrastructure — but no
+> tagged release exists yet, and the config schema may still change before
+> one does.
 
 ---
 
@@ -122,9 +125,12 @@ information you actually wanted.
 Severity is computed on top, from policy you control. Export the facts and
 apply your own rules if ours do not fit.
 
-**Time is a parameter.** Every evaluation takes an `asOf` date, so
-`--as-of 2027-01-01` answers "what dies before next budget year" — and tests
-stay deterministic instead of rotting.
+**Time is a parameter.** Evaluation never calls the system clock itself — it
+always takes `asOf` explicitly, sourced from the inventory's own collection
+timestamp (`inventory.jsonl`'s `collectedAt`). Re-running `check --from` an
+old inventory evaluates it as of *when it was collected*, not today, so
+results and tests both stay deterministic instead of silently drifting with
+the calendar.
 
 **Probes are compiled in.** One product, one file, one entry in an explicit
 registry. Adding support means a new release, not a plugin ABI. For anything
@@ -187,6 +193,43 @@ default `enodia check` table is unaffected by any of them except
 `render.default_view`. See `docs/DECISIONS.md` D19 for the full reasoning,
 including why a corrupted or unrecognised theme saved in a viewer's browser
 resets to *this* file's `html.theme`, not to some hardcoded name.
+
+### The fleet view
+
+`--view fleet` (or the `settings.yaml` above, which sets it as the default)
+groups observations by product, installed version, and reachability instead
+of one row per target — the offline-only view: it needs nothing but the
+inventory itself, no lifecycle resolver, no internet access at all. Two
+failed instances of the same product with different failure kinds (auth vs.
+unreachable) get their own rows, not a shared "(unknown)" bucket:
+
+```console
+$ enodia check --view fleet --from inventory.jsonl
+PRODUCT  VERSION    STATUS       COUNT  INSTANCES
+gitlab   (unknown)  auth         1      gitlab-2
+gitlab   18.2.1     ok           1      gitlab-1
+jira     (unknown)  unreachable  1      jira-staging
+jira     10.3.1     ok           1      jira-3
+jira     10.3.2     ok           2      jira-1, jira-2
+```
+
+`export --format html` with `html.assets: cdn` renders the same rows with a
+Bootstrap contextual class per row — red for a failed instance, green for a
+reachable one, in whatever Bootswatch theme is configured, not a hardcoded
+color enodia has to maintain per theme:
+
+```html
+<table class="table table-striped table-hover table-sm align-middle">
+<thead><tr><th>PRODUCT</th><th>VERSION</th><th>STATUS</th><th>COUNT</th><th>INSTANCES</th></tr></thead>
+<tbody>
+<tr class="table-danger"><td>gitlab</td><td>(unknown)</td><td>auth</td><td>1</td><td>gitlab-2</td></tr>
+<tr class="table-success"><td>gitlab</td><td>18.2.1</td><td>ok</td><td>1</td><td>gitlab-1</td></tr>
+<tr class="table-danger"><td>jira</td><td>(unknown)</td><td>unreachable</td><td>1</td><td>jira-staging</td></tr>
+<tr class="table-success"><td>jira</td><td>10.3.1</td><td>ok</td><td>1</td><td>jira-3</td></tr>
+<tr class="table-success"><td>jira</td><td>10.3.2</td><td>ok</td><td>2</td><td>jira-1, jira-2</td></tr>
+</tbody>
+</table>
+```
 
 ## Third-party assets
 
