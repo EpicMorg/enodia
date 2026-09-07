@@ -96,8 +96,13 @@ signs:
 dockers_v2:
   - images:
       - ghcr.io/epicmorg/enodia
+    # .Version is MAJOR.MINOR.PATCH+BUILD (release.yml's tag scheme) — "+"
+    # is not a legal character in a Docker/OCI tag at all (confirmed live:
+    # `docker tag foo:1.2.3+4` is flatly refused, "invalid reference
+    # format"), so it must be replaced, not merely hoped to work, before
+    # it ever reaches a tags: entry here.
     tags:
-      - "{{ .Version }}"
+      - '{{ replace .Version "+" "-" }}'
       - "{{ if not .Prerelease }}{{ .Major }}{{ end }}"
       - "{{ if not .Prerelease }}latest{{ end }}"
     platforms:
