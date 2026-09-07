@@ -42,6 +42,23 @@ Not dates. Order of work, and what each step unblocks.
   automatically, no separate upload config needed. `develop.yml`/`pr.yml`
   gained four more `actions/upload-artifact` steps (amd64/arm64 × deb/rpm)
   for the same reason every other platform already gets its own artifact
+- `build/docker/Dockerfile` — a second, alternate runtime image on the
+  user's own `ghcr.io/epicmorg/debian:trixie-light` base, installing the
+  released `.deb` via `apt` instead of copying a raw binary into `scratch`
+  the way the repo-root `Dockerfile` (goreleaser's own `ghcr.io/epicmorg/
+  enodia` image) does — a full Debian userland on purpose, for whatever
+  the house image already brings. `/etc/enodia` and `/opt/enodia` (the
+  latter for exported reports/inventory, not created by the package
+  itself) are both declared as volumes. `ENODIA_VERSION=latest` resolves
+  through GitHub's own `/releases/latest/download/` alias, needing no
+  version string at all; an exact tag can be passed instead. Verified as
+  much as this environment allows: the `apt-get install ./local.deb` step
+  itself against a real snapshot-built package inside the real base image
+  (binary and both directories landed correctly, `enodia --help` ran), and
+  the URL-construction shell logic standalone for both the `latest` and
+  pinned-version cases — not the actual `curl` download from a live
+  release, since none exists yet and this environment's own build
+  sandbox can't reach a local test server to fake one convincingly
 - Windows resource embedding — `build/windows/` (icon, version-info `.rc`
   template, manifest) compiled by `make windows-resources`/`windows-exe`
   into `cmd/enodia/resource_windows_{amd64,386,arm64}.syso`. amd64/386 use
