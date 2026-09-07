@@ -269,6 +269,18 @@ Not dates. Order of work, and what each step unblocks.
   never a policy `Severity` (D7), even though it drives the same visual
   vocabulary. Inline mode ignores tones entirely (no Bootstrap loaded to
   give the classes meaning); `Table` (plain text) ignores them too.
+- Fixed: an unreachable target's `lifecycle`/`drift` rows read `ToneGood`
+  (green) even though every cell was a dash — `PatchUnknown`/
+  `LifecycleUnknown` both leave their axis's `Severity` at the zero value
+  (`SeverityNone`), which `severityTone`'s default case maps to green, the
+  same as an axis that was actually checked and found fine. `compact`
+  never showed this because `OverallSeverity()` also folds in
+  `ReasonSeverity` (`probe_failed` floors at `SeverityWarn`), but
+  `lifecycle`/`drift` deliberately tone by their own axis alone (see
+  above) and that axis has no signal at all when there's no data. Both
+  views now check for `PatchUnknown`/`LifecycleUnknown` specifically and
+  tone those `ToneInfo` (blue) instead — "no data" is a different color
+  from "checked, no issue", not a variant of good
 - Tests on recorded fixtures, offline, `-race` clean; every new probe
   live-verified against a real instance (Docker or the user's own
   production) before being written, not just against hand-built fixtures
