@@ -379,16 +379,23 @@ Not dates. Order of work, and what each step unblocks.
   check `--format` itself already goes through, no second definition of
   "valid" to keep in sync
 - `install.sh` now falls back to `$PREFIX/bin` when the target install
-  directory isn't writable and there's no `sudo` to retry with — Termux
-  (and other sandboxed userland-prefix environments) ship neither a
-  writable `/usr/local/bin` nor a `sudo` binary at all, so the script
-  used to hard-fail trying to exec a command that doesn't exist. Kept
-  generic on purpose, no name-based "is this Termux" branch: `$PREFIX` is
-  that environment's own "where my stuff goes" variable, and its
-  presence plus a missing `sudo` already describes the situation without
-  guessing an OS by name. `uname`-based OS/arch detection is untouched —
-  Termux reports `Linux`/`aarch64` like any other Android-on-ARM device,
-  so only the install-directory fallback needed to change
+  directory isn't writable and there's no *working* `sudo` to retry
+  with — Termux (and other sandboxed userland-prefix environments) ship
+  neither a writable `/usr/local/bin` nor a real `sudo`, so the script
+  used to hard-fail. Kept generic on purpose, no name-based "is this
+  Termux" branch: `$PREFIX` is that environment's own "where my stuff
+  goes" variable. `uname`-based OS/arch detection is untouched — Termux
+  reports `Linux`/`aarch64` like any other Android-on-ARM device.
+  **Fixed on first real-device use via `get.enodia.sh/unix`:** the
+  original check was `command -v sudo` — a present binary, not a working
+  one. Termux's own optional `sudo` *package* sits on `PATH` and fails
+  outright on an unrooted device (`No superuser binary detected. Are you
+  rooted?`, exit non-zero), so the script picked the "retry with sudo"
+  branch anyway and then hard-failed on that error instead of ever
+  reaching the `$PREFIX/bin` fallback. Now actually runs `sudo install`
+  and only counts it as done if it exits 0; any other outcome — missing
+  entirely or present-but-unusable — falls through to `$PREFIX/bin` the
+  same way
 
 ## Later
 
