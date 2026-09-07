@@ -171,6 +171,19 @@ Not dates. Order of work, and what each step unblocks.
   local build+archive run) — not an actual push to `ghcr.io/epicmorg/enodia`
   or a real GitHub release, since faking that needs real credentials
   against their live infrastructure
+- CI: `develop.yml` (manual, `workflow_dispatch` only) and `pr.yml`
+  (automatic on `pull_request`) — the same `epicmorg/debian:trixie-develop`
+  container as `release.yml`, `goreleaser release --snapshot --clean
+  --skip=docker,sign` (no docker CLI needed at all here, since neither
+  ever touches GHCR or cosign), archives + `checksums.txt` uploaded as the
+  run's own artifacts via `actions/upload-artifact`. `develop.yml` is
+  deliberately never triggered by a push: pulling a ~5GB image on every
+  commit to `develop` would make ordinary iteration there unworkable;
+  `pr.yml` accepts that same cost automatically because a PR is a
+  deliberate review checkpoint, not routine commit-by-commit work.
+  Verified locally: the exact `goreleaser` invocation both workflows run
+  produces all 7 archives + `checksums.txt` with no snapshot-only skip
+  needed beyond `docker,sign`; both files pass `actionlint`
 - Revisit CVE correlation via OSV.dev if a workable data source appears —
   see DECISIONS.md D18 for exactly what was tried and why it's closed, not
   just deferred
