@@ -480,6 +480,28 @@ or a different data source entirely — NVD's CPE-based CVE API 2.0 covers
 commercial software like Atlassian's, at the cost of being a second,
 differently-shaped external dependency, not evaluated here.
 
+**Also considered and closed: GitHub Security Advisories (GHSA).** Checked
+live against the real API, not assumed. `GET /advisories?ecosystem=`
+accepts exactly: `rubygems, npm, pip, maven, nuget, composer, go, rust,
+erlang, actions, pub, other, swift` — language package-manager ecosystems
+only, the same category OSV already covers and that was never enodia's
+gap (enodia probes standalone server software, not libraries). There is
+no distro or generic-product ecosystem at all, not even one with OSV's
+epoch problem. Atlassian's CVE-2023-22515 (the same Confluence RCE used
+above) does exist in GHSA's index, but as `"type": "unreviewed"` with
+`"vulnerabilities": []` — an empty array, no structured affected-version
+range whatsoever, just the CVE text and a link to NVD. That is strictly
+less useful than OSV's own zero-results for Atlassian: it can confirm a
+CVE ID exists but can never answer "is this specific version affected,"
+which is the only question worth asking (D7: a fact enodia could act on,
+not a maybe). And on the open-source side it is worse, not equal: the
+exact Redis CVE (CVE-2024-31449) used above to demonstrate OSV's epoch
+bug is entirely absent from GHSA's index — zero results, not merely
+unmatchable. GHSA solves neither of D18's two original problems and adds
+no new capability enodia doesn't already get from OSV; there is no
+version of this worth revisiting without a genuinely different data
+source, per the "Cost accepted" paragraph above.
+
 ---
 
 ## D19 — Display settings are a separate file; HTML export stays offline by default
