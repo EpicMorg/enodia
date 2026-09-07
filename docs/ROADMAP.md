@@ -45,9 +45,9 @@ Not dates. Order of work, and what each step unblocks.
   has no such build target at all (`go tool dist list` omits it, and
   building one fails with "unsupported GOOS/GOARCH pair") — there is no
   binary of that shape to embed a resource into, independent of windres.
-  Not yet wired into CI (`.goreleaser.yaml`'s `before.hooks`/release.yml
-  still only install plain mingw-w64, so real releases get arm64 resources
-  only once the deferred CI-image decision below is made)
+  Wired into real releases too, not just local runs — see the CI entry
+  below: `release.yml`'s job now runs inside the same image, so tagged
+  releases get the arm64 icon automatically
 - `make dist` — `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`,
   `windows/{amd64,arm64,386}`, same `-ldflags` as `make enodia`, all three
   windows targets picking up the icon/version resource via
@@ -65,8 +65,6 @@ Not dates. Order of work, and what each step unblocks.
   "unidentified developer" (routine for curl/browser-downloaded CLI tools,
   cleared via `xattr -d com.apple.quarantine` or right-click → Open) — not
   something to design around
-- CVE correlation via OSV.dev — investigated twice, deferred both times;
-  see DECISIONS.md D18
 - `internal/settings` — `settings.yaml`, personal display defaults kept
   separate from `enodia.yaml` (DECISIONS.md D19). Same resolution pattern
   as config (`internal/config/paths.go`): `--settings`, `$ENODIA_SETTINGS`,
@@ -184,9 +182,12 @@ Not dates. Order of work, and what each step unblocks.
   Verified locally: the exact `goreleaser` invocation both workflows run
   produces all 7 archives + `checksums.txt` with no snapshot-only skip
   needed beyond `docker,sign`; both files pass `actionlint`
-- Revisit CVE correlation via OSV.dev if a workable data source appears —
-  see DECISIONS.md D18 for exactly what was tried and why it's closed, not
-  just deferred
+
+## Later
+
+- CVE correlation via OSV.dev — investigated twice, deferred both times;
+  revisit only if a workable data source appears — see DECISIONS.md D18
+  for exactly what was tried and why it's closed, not just deferred
 
 ## Deliberately not planned
 
