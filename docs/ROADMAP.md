@@ -34,7 +34,7 @@ Not dates. Order of work, and what each step unblocks.
   since Debian's mingw-w64 package ships none — discovered via
   `$LLVM_MINGW_DIR/llvm-mingw-*-ucrt-ubuntu-22.04-x86_64/bin/` (wildcarded
   because that path's own date stamp changes with every toolchain
-  refresh), which `epicmorg/debian:trixie-develop` sets. All three are
+  refresh), which `ghcr.io/epicmorg/debian:trixie-develop` sets. All three are
   checked independently; missing any one is a skip, never a failure for
   the others. Verified end-to-end against the real image (`docker run -v
   $PWD:/workspace ... make windows-resources` and a windows/arm64 build):
@@ -136,7 +136,7 @@ Not dates. Order of work, and what each step unblocks.
 - Tests on recorded fixtures, offline, `-race` clean; every new probe
   live-verified against a real instance (Docker or the user's own
   production) before being written, not just against hand-built fixtures
-- CI: `release.yml`'s job now runs inside `epicmorg/debian:trixie-develop`
+- CI: `release.yml`'s job now runs inside `ghcr.io/epicmorg/debian:trixie-develop`
   (`container:`, not a `docker run` step) — the whole point being that
   image already carries Go, mingw-w64, and llvm-mingw, so real tagged
   releases now get the windows/arm64 icon too, with nothing left to
@@ -170,7 +170,7 @@ Not dates. Order of work, and what each step unblocks.
   or a real GitHub release, since faking that needs real credentials
   against their live infrastructure
 - CI: `develop.yml` (manual, `workflow_dispatch` only) and `pr.yml`
-  (automatic on `pull_request`) — the same `epicmorg/debian:trixie-develop`
+  (automatic on `pull_request`) — the same `ghcr.io/epicmorg/debian:trixie-develop`
   container as `release.yml`, `goreleaser release --snapshot --clean
   --skip=docker,sign` (no docker CLI needed at all here, since neither
   ever touches GHCR or cosign), each of the 7 archives plus `checksums.txt`
