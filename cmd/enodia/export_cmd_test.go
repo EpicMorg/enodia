@@ -137,6 +137,67 @@ func TestRunExportCmdHTMLViewFlagRestrictsToOneSection(t *testing.T) {
 	}
 }
 
+// settings.yaml's export.default_format applies only when --format was not
+// passed on the command line; exportFormatFlag already carries cobra's own
+// "json" default at this point (set by init()'s StringVar), so this test
+// has to distinguish "user typed --format" from "flag left at its default"
+// the same way runExportCmd does: cmd.Flags().Changed("format") — mirrors
+// TestRunCheckCmdUsesSettingsDefaultViewWhenFlagNotPassed for --view.
+func TestRunExportCmdUsesSettingsDefaultFormatWhenFlagNotPassed(t *testing.T) {
+	dir := t.TempDir()
+	invPath := filepath.Join(dir, "inv.jsonl")
+	writeFile(t, invPath, `{"kind":"inventory","schemaVersion":1,"collectedAt":"2026-01-01T00:00:00Z","tool":"test"}
+{"kind":"observation","id":"x","product":"generic","version":"1.0","normalized":"1.0","collectedAt":"2026-01-01T00:00:00Z"}
+`)
+	withFakeResolver(t, fakeSource{})
+
+	prevFrom, prevOut := exportFromFlag, exportOutputFlag
+	exportFromFlag, exportOutputFlag = invPath, "-"
+	t.Cleanup(func() { exportFromFlag, exportOutputFlag = prevFrom, prevOut })
+
+	settingsPath := filepath.Join(dir, "settings.yaml")
+	writeFile(t, settingsPath, "schemaVersion: 1\nexport:\n  default_format: html\n")
+	withSettingsFlag(t, settingsPath)
+
+	cmd, stdout, _ := testCmd(t)
+	if err := runExportCmd(cmd, nil); err != nil {
+		t.Fatalf("runExportCmd: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "<!doctype html>") {
+		t.Fatalf("expected settings.yaml's export.default_format: html to apply, got:\n%s", stdout.String())
+	}
+}
+
+func TestRunExportCmdExplicitFormatFlagBeatsSettings(t *testing.T) {
+	dir := t.TempDir()
+	invPath := filepath.Join(dir, "inv.jsonl")
+	writeFile(t, invPath, `{"kind":"inventory","schemaVersion":1,"collectedAt":"2026-01-01T00:00:00Z","tool":"test"}
+{"kind":"observation","id":"x","product":"generic","version":"1.0","normalized":"1.0","collectedAt":"2026-01-01T00:00:00Z"}
+`)
+	withFakeResolver(t, fakeSource{})
+	setExportFlags(t, invPath, "json", "-")
+
+	settingsPath := filepath.Join(dir, "settings.yaml")
+	writeFile(t, settingsPath, "schemaVersion: 1\nexport:\n  default_format: html\n")
+	withSettingsFlag(t, settingsPath)
+
+	cmd, stdout, _ := testCmd(t)
+	cmd.Flags().String("format", "", "")
+	if err := cmd.Flags().Set("format", "json"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runExportCmd(cmd, nil); err != nil {
+		t.Fatalf("runExportCmd: %v", err)
+	}
+	var got render.Report
+	if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
+		t.Fatalf("expected explicit --format json to beat settings.yaml's default_format: html, got:\n%s", stdout.String())
+	}
+	if len(got.Assessments) != 1 {
+		t.Fatalf("got %+v", got)
+	}
+}
+
 func TestRunExportCmdUnsupportedFormatIsBadArgument(t *testing.T) {
 	setExportFlags(t, "", "yaml", "-")
 

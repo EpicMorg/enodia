@@ -41,6 +41,7 @@ type Settings struct {
 	SchemaVersion int            `yaml:"schemaVersion"`
 	Render        RenderSettings `yaml:"render,omitempty"`
 	HTML          HTMLSettings   `yaml:"html,omitempty"`
+	Export        ExportSettings `yaml:"export,omitempty"`
 
 	// path is where this was loaded from, kept only for error messages.
 	path string
@@ -53,6 +54,18 @@ type RenderSettings struct {
 	// on the command line. Empty means the built-in default (compact for
 	// check; all four sections for html export).
 	DefaultView string `yaml:"default_view,omitempty"`
+}
+
+// ExportSettings controls the `export` command itself, not one specific
+// output format.
+type ExportSettings struct {
+	// DefaultFormat is used by `export` whenever --format is not passed on
+	// the command line. Empty means the built-in default ("json"). Not
+	// enum-validated here for the same reason HTMLSettings' fields aren't
+	// (see below): an invalid value surfaces at export time, from the same
+	// `format %q is not supported` check --format itself already goes
+	// through, rather than a second definition of "valid" living here.
+	DefaultFormat string `yaml:"default_format,omitempty"`
 }
 
 // HTMLSettings controls `export --format html`. What Assets/View/Theme/CDN

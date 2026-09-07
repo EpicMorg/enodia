@@ -350,6 +350,19 @@ Not dates. Order of work, and what each step unblocks.
   `rel="apple-touch-icon"`) — that mode already needs internet access to
   render at all, so there's no offline guarantee to protect and no reason
   to bloat the page for an icon the browser can just fetch itself
+- `settings.yaml` gained `export.default_format`, used by `export`
+  whenever `--format` itself is not passed on the command line (built-in
+  default stays `json` either way) — `./enodia export > report.html`
+  previously always wrote JSON regardless of the file's name, since
+  nothing about `settings.yaml`'s `html.*` block was ever consulted
+  outside the `--format html` branch. Same precedence rule `check`'s
+  `render.default_view` already established: `cmd.Flags().Changed(
+  "format")`, not "is the value still the flag's own default", so an
+  explicit `--format json` still beats a `settings.yaml` that says
+  `html`. Not enum-validated in `internal/settings` — an unrecognised
+  value surfaces through the exact same `format %q is not supported`
+  check `--format` itself already goes through, no second definition of
+  "valid" to keep in sync
 
 ## Later
 
