@@ -160,6 +160,86 @@ func TestLocatePlainEnodiaYAMLBeatsDotfile(t *testing.T) {
 	}
 }
 
+func TestLocateFindsBareConfigYAML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "config.yaml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "config.yaml" {
+		t.Fatalf("got %q, want %q", got, "config.yaml")
+	}
+}
+
+func TestLocateFindsBareConfigYML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "config.yml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "config.yml" {
+		t.Fatalf("got %q, want %q", got, "config.yml")
+	}
+}
+
+func TestLocateFindsDotConfigYAML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, ".config.yaml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != ".config.yaml" {
+		t.Fatalf("got %q, want %q", got, ".config.yaml")
+	}
+}
+
+func TestLocateEnodiaYAMLBeatsBareConfigYAML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "enodia.yaml"), "schemaVersion: 1\n")
+	writeFile(t, filepath.Join(dir, "config.yaml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "enodia.yaml" {
+		t.Fatalf("got %q, want %q (enodia.yaml should win over bare config.yaml)", got, "enodia.yaml")
+	}
+}
+
+func TestLocateFindsXDGConfigHomeBareConfigYAML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	xdg := t.TempDir()
+	want := filepath.Join(xdg, "enodia", "config.yaml")
+	writeFile(t, want, "schemaVersion: 1\n")
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
 func TestLocateFindsCwdEnodiaYML(t *testing.T) {
 	clearSearchEnv(t)
 	dir := t.TempDir()
@@ -287,8 +367,10 @@ func TestLocateFallsBackToHomeConfigWhenXDGUnset(t *testing.T) {
 }
 
 func TestLocateNothingFoundIsErrNotFound(t *testing.T) {
-	if fileExists("/etc/enodia/enodia.yaml") {
-		t.Skip("this host actually has /etc/enodia/enodia.yaml; the empty-search case can't be tested here")
+	for _, p := range []string{"/etc/enodia/enodia.yaml", "/etc/enodia/config.yaml"} {
+		if fileExists(p) {
+			t.Skipf("this host actually has %s; the empty-search case can't be tested here", p)
+		}
 	}
 
 	clearSearchEnv(t)

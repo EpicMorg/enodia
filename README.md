@@ -70,11 +70,8 @@ jira-main    jira     behind  active     newer_lts  warn      -
 gitlab-main  gitlab   behind  eol        newer      fail      -
 ```
 
-Save this as `enodia.yaml` (or `enodia.yml` — both work; `.yaml` wins if both
-exist in the same place) in the current directory, `$XDG_CONFIG_HOME/enodia/`,
-or `/etc/enodia/`. `--config <path>` or `$ENODIA_CONFIG` point at an exact
-file instead, and a typo there is always an error, never a silent fall
-through to some other config with different credentials.
+Save this as `enodia.yaml` next to the binary — see "File locations" below
+for every name and directory enodia actually searches, and the exact order.
 
 ## Why not something else
 
@@ -136,6 +133,57 @@ the calendar.
 registry. Adding support means a new release, not a plugin ABI. For anything
 in-house, `product: generic` takes a parser spec straight from your config.
 
+## Views
+
+`check` and `export` both render one of four focuses, picked with `--view`
+(or `settings.yaml`'s `render.default_view` when the flag isn't passed —
+see "Reporting" below). Each view is a different slice of the same
+inventory + assessment data, not a different data source.
+
+**`compact`** (the default) — one row per target: the three axes, overall
+severity, and why, if anything needs attention. This is what plain
+`enodia check` shows, as in the example above.
+
+**`lifecycle`** — when each target's lifecycle actually ends:
+
+```console
+$ enodia check --from inventory.jsonl --view lifecycle
+ID           PRODUCT  LIFECYCLE  EOL         SUPPORT-ENDS  DAYS-TO-EOL
+jira-main    jira     active     2026-12-05  -             338
+gitlab-main  gitlab   eol        2025-01-16  2024-11-21    -350
+```
+
+**`drift`** — installed version against the latest release in the same
+cycle:
+
+```console
+$ enodia check --from inventory.jsonl --view drift
+ID           PRODUCT  CURRENT  LATEST   CYCLE  PATCH
+jira-main    jira     10.3.1   10.3.25  10.3   behind
+gitlab-main  gitlab   17.5.0   17.5.5   17.5   behind
+```
+
+**`fleet`** — version spread and reachability across every instance of a
+product, grouped instead of listed one row per target. The offline-only
+view: it needs nothing but the inventory itself, no lifecycle resolver, no
+internet access at all. Two failed instances of the same product with
+different failure kinds (auth vs. unreachable) get their own rows, not a
+shared `(unknown)` bucket:
+
+```console
+$ enodia check --from inventory.jsonl --view fleet
+PRODUCT  VERSION    STATUS       COUNT  INSTANCES
+gitlab   (unknown)  auth         1      gitlab-2
+gitlab   18.2.1     ok           1      gitlab-1
+jira     (unknown)  unreachable  1      jira-staging
+jira     10.3.1     ok           1      jira-3
+jira     10.3.2     ok           2      jira-1, jira-2
+```
+
+`export --format json`/`prometheus` ignore `--view` entirely — they always
+carry every observation and assessment; views only shape the table and the
+HTML report (see "Reporting").
+
 ## Installation
 
 Not published yet. When it is:
@@ -156,14 +204,11 @@ polls your entire fleet on every click is a self-inflicted denial of service.
 Collection runs on a schedule; the page shows the latest snapshot and states
 plainly when it was taken.
 
-An optional settings file holds personal display defaults: which table view
+An optional `settings.yaml` holds personal display defaults: which table view
 `check`/`export` use when `--view` isn't passed, and how `export --format
-html` renders. Same search locations as `enodia.yaml` above (current
-directory, `$XDG_CONFIG_HOME/enodia/`, `/etc/enodia/`; `--settings <path>` or
-`$ENODIA_SETTINGS` for an exact file), but a bare `settings.yaml`/`settings.yml`
-next to the binary works too, not just the `enodia.`-prefixed form — and
-unlike `enodia.yaml`, a missing settings file is never an error, every field
-just falls back to its built-in default. For example:
+html` renders — see "File locations" below for every name and directory it's
+searched in, and why a missing one is never an error the way a missing
+`enodia.yaml` is. For example:
 
 ```yaml
 schemaVersion: 1
@@ -197,29 +242,13 @@ default `enodia check` table is unaffected by any of them except
 including why a corrupted or unrecognised theme saved in a viewer's browser
 resets to *this* file's `html.theme`, not to some hardcoded name.
 
-### The fleet view
+### Row colors in CDN mode
 
-`--view fleet` (or the `settings.yaml` above, which sets it as the default)
-groups observations by product, installed version, and reachability instead
-of one row per target — the offline-only view: it needs nothing but the
-inventory itself, no lifecycle resolver, no internet access at all. Two
-failed instances of the same product with different failure kinds (auth vs.
-unreachable) get their own rows, not a shared "(unknown)" bucket:
-
-```console
-$ enodia check --view fleet --from inventory.jsonl
-PRODUCT  VERSION    STATUS       COUNT  INSTANCES
-gitlab   (unknown)  auth         1      gitlab-2
-gitlab   18.2.1     ok           1      gitlab-1
-jira     (unknown)  unreachable  1      jira-staging
-jira     10.3.1     ok           1      jira-3
-jira     10.3.2     ok           2      jira-1, jira-2
-```
-
-`export --format html` with `html.assets: cdn` renders the same rows with a
-Bootstrap contextual class per row — red for a failed instance, green for a
-reachable one, in whatever Bootswatch theme is configured, not a hardcoded
-color enodia has to maintain per theme:
+With `html.assets: cdn`, `export --format html` gives each row a Bootstrap
+contextual class — red for a failed instance, green for a reachable one (see
+"Views" above for the plain data), in whatever Bootswatch theme is
+configured, not a hardcoded color enodia has to maintain per theme. Here's
+the fleet view's rows from the same data:
 
 ```html
 <table class="table table-striped table-hover table-sm align-middle">
@@ -233,6 +262,59 @@ color enodia has to maintain per theme:
 </tbody>
 </table>
 ```
+
+## File locations
+
+Both files are found the same way: an explicit path always wins and must
+exist (a typo must be an error, never a silent fall-through to some other
+file), then a search — first match wins outright, nothing is merged from
+several found files. Location beats naming: a match in the current directory
+always wins over one in `$XDG_CONFIG_HOME`, which always wins over one in
+`/etc/enodia/`, regardless of which name matched where.
+
+**`enodia.yaml`** (`--config <path>` or `$ENODIA_CONFIG` for an exact file):
+
+1. `./enodia.yaml`
+2. `./enodia.yml`
+3. `./config.yaml`
+4. `./config.yml`
+5. `./.enodia.yaml`
+6. `./.enodia.yml`
+7. `./.config.yaml`
+8. `./.config.yml`
+9. `$XDG_CONFIG_HOME/enodia/enodia.yaml` (`~/.config/enodia/enodia.yaml` if
+   `$XDG_CONFIG_HOME` is unset)
+10. `$XDG_CONFIG_HOME/enodia/enodia.yml`
+11. `$XDG_CONFIG_HOME/enodia/config.yaml`
+12. `$XDG_CONFIG_HOME/enodia/config.yml`
+13. `/etc/enodia/enodia.yaml`
+14. `/etc/enodia/enodia.yml`
+15. `/etc/enodia/config.yaml`
+16. `/etc/enodia/config.yml`
+
+Finding nothing at all is an error: a config that can't be found is worth
+failing loudly over, since it usually means the wrong file (or none) is
+about to be used.
+
+**`settings.yaml`** (`--settings <path>` or `$ENODIA_SETTINGS` for an exact
+file) — same idea, with two differences: it also checks a plain `settings.`
+name (not just `enodia.settings.`), and finding nothing at all is *not* an
+error — every field just falls back to its built-in default, since this
+file is entirely optional:
+
+1. `./enodia.settings.yaml`
+2. `./enodia.settings.yml`
+3. `./settings.yaml`
+4. `./settings.yml`
+5. `./.enodia.settings.yaml`
+6. `./.enodia.settings.yml`
+7. `./.settings.yaml`
+8. `./.settings.yml`
+9. `$XDG_CONFIG_HOME/enodia/settings.yaml` (`~/.config/enodia/settings.yaml`
+   if `$XDG_CONFIG_HOME` is unset)
+10. `$XDG_CONFIG_HOME/enodia/settings.yml`
+11. `/etc/enodia/settings.yaml`
+12. `/etc/enodia/settings.yml`
 
 ## Third-party assets
 
