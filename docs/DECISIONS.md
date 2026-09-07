@@ -143,8 +143,10 @@ into post-processing.
 calls `time.Now()`.
 
 Tests stay deterministic instead of turning red on their own a year from now.
-`--as-of 2027-01-01` — "what dies before next budget year" — falls out for
-free; retrofitting it later would not.
+There is no `--as-of` CLI flag today — `asOf` is always sourced internally,
+never typed by a user — but taking it as a plain parameter here means adding
+one later (e.g. "what dies before next budget year") would just be plumbing
+a value through, not restructuring how time enters the evaluation path.
 
 `check --from` takes `asOf` from the inventory header, so a month-old file is
 not silently judged against today.
