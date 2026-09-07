@@ -40,29 +40,41 @@ Not dates. Order of work, and what each step unblocks.
   artifacts.json` tags them `"Linux Package"` — the same artifact class as
   archives/checksums, so they're published to the GitHub Release
   automatically, no separate upload config needed. `develop.yml`/`pr.yml`
-  gained four more `actions/upload-artifact` steps (amd64/arm64 × deb/rpm)
-  for the same reason every other platform already gets its own artifact
+  gained four more `actions/upload-artifact` steps (amd64/arm64 × deb/rpm,
+  later six once `.apk` joined them) for the same reason every other
+  platform already gets its own artifact
 - Rootless packages — `build/nfpm/preinstall.sh` creates a dedicated
-  `enodia` system user/group at a fixed uid/gid `1337` (idempotent via
-  `getent`; the id is pinned rather than left to the distro's next free
-  system id so numeric ownership matches across every machine the package
-  lands on, `build/docker/Dockerfile`'s image included — useful for a
-  host-side `chown 1337:1337` on a bind-mounted volume with no name lookup
-  needed), `postinstall.sh` chowns `/etc/enodia` (`root:enodia`, `0750`)
-  and the two new empty directories `/opt/enodia`/`/var/enodia`
-  (`enodia:enodia`, `0750`) to it — nothing in this codebase actually
-  hardcodes those last two paths today (the resolver cache uses
-  `os.UserCacheDir()` instead), they're placeholder FHS spots for whatever
-  a future systemd-managed `enodia serve` needs to write. Ownership is set
-  in `postinstall`, not baked into `nfpms.contents`' own
-  `file_info.owner/group`, because a `.deb`'s payload carries numeric UIDs
-  resolved at *build* time and the `enodia` user only exists on whatever
-  machine actually installs the package. Verified with a real snapshot
-  build against both formats: `dpkg-deb -e`/`rpm -qp --scripts` show the
-  exact scripts, `dpkg-deb -c`/`rpm2cpio | cpio -tv` show all three
-  directories at the right modes, and a real `apt install`/`dnf install`
-  inside fresh `debian:trixie`/`fedora:latest` containers confirms
-  `enodia:x:1337:1337:...` and matching directory ownership end to end
+  `enodia` system user/group at a fixed uid/gid `1337` (idempotent; the id
+  is pinned rather than left to the distro's next free system id so
+  numeric ownership matches across every machine the package lands on,
+  `build/docker/Dockerfile`'s image included — useful for a host-side
+  `chown 1337:1337` on a bind-mounted volume with no name lookup needed),
+  `postinstall.sh` chowns `/etc/enodia` (`root:enodia`, `0750`) and the two
+  new empty directories `/opt/enodia`/`/var/enodia` (`enodia:enodia`,
+  `0750`) to it — nothing in this codebase actually hardcodes those last
+  two paths today (the resolver cache uses `os.UserCacheDir()` instead),
+  they're placeholder FHS spots for whatever a future systemd-managed
+  `enodia serve` needs to write. Ownership is set in `postinstall`, not
+  baked into `nfpms.contents`' own `file_info.owner/group`, because a
+  package's payload carries numeric UIDs resolved at *build* time and the
+  `enodia` user only exists on whatever machine actually installs it.
+  `preinstall.sh` branches on whether `groupadd` exists rather than
+  detecting a distro: deb/rpm targets always have GNU shadow-utils
+  (`groupadd`/`useradd`), but the `apk` target below is Alpine, whose base
+  image ships neither — only busybox's `addgroup`/`adduser`, a different
+  flag syntax, and `/sbin/nologin` instead of `/usr/sbin/nologin`. Verified
+  with real `apt install`/`dnf install`/`apk add` inside fresh
+  `debian:trixie`/`fedora:latest`/`alpine:latest` containers, all three
+  landing `enodia:x:1337:1337:...` and matching directory ownership;
+  `dpkg-deb -e`/`rpm -qp --scripts` also show the exact scripts verbatim
+- `.apk` (Alpine) alongside `.deb`/`.rpm` in the same `nfpms:` block — one
+  more format nfpm already supports, no extra tooling. `make pkg` wraps
+  the exact `goreleaser release --snapshot --clean --skip=docker,sign`
+  invocation CI already runs (see below), so all three package formats
+  plus every archive land in `dist/` from a single local command, with no
+  tag or CI needed — `make dist` deliberately stays a bare `go build` loop
+  with no packaging step, since duplicating nfpm's config in Make would
+  just be a second copy of `.goreleaser.yaml` to keep in sync
 - Man pages — `cmd/enodia/genman_cmd.go`'s hidden `enodia gen-man <dir>`
   subcommand wraps `cobra/doc`'s `GenManTree` (a subpackage of the already-
   approved `cobra` dependency, though it does pull three new indirect
