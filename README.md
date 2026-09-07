@@ -187,20 +187,21 @@ HTML report (see "Reporting").
 ## Installation
 
 Not published yet. When it is, each [release](https://github.com/EpicMorg/enodia/releases)
-carries a `.deb`, `.rpm` and `.apk` (linux/amd64+arm64) alongside the raw
-archives, plus a container image:
+carries a `.deb`, `.rpm`, `.apk` and Arch's `.pkg.tar.zst` (linux/amd64+arm64)
+alongside the raw archives, plus a container image:
 
 ```console
-sudo dpkg -i enodia_linux_amd64.deb          # Debian/Ubuntu
-sudo rpm -i enodia_linux_amd64.rpm           # Fedora/RHEL
-apk add --allow-untrusted enodia_linux_amd64.apk  # Alpine
+sudo dpkg -i enodia_linux_amd64.deb                # Debian/Ubuntu
+sudo rpm -i enodia_linux_amd64.rpm                 # Fedora/RHEL
+apk add --allow-untrusted enodia_linux_amd64.apk   # Alpine
+sudo pacman -U enodia_linux_amd64.pkg.tar.zst      # Arch
 
 docker run --rm \
   -v /etc/enodia:/config:ro \
   ghcr.io/epicmorg/enodia:1 check --config /config/config.yaml
 ```
 
-The `.deb`/`.rpm`/`.apk` install the binary at `/usr/bin/enodia`, man pages for
+All four packages install the binary at `/usr/bin/enodia`, man pages for
 every command under `/usr/share/man/man1/` (`man enodia`, `man
 enodia-collect`, ...), and create a dedicated, unprivileged `enodia` system
 user — nothing in this package needs root to run, so `enodia serve` under

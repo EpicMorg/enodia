@@ -41,8 +41,8 @@ Not dates. Order of work, and what each step unblocks.
   archives/checksums, so they're published to the GitHub Release
   automatically, no separate upload config needed. `develop.yml`/`pr.yml`
   gained four more `actions/upload-artifact` steps (amd64/arm64 × deb/rpm,
-  later six once `.apk` joined them) for the same reason every other
-  platform already gets its own artifact
+  later eight once `.apk` and `.pkg.tar.zst` joined them) for the same
+  reason every other platform already gets its own artifact
 - Rootless packages — `build/nfpm/preinstall.sh` creates a dedicated
   `enodia` system user/group at a fixed uid/gid `1337` (idempotent; the id
   is pinned rather than left to the distro's next free system id so
@@ -67,14 +67,26 @@ Not dates. Order of work, and what each step unblocks.
   `debian:trixie`/`fedora:latest`/`alpine:latest` containers, all three
   landing `enodia:x:1337:1337:...` and matching directory ownership;
   `dpkg-deb -e`/`rpm -qp --scripts` also show the exact scripts verbatim
-- `.apk` (Alpine) alongside `.deb`/`.rpm` in the same `nfpms:` block — one
-  more format nfpm already supports, no extra tooling. `make pkg` wraps
-  the exact `goreleaser release --snapshot --clean --skip=docker,sign`
-  invocation CI already runs (see below), so all three package formats
-  plus every archive land in `dist/` from a single local command, with no
-  tag or CI needed — `make dist` deliberately stays a bare `go build` loop
-  with no packaging step, since duplicating nfpm's config in Make would
-  just be a second copy of `.goreleaser.yaml` to keep in sync
+- `.apk` (Alpine) and `.pkg.tar.zst` (Arch, nfpm's `archlinux` format)
+  alongside `.deb`/`.rpm` in the same `nfpms:` block — nfpm already
+  supports both, no extra tooling. Arch's base image ships GNU shadow-utils
+  (`useradd`/`groupadd`) same as deb/rpm, so `preinstall.sh`'s existing
+  branch covers it with no changes; verified live with `pacman -U` inside a
+  fresh `archlinux:latest` container — `enodia:x:1337:1337` and correct
+  directory ownership land exactly like the other three formats (a harmless
+  `SYS_UID_MAX 999` warning from `useradd`, since 1337 is deliberately
+  outside the typical system-id range — install still succeeds with the
+  requested id). The man pages *are* in the package (confirmed via a raw
+  `tar` listing) but the official `archlinux` Docker image doesn't extract
+  them on install — its own `/etc/pacman.conf` ships a global `NoExtract =
+  usr/share/man/*` for container-image size, unrelated to this package; a
+  real Arch install has no such default. `make pkg` wraps the exact
+  `goreleaser release --snapshot --clean --skip=docker,sign` invocation CI
+  already runs (see below), so all four package formats plus every archive
+  land in `dist/` from a single local command, with no tag or CI needed —
+  `make dist` deliberately stays a bare `go build` loop with no packaging
+  step, since duplicating nfpm's config in Make would just be a second copy
+  of `.goreleaser.yaml` to keep in sync
 - Man pages — `cmd/enodia/genman_cmd.go`'s hidden `enodia gen-man <dir>`
   subcommand wraps `cobra/doc`'s `GenManTree` (a subpackage of the already-
   approved `cobra` dependency, though it does pull three new indirect
