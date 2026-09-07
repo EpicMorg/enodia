@@ -27,15 +27,30 @@ go.work.sumы
 # env file
 .env
 
+# One-off local scratch files carrying real internal data — never committed
+poc.config.from.puthon.yml
+.tmp.secrets.from.poc.env
+prod.enodia.yaml
+
 # Editor/IDE
 # .idea/
 # .vscode/
 
 # Build artifacts
 /dist/
-/build/
 /enodia
 /enodia.exe
+
+# Windows resource pipeline (see build/windows/ and `make windows-resources`):
+# meta.rc.in is the committed template, meta.rc is generated from it per
+# build; the .syso must land in cmd/enodia for `go build` to pick it up.
+/build/windows/meta.rc
+/cmd/enodia/resource_windows_*.syso
+
+# Generated man pages (see `make man`, cmd/enodia/genman_cmd.go): rendered
+# fresh from cobra's own command tree before every package build, never
+# hand-edited, so there is nothing to track.
+/build/man/
 
 # Local configuration and secrets — MUST NOT be committed
 credentials.yaml
