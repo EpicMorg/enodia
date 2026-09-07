@@ -31,11 +31,14 @@ You describe your services once. Enodia handles the rest.
 
 </div>
 
-> **Status: pre-1.0.** The full pipeline (collect → inventory → evaluate →
+> **[docs.enodia.sh](https://docs.enodia.sh)** · full docs, config reference,
+> and per-product probe notes.
+
+> **Status: 1.0.** The full pipeline (collect → inventory → evaluate →
 > render), 29 probes, `settings.yaml`, and the release/packaging pipeline are
-> all implemented and used against real production infrastructure — but no
-> tagged release exists yet, and the config schema may still change before
-> one does.
+> all implemented and used against real production infrastructure. See the
+> [latest release](https://github.com/EpicMorg/enodia/releases/latest) for
+> downloads.
 
 ---
 
@@ -183,8 +186,8 @@ HTML report (see "Reporting").
 
 ## Installation
 
-Not published yet. When it is, each [release](https://github.com/EpicMorg/enodia/releases)
-carries a `.deb`, `.rpm`, `.apk` and Arch's `.pkg.tar.zst` (linux/amd64+arm64)
+Each [release](https://github.com/EpicMorg/enodia/releases/latest) carries a
+`.deb`, `.rpm`, `.apk` and Arch's `.pkg.tar.zst` (linux/amd64+arm64)
 alongside the raw archives, plus a container image:
 
 ```console
