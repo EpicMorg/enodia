@@ -16,13 +16,17 @@
 #   ENODIA_VERSION    version tag to install, e.g. "1.2.3+4" (default: latest)
 #   ENODIA_INSTALL_DIR  directory to install into (default: /usr/local/bin)
 #
-# If install_dir isn't writable and sudo doesn't actually work (missing,
-# or present but unusable — Termux's own optional `sudo` package exists on
-# PATH but just prints "No superuser binary detected" on an unrooted
-# device), but $PREFIX is set and its bin/ is writable (Termux and similar
-# userland-prefix environments), that's used instead — no separate script
-# or name-based "is this Termux" check, just the same curl|sh one-liner
-# working there too.
+# Termux (running on the real Android kernel and Bionic's own dynamic
+# linker, not a "normal" Linux libc userspace) gets its own android_arm64
+# archive, not the plain linux one — see docs/DECISIONS.md D20 for why a
+# straight linux/arm64 binary can never run there at all, PIE or not.
+#
+# Separately: if install_dir isn't writable and sudo doesn't actually work
+# (missing, or present but unusable — Termux's own optional `sudo` package
+# exists on PATH but just prints "No superuser binary detected" on an
+# unrooted device), but $PREFIX is set and its bin/ is writable, that's
+# used instead — no name-based "is this Termux" check needed there either,
+# just the same curl|sh one-liner working there too.
 
 set -eu
 
@@ -31,7 +35,18 @@ install_dir="${ENODIA_INSTALL_DIR:-/usr/local/bin}"
 
 os=$(uname -s)
 case "$os" in
-	Linux) os=linux ;;
+	Linux)
+		os=linux
+		# $TERMUX_VERSION is Termux's own unambiguous self-identifying
+		# variable — deliberately not the more generic $PREFIX (used below
+		# for a lower-stakes fallback), which other, unrelated environments
+		# occasionally also set: getting this wrong here doesn't just pick
+		# a different install directory, it downloads a binary this OS
+		# categorically cannot execute at all (D20).
+		if [ -n "${TERMUX_VERSION:-}" ]; then
+			os=android
+		fi
+		;;
 	Darwin) os=darwin ;;
 	*)
 		echo "install.sh: unsupported OS: $os (only linux and darwin are supported; see releases for Windows binaries)" >&2
@@ -48,6 +63,14 @@ case "$arch" in
 		exit 1
 		;;
 esac
+
+# android only ships arm64 today: the other android GOARCHes need an
+# Android NDK cross-compiler this project's build image doesn't carry yet
+# (D20) — arm64 covers essentially every real device anyway.
+if [ "$os" = "android" ] && [ "$arch" != "arm64" ]; then
+	echo "install.sh: enodia has no android/$arch build yet (arm64 only) — see docs/ROADMAP.md" >&2
+	exit 1
+fi
 
 version="${ENODIA_VERSION:-latest}"
 

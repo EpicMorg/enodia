@@ -68,11 +68,38 @@ builds:
       - -X main.buildCommit={{ .Commit }}
       - -X main.buildDate={{ .Date }}
 
+  # android/arm64 only, not folded into enodia's goos/goarch lists above:
+  # GOOS=linux, not GOOS=android, is what Termux's own `uname -s` reports,
+  # but Android's kernel/Bionic linker refuses to exec anything but a PIE
+  # (ET_DYN) binary, which the plain linux builds above aren't (see
+  # docs/DECISIONS.md D20) — this needs its own separate GOOS entirely.
+  # arm64 is the only android GOARCH Go can build with pure internal
+  # linking (CGO_ENABLED=0, confirmed live); android/amd64, android/386
+  # and android/arm all hard-require cgo against the Android NDK, which
+  # isn't in this project's build image today — deferred, see D20.
+  - id: enodia-android
+    main: ./cmd/enodia
+    binary: enodia
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - android
+    goarch:
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.buildVersion={{ .Version }}
+      - -X main.buildCommit={{ .Commit }}
+      - -X main.buildDate={{ .Date }}
+
 archives:
   - id: enodia
     ids:
       - enodia
       - enodia-windows-386
+      - enodia-android
     name_template: "enodia_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
