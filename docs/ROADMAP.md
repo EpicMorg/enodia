@@ -333,6 +333,23 @@ Not dates. Order of work, and what each step unblocks.
   Verified locally: the exact `goreleaser` invocation both workflows run
   produces all 7 archives + `checksums.txt` with no snapshot-only skip
   needed beyond `docker,sign`; both files pass `actionlint`
+- HTML report footer now also links `enodia.sh` and `docs.enodia.sh`
+  (alongside the existing GitHub link), in both inline and CDN mode —
+  plain `<a href>`s, not a resource fetch, so this doesn't touch the
+  inline-mode offline guarantee (D19's "zero `http(s)://` or `<script`"
+  check is specifically about *loaded* resources, not inert hyperlink
+  text — the GitHub credit link already established that precedent).
+  Also gained a favicon: inline mode embeds `enodia.sh`'s
+  `apple-touch-icon.png` (180x180, ~8.6KB base64) as a `data:` URI rather
+  than `enodia.sh/favicon.ico` itself — that `.ico` is a 9-size,
+  381KB multi-resolution set that would add ~508KB of base64 to every
+  single generated report, which the tool's whole "one small
+  self-contained file" premise doesn't need for something as
+  inconsequential as a tab icon. CDN mode instead links both live
+  `https://enodia.sh` icons directly (`<link rel="icon">` /
+  `rel="apple-touch-icon"`) — that mode already needs internet access to
+  render at all, so there's no offline guarantee to protect and no reason
+  to bloat the page for an icon the browser can just fetch itself
 
 ## Later
 
