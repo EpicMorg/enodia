@@ -47,6 +47,11 @@ prod.enodia.yaml
 /build/windows/meta.rc
 /cmd/enodia/resource_windows_*.syso
 
+# Generated man pages (see `make man`, cmd/enodia/genman_cmd.go): rendered
+# fresh from cobra's own command tree before every package build, never
+# hand-edited, so there is nothing to track.
+/build/man/
+
 # Local configuration and secrets — MUST NOT be committed
 credentials.yaml
 credentials.yml

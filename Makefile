@@ -45,7 +45,10 @@ VERSION_CSV := $(if $(VERSION_CSV),$(VERSION_CSV),0,0,0,0)
 DIST_DIR     := dist
 DIST_TARGETS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64 windows/386
 
-.PHONY: all build enodia windows-resources windows-resources-clean windows-exe dist vet test fmt fmt-check lint check tidy clean
+MAN_DIR      := build/man
+MAN_BIN      := $(MAN_DIR)/.gen-man-bin
+
+.PHONY: all build enodia windows-resources windows-resources-clean windows-exe dist vet test fmt fmt-check lint check tidy clean man man-clean
 
 all: check
 
@@ -111,6 +114,23 @@ dist: windows-resources
 		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "$(LDFLAGS)" -o $$out ./cmd/enodia || exit 1; \
 	done
 	$(MAKE) windows-resources-clean
+
+# Man pages (see cmd/enodia/genman_cmd.go's "gen-man" hidden command,
+# .goreleaser.yaml's before.hooks, and nfpms.contents which packages the
+# .gz output into /usr/share/man/man1). The throwaway binary is built for
+# the host GOOS/GOARCH — it only ever runs locally, right here, to walk
+# cobra's own command tree, so it needs no version/commit ldflags and no
+# cross-compilation. gzip -f so a re-run doesn't fail on files left by a
+# previous one.
+man:
+	@mkdir -p $(MAN_DIR)
+	$(GO) build -o $(MAN_BIN) ./cmd/enodia
+	$(MAN_BIN) gen-man $(MAN_DIR)
+	rm -f $(MAN_BIN)
+	gzip -f $(MAN_DIR)/*.1
+
+man-clean:
+	rm -rf $(MAN_DIR)
 
 vet:
 	$(GO) vet ./...

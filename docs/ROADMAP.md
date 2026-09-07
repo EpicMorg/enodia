@@ -42,6 +42,40 @@ Not dates. Order of work, and what each step unblocks.
   automatically, no separate upload config needed. `develop.yml`/`pr.yml`
   gained four more `actions/upload-artifact` steps (amd64/arm64 × deb/rpm)
   for the same reason every other platform already gets its own artifact
+- Rootless packages — `build/nfpm/preinstall.sh` creates a dedicated
+  `enodia` system user/group (idempotent via `getent`), `postinstall.sh`
+  chowns `/etc/enodia` (`root:enodia`, `0750`) and the two new empty
+  directories `/opt/enodia`/`/var/enodia` (`enodia:enodia`, `0750`) to it —
+  nothing in this codebase actually hardcodes those last two paths today
+  (the resolver cache uses `os.UserCacheDir()` instead), they're placeholder
+  FHS spots for whatever a future systemd-managed `enodia serve` needs to
+  write. Ownership is set in `postinstall`, not baked into `nfpms.contents`'
+  own `file_info.owner/group`, because a `.deb`'s payload carries numeric
+  UIDs resolved at *build* time and the `enodia` user only exists on
+  whatever machine actually installs the package. Verified with a real
+  snapshot build against both formats: `dpkg-deb -e`/`rpm -qp --scripts`
+  show the exact scripts, `dpkg-deb -c`/`rpm2cpio | cpio -tv` show all three
+  directories at the right modes
+- Man pages — `cmd/enodia/genman_cmd.go`'s hidden `enodia gen-man <dir>`
+  subcommand wraps `cobra/doc`'s `GenManTree` (a subpackage of the already-
+  approved `cobra` dependency, though it does pull three new indirect
+  dependencies of its own for markdown rendering — `go-md2man`,
+  `blackfriday`, `go.yaml.in/yaml/v3` — accepted deliberately rather than
+  hand-rolling a troff writer). `make man` builds a throwaway host binary,
+  runs it, gzips the output into `build/man/` (generated, gitignored, never
+  committed); `.goreleaser.yaml`'s `before.hooks` runs it before packaging,
+  and `nfpms.contents` maps `build/man/*.1.gz` into `/usr/share/man/man1/`.
+  One page per command including subcommands (`enodia-collect.1`,
+  `enodia-config-path.1`, etc.) — verified present with the right names in
+  both package formats via the same snapshot build
+- `install.ps1` — Windows counterpart to `install.sh`, mirroring its logic
+  (same repo, same archive naming, same latest/download alias to skip the
+  GitHub API's rate limit) for the one OS `install.sh` explicitly declines
+  to handle. `install.sh` itself switched its "latest" case from parsing
+  `api.github.com/.../releases/latest`'s `tag_name` to the same
+  `/releases/latest/download/` alias `build/docker/Dockerfile` already
+  uses — one fewer API call, no rate-limit exposure, and no `curl`+`grep`+
+  `sed` chain to keep in sync with GitHub's JSON shape
 - `build/docker/Dockerfile` — a second, alternate runtime image on the
   user's own `ghcr.io/epicmorg/debian:trixie-light` base, installing the
   released `.deb` via `apt` instead of copying a raw binary into `scratch`

@@ -23,19 +23,29 @@ FROM ghcr.io/epicmorg/debian:trixie-light
 # to pin one instead. TARGETARCH is set automatically by buildx and
 # already matches nfpm's own file_name_template exactly ("amd64"/"arm64"),
 # no translation needed.
-ARG ENODIA_VERSION=latest
-ARG TARGETARCH
+ARG ENODIA_VERSION=1.0.0+0
+ARG TARGETARCH=amd64
 
 RUN set -eux; \
 	if [ "${ENODIA_VERSION}" = "latest" ]; then \
 		url="https://github.com/EpicMorg/enodia/releases/latest/download/enodia_linux_${TARGETARCH}.deb"; \
 	else \
 		url="https://github.com/EpicMorg/enodia/releases/download/${ENODIA_VERSION}/enodia_linux_${TARGETARCH}.deb"; \
-	fi; \
-	curl -fsSL -o /tmp/enodia.deb "$url"; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends /tmp/enodia.deb; \
-	rm -rf /tmp/enodia.deb /var/lib/apt/lists/*
+	fi && \
+	aria2c \
+        --conf-path="/usr/local/share/epicmorg/aria2/config/aria2.conf" \
+        --user-agent="$(shuf -n 1 /usr/local/share/epicmorg/user-agents/user-agents.txt)" \
+        -d / \
+        -o /tmp/enodia.deb \
+        "$url" && \
+	apt-get update && \
+	apt-get install -y --no-install-recommends /tmp/enodia.deb && \
+    echo "clean up" && \
+    apt-get clean -y && \
+    apt-get autoclean -y && \
+    rm -rfv /var/lib/apt/lists/* && \
+    rm -rfv /var/cache/apt/archives/*.deb && \
+    rm -rfv /tmp/*
 
 # Config — enodia.yaml/settings.yaml/credentials.yaml. The .deb itself
 # creates this directory empty (see .goreleaser.yaml's nfpms.contents); the
@@ -50,5 +60,7 @@ VOLUME ["/etc/enodia"]
 RUN mkdir -p /opt/enodia
 VOLUME ["/opt/enodia"]
 WORKDIR /opt/enodia
+
+RUN /usr/bin/enodia about
 
 ENTRYPOINT ["/usr/bin/enodia"]
