@@ -186,13 +186,36 @@ HTML report (see "Reporting").
 
 ## Installation
 
-Not published yet. When it is:
+Not published yet. When it is, each [release](https://github.com/EpicMorg/enodia/releases)
+carries a `.deb` and `.rpm` (linux/amd64+arm64, binary at `/usr/bin/enodia`,
+an empty `/etc/enodia/` for your config) alongside the raw archives, plus a
+container image:
 
 ```console
+sudo dpkg -i enodia_linux_amd64.deb          # Debian/Ubuntu
+sudo rpm -i enodia_linux_amd64.rpm           # Fedora/RHEL
+
 docker run --rm \
   -v /etc/enodia:/config:ro \
   ghcr.io/epicmorg/enodia:1 check --config /config/config.yaml
 ```
+
+## Supported platforms
+
+| OS | Arch | Minimum version |
+|---|---|---|
+| Linux | amd64, arm64 | Kernel 3.2 or later — Debian 8+, Ubuntu 14.04+, RHEL/CentOS 7+ all comfortably qualify |
+| Windows | amd64, arm64, 386 | Windows 10 / Windows Server 2016 or later |
+| macOS | amd64, arm64 | macOS 12 Monterey or later |
+
+These are the Go 1.26 toolchain's own floor (confirmed against
+[go.dev/wiki/MinimumRequirements](https://go.dev/wiki/MinimumRequirements)
+directly, not assumed), not something enodia adds on top — building from
+source with a newer Go raises the macOS floor further (1.27 requires macOS
+13 Ventura), since that's a toolchain decision, not a project one.
+`CGO_ENABLED=0` (see `.goreleaser.yaml`) means the binary is fully static
+and never links libc at all: on Linux, only the kernel version matters, not
+which distro or glibc version is underneath.
 
 ## Reporting
 
