@@ -1,5 +1,6 @@
 GO ?= go
 GOLANGCI_LINT ?= golangci-lint
+GORELEASER ?= goreleaser
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
@@ -48,7 +49,7 @@ DIST_TARGETS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 
 MAN_DIR      := build/man
 MAN_BIN      := $(MAN_DIR)/.gen-man-bin
 
-.PHONY: all build enodia windows-resources windows-resources-clean windows-exe dist vet test fmt fmt-check lint check tidy clean man man-clean
+.PHONY: all build enodia windows-resources windows-resources-clean windows-exe dist vet test fmt fmt-check lint check tidy clean man man-clean pkg
 
 all: check
 
@@ -131,6 +132,19 @@ man:
 
 man-clean:
 	rm -rf $(MAN_DIR)
+
+# .deb/.rpm/.apk into dist/, same as a real release: `dist` above is a bare
+# GOOS/GOARCH loop with no packaging step at all, and there is no separate
+# packaging tool to shell out to here — nfpm (which builds all three
+# formats) is wired into .goreleaser.yaml, not a standalone CLI invocation,
+# so this wraps goreleaser itself rather than duplicating its nfpm config
+# in Make. The exact command develop.yml/pr.yml run in CI (see
+# docs/ROADMAP.md) — --snapshot because there's no tag here, --skip=docker
+# because that needs a real registry login, --skip=sign because cosign
+# needs the CI job's own OIDC identity, neither available locally.
+pkg:
+	@command -v $(GORELEASER) >/dev/null 2>&1 || { echo "make pkg: $(GORELEASER) not found (https://goreleaser.com/install/)"; exit 1; }
+	$(GORELEASER) release --snapshot --clean --skip=docker,sign
 
 vet:
 	$(GO) vet ./...
