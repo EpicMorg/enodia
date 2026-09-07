@@ -28,28 +28,36 @@ Not dates. Order of work, and what each step unblocks.
   baked in via `-ldflags`
 - Windows resource embedding — `build/windows/` (icon, version-info `.rc`
   template, manifest) compiled by `make windows-resources`/`windows-exe`
-  into `cmd/enodia/resource_windows_{amd64,386}.syso` via mingw-w64's
-  windres (x86_64 and i686 flavors, checked independently — one missing
-  doesn't block the other); wired into `.goreleaser.yaml`'s `before.hooks`
-  and the release workflow
-  (mingw-w64 installed there with `continue-on-error`, so its absence
-  degrades only that one artifact). Verified end-to-end: real multi-size
-  icon and version block land in a real cross-compiled `.exe`, console
-  subsystem kept intact (no `-H=windowsgui` — that's for GUI apps, and
-  would hide this CLI's own stdout/stderr). windows/arm64 has no
-  equivalent yet — Debian's mingw-w64 ships no aarch64-w64-mingw32-windres
+  into `cmd/enodia/resource_windows_{amd64,386,arm64}.syso`. amd64/386 use
+  mingw-w64's windres (x86_64/i686 flavors, an `apt install mingw-w64`
+  away); arm64 uses llvm-mingw's `aarch64-w64-mingw32-windres` instead,
+  since Debian's mingw-w64 package ships none — discovered via
+  `$LLVM_MINGW_DIR/llvm-mingw-*-ucrt-ubuntu-22.04-x86_64/bin/` (wildcarded
+  because that path's own date stamp changes with every toolchain
+  refresh), which `epicmorg/debian:trixie-develop` sets. All three are
+  checked independently; missing any one is a skip, never a failure for
+  the others. Verified end-to-end against the real image (`docker run -v
+  $PWD:/workspace ... make windows-resources` and a windows/arm64 build):
+  real multi-size icon and version block land in a real ARM64 PE32+ `.exe`,
+  console subsystem kept intact (no `-H=windowsgui` — that's for GUI apps,
+  and would hide this CLI's own stdout/stderr). windows/arm (32-bit
+  "armv7") has no equivalent and never will: confirmed live that Go itself
+  has no such build target at all (`go tool dist list` omits it, and
+  building one fails with "unsupported GOOS/GOARCH pair") — there is no
+  binary of that shape to embed a resource into, independent of windres.
+  Not yet wired into CI (`.goreleaser.yaml`'s `before.hooks`/release.yml
+  still only install plain mingw-w64, so real releases get arm64 resources
+  only once the deferred CI-image decision below is made)
 - `make dist` — `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`,
-  `windows/{amd64,arm64,386}`, same `-ldflags` as `make enodia`,
-  windows/amd64 and windows/386 picking up the icon/version resource via
-  `windows-resources` (both mingw-w64 windres flavors are just an
-  `apt install mingw-w64` away, unlike arm64's). `.goreleaser.yaml` gained
-  a second build (`enodia-windows-386`, since Go never supported
+  `windows/{amd64,arm64,386}`, same `-ldflags` as `make enodia`, all three
+  windows targets picking up the icon/version resource via
+  `windows-resources` when its toolchain is available. `.goreleaser.yaml`
+  gained a second build (`enodia-windows-386`, since Go never supported
   darwin/386 — it can't share enodia's goarch list) folded into the same
   archives. Verified with a real `goreleaser check` and a
   `--snapshot --clean --skip=docker,sign,publish` run, not just `make
   dist`: all seven binaries have the right file type (ELF/Mach-O/
-  PE32/PE32+), the resource lands correctly in windows/amd64 and
-  windows/386 and is correctly absent from windows/arm64. macOS ships
+  PE32/PE32+). macOS ships
   unsigned — no Apple Developer Program membership needed for this; the
   project's existing cosign signature over `checksums.txt` (D17) already
   gives independent supply-chain verification for every platform,
@@ -134,17 +142,16 @@ Not dates. Order of work, and what each step unblocks.
 ## Later
 
 - CI: build inside the user's own `epicmorg/debian:trixie-develop` image
-  (already carries Go + mingw-w64) instead of `apt-get install mingw-w64`
-  in release.yml. Scope still open — pending decision is whether this
-  replaces only the windows-resources step (a plain `docker run` before
+  (carries Go, mingw-w64, and now llvm-mingw with `$LLVM_MINGW_DIR`)
+  instead of `apt-get install mingw-w64` in release.yml — this is what
+  would give real releases (not just local/manual runs) the windows/arm64
+  icon. Scope still open — pending decision is whether this replaces only
+  the windows-resources step (a plain `docker run` before
   `goreleaser-action`, no risk to the existing native `go build`/docker
   buildx/cosign steps) or the whole release job runs inside the image
   (needs docker-in-docker for buildx/push and confirmation cosign's OIDC
   flow still works from inside a container) — explicitly deferred, not
   decided
-- windows/arm64 resource embedding — blocked on the same image gaining
-  llvm-mingw (aarch64-capable; Debian's mingw-w64 package isn't), which
-  the user plans to add to `epicmorg/debian:trixie-develop` later
 - Revisit CVE correlation via OSV.dev if a workable data source appears —
   see DECISIONS.md D18 for exactly what was tried and why it's closed, not
   just deferred
