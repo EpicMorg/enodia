@@ -43,19 +43,26 @@ Not dates. Order of work, and what each step unblocks.
   gained four more `actions/upload-artifact` steps (amd64/arm64 × deb/rpm)
   for the same reason every other platform already gets its own artifact
 - Rootless packages — `build/nfpm/preinstall.sh` creates a dedicated
-  `enodia` system user/group (idempotent via `getent`), `postinstall.sh`
-  chowns `/etc/enodia` (`root:enodia`, `0750`) and the two new empty
-  directories `/opt/enodia`/`/var/enodia` (`enodia:enodia`, `0750`) to it —
-  nothing in this codebase actually hardcodes those last two paths today
-  (the resolver cache uses `os.UserCacheDir()` instead), they're placeholder
-  FHS spots for whatever a future systemd-managed `enodia serve` needs to
-  write. Ownership is set in `postinstall`, not baked into `nfpms.contents`'
-  own `file_info.owner/group`, because a `.deb`'s payload carries numeric
-  UIDs resolved at *build* time and the `enodia` user only exists on
-  whatever machine actually installs the package. Verified with a real
-  snapshot build against both formats: `dpkg-deb -e`/`rpm -qp --scripts`
-  show the exact scripts, `dpkg-deb -c`/`rpm2cpio | cpio -tv` show all three
-  directories at the right modes
+  `enodia` system user/group at a fixed uid/gid `1337` (idempotent via
+  `getent`; the id is pinned rather than left to the distro's next free
+  system id so numeric ownership matches across every machine the package
+  lands on, `build/docker/Dockerfile`'s image included — useful for a
+  host-side `chown 1337:1337` on a bind-mounted volume with no name lookup
+  needed), `postinstall.sh` chowns `/etc/enodia` (`root:enodia`, `0750`)
+  and the two new empty directories `/opt/enodia`/`/var/enodia`
+  (`enodia:enodia`, `0750`) to it — nothing in this codebase actually
+  hardcodes those last two paths today (the resolver cache uses
+  `os.UserCacheDir()` instead), they're placeholder FHS spots for whatever
+  a future systemd-managed `enodia serve` needs to write. Ownership is set
+  in `postinstall`, not baked into `nfpms.contents`' own
+  `file_info.owner/group`, because a `.deb`'s payload carries numeric UIDs
+  resolved at *build* time and the `enodia` user only exists on whatever
+  machine actually installs the package. Verified with a real snapshot
+  build against both formats: `dpkg-deb -e`/`rpm -qp --scripts` show the
+  exact scripts, `dpkg-deb -c`/`rpm2cpio | cpio -tv` show all three
+  directories at the right modes, and a real `apt install`/`dnf install`
+  inside fresh `debian:trixie`/`fedora:latest` containers confirms
+  `enodia:x:1337:1337:...` and matching directory ownership end to end
 - Man pages — `cmd/enodia/genman_cmd.go`'s hidden `enodia gen-man <dir>`
   subcommand wraps `cobra/doc`'s `GenManTree` (a subpackage of the already-
   approved `cobra` dependency, though it does pull three new indirect
