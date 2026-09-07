@@ -350,7 +350,7 @@ goreleaser v3 ships. The GitHub Action rebuilds enodia from source on every
 invocation rather than reusing a published image.
 
 **Revisited:** `release.yml`'s job now runs inside the user's own
-`epicmorg/debian:trixie-develop` image via `jobs.<id>.container:`, not bare
+`ghcr.io/epicmorg/debian:trixie-develop` image via `jobs.<id>.container:`, not bare
 `ubuntu-latest` with `apt-get install mingw-w64`. That image already
 carries Go, mingw-w64 (windows/amd64 and windows/386's resource icons —
 see ROADMAP.md's Windows resource embedding entry), and llvm-mingw

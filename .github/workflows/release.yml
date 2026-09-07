@@ -19,7 +19,7 @@
 # pushed from anywhere, which is what a bare `on.push.tags` filter alone
 # would allow.
 #
-# The job runs inside epicmorg/debian:trixie-develop (the user's own image)
+# The job runs inside ghcr.io/epicmorg/debian:trixie-develop (the user's own image)
 # rather than bare ubuntu-latest: it already carries the Go version this
 # project requires, mingw-w64 (windows/amd64 and windows/386 resource
 # icons), and llvm-mingw (windows/arm64's, which Debian's own mingw-w64
@@ -33,7 +33,7 @@
 #
 # Actions are pinned by commit SHA (version in the trailing comment) rather
 # than a floating tag, so a compromised or force-moved tag upstream can't
-# silently change what runs in this pipeline. epicmorg/debian:trixie-develop
+# silently change what runs in this pipeline. ghcr.io/epicmorg/debian:trixie-develop
 # below is deliberately the exception: it is the user's own first-party
 # build environment, not a third party's, and floating-by-design is the
 # actual point of it — this repo picking up a newly added cross-compiler
@@ -59,7 +59,7 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     container:
-      image: epicmorg/debian:trixie-develop
+      image: ghcr.io/epicmorg/debian:trixie-develop
       # Sibling-container access to the runner's own daemon (see the file
       # header) — this is what lets docker buildx/push and goreleaser's
       # dockers_v2 pipe work from inside the job's container at all: the
@@ -89,7 +89,7 @@ jobs:
             exit 1
           fi
 
-      # epicmorg/debian:trixie-develop has no docker CLI or buildx plugin
+      # ghcr.io/epicmorg/debian:trixie-develop has no docker CLI or buildx plugin
       # baked in (confirmed) — only the socket to talk to one. Everything
       # else this job needs (Go, mingw-w64, llvm-mingw) is already there.
       - name: Install docker CLI and buildx plugin
