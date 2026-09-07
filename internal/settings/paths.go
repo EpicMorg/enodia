@@ -34,18 +34,22 @@ var candidateNames = []string{"settings.yaml", "settings.yml"}
 //  6. ./settings.yml
 //  7. ./.enodia.settings.yaml
 //  8. ./.enodia.settings.yml
-//  9. $XDG_CONFIG_HOME/enodia/settings.yaml, defaulting to
+//  9. ./.settings.yaml — the dotfile counterpart of the bare form above,
+//     same as enodia.yaml/.enodia.yaml already pair up.
+//  10. ./.settings.yml
+//  11. $XDG_CONFIG_HOME/enodia/settings.yaml, defaulting to
 //     ~/.config/enodia/settings.yaml per the XDG basedir spec when the
 //     variable is unset.
-//  10. $XDG_CONFIG_HOME/enodia/settings.yml (same fallback)
-//  11. /etc/enodia/settings.yaml
-//  12. /etc/enodia/settings.yml
+//  12. $XDG_CONFIG_HOME/enodia/settings.yml (same fallback)
+//  13. /etc/enodia/settings.yaml
+//  14. /etc/enodia/settings.yml
 //
-// Unlike config.Locate, finding nothing at steps 3-12 is not an error: this
+// Unlike config.Locate, finding nothing at steps 3-14 is not an error: this
 // file is entirely optional (D19). Locate returns ("", nil) in that case,
 // and Resolve falls back to Default. Precedence is by location first (cwd,
-// then XDG, then /etc), and only .yaml vs .yml within the same location —
-// a cwd .yml still beats an XDG .yaml.
+// then XDG, then /etc), and only naming (enodia.-prefixed vs bare vs
+// dotfile, and .yaml vs .yml) within the same location — a cwd .yml still
+// beats an XDG .yaml.
 func Locate(explicit string) (string, error) {
 	if explicit != "" {
 		return mustExist(explicit)
@@ -58,6 +62,7 @@ func Locate(explicit string) (string, error) {
 		"enodia.settings.yaml", "enodia.settings.yml",
 		"settings.yaml", "settings.yml",
 		".enodia.settings.yaml", ".enodia.settings.yml",
+		".settings.yaml", ".settings.yml",
 	}
 
 	var dirs []string

@@ -137,6 +137,37 @@ func TestLocateEnodiaPrefixedBeatsBareSettings(t *testing.T) {
 	}
 }
 
+func TestLocateFindsBareDotSettingsYAML(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, ".settings.yaml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != ".settings.yaml" {
+		t.Fatalf("got %q, want %q", got, ".settings.yaml")
+	}
+}
+
+func TestLocateDotEnodiaSettingsBeatsBareDotSettings(t *testing.T) {
+	clearSearchEnv(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, ".enodia.settings.yaml"), "schemaVersion: 1\n")
+	writeFile(t, filepath.Join(dir, ".settings.yaml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != ".enodia.settings.yaml" {
+		t.Fatalf("got %q, want %q (.enodia.settings.yaml should win over bare .settings.yaml)", got, ".enodia.settings.yaml")
+	}
+}
+
 func TestLocateFindsCwdDotfileWhenPlainOneAbsent(t *testing.T) {
 	clearSearchEnv(t)
 	dir := t.TempDir()
