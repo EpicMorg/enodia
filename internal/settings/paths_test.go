@@ -252,6 +252,90 @@ func TestLocateCwdBeatsXDGConfigHome(t *testing.T) {
 	}
 }
 
+// writeExecutableDirFile writes name into executableDir() (the running test
+// binary's own directory) and removes it on cleanup — that directory is
+// shared by every test in this binary, so leaving a file behind would leak
+// into unrelated tests run afterwards in the same process.
+func writeExecutableDirFile(t *testing.T, name, content string) string {
+	t.Helper()
+	dir := executableDir()
+	if dir == "" {
+		t.Skip("os.Executable unavailable on this platform/environment")
+	}
+	path := filepath.Join(dir, name)
+	writeFile(t, path, content)
+	t.Cleanup(func() { _ = os.Remove(path) })
+	return path
+}
+
+func TestExecutableDirIsAnExistingDirectory(t *testing.T) {
+	dir := executableDir()
+	if dir == "" {
+		t.Skip("os.Executable unavailable on this platform/environment")
+	}
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		t.Fatalf("executableDir() = %q, want an existing directory (err=%v)", dir, err)
+	}
+}
+
+// The Windows case this exists for: install.ps1 puts enodia.exe in
+// %LOCALAPPDATA%\enodia and adds that to PATH, so cwd at invocation time is
+// essentially never the install directory. A settings.yaml dropped next to
+// the real .exe must still be found.
+func TestLocateFindsExecutableDir(t *testing.T) {
+	clearSearchEnv(t)
+	want := writeExecutableDirFile(t, "settings.yaml", "schemaVersion: 1\n")
+
+	empty := t.TempDir()
+	t.Chdir(empty)
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestLocateCwdBeatsExecutableDir(t *testing.T) {
+	clearSearchEnv(t)
+	writeExecutableDirFile(t, "settings.yaml", "schemaVersion: 1\n")
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeFile(t, filepath.Join(dir, "settings.yaml"), "schemaVersion: 1\n")
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "settings.yaml" {
+		t.Fatalf("got %q, want %q", got, "settings.yaml")
+	}
+}
+
+func TestLocateExecutableDirBeatsXDGConfigHome(t *testing.T) {
+	clearSearchEnv(t)
+	want := writeExecutableDirFile(t, "settings.yaml", "schemaVersion: 1\n")
+
+	empty := t.TempDir()
+	t.Chdir(empty)
+
+	xdg := t.TempDir()
+	writeFile(t, filepath.Join(xdg, "enodia", "settings.yaml"), "schemaVersion: 1\n")
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+
+	got, err := Locate("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
 // Unlike config.Locate, finding nothing at all is not an error: settings
 // are entirely optional (D19).
 func TestLocateNothingFoundIsNotAnError(t *testing.T) {

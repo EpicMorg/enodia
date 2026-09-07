@@ -180,6 +180,31 @@ Not dates. Order of work, and what each step unblocks.
   the flag's own cobra default is already "compact"); `html.view` does the
   same for `export --format html`, which also gained its own `--view` flag
   independent of `check`'s
+- Fixed: `parser.cleanRegex` in `enodia.yaml` was silently rejected —
+  `probe.ParserSpec` only carried `json:` tags, so `yaml.v3` (with
+  `KnownFields(true)`) fell back to the lowercased Go field name with no
+  word splitting (`cleanregex`), not the `cleanRegex` docs/DECISIONS.md
+  (D3) and docs/CLAUDE.md actually documented. Found by the docs-repo
+  agent while writing enodia-docs content, confirmed by decoding a real
+  YAML target through `internal/config` in a test. Fixed by adding
+  explicit `yaml:` tags to `ParserSpec`, spelled `clean_regex` (snake_case)
+  to match every other multi-word key in the schema (`ca_file`,
+  `min_version`, `allow_insecure_transport`, ...) rather than inventing a
+  lone camelCase exception — D3/CLAUDE.md updated to match. Never shipped
+  in a release, so no back-compat concern
+- `settings.yaml` also checked next to the running executable, not just
+  cwd/XDG/`/etc` — the actual "next to the binary" case, distinct from cwd:
+  `install.ps1` puts `enodia.exe` in `%LOCALAPPDATA%\enodia` and adds that
+  to PATH, so on Windows especially, cwd at invocation time is essentially
+  never the install directory (the whole point of PATH is that it stops
+  mattering). `internal/settings/paths.go`'s new `executableDir()` resolves
+  `os.Executable()` through `filepath.EvalSymlinks` first, so a PATH shim
+  (e.g. a version manager) doesn't make settings.yaml appear to live
+  somewhere the real binary never runs from. Precedence: cwd forms still
+  win first, then the executable's directory, then XDG, then `/etc/enodia`.
+  Deliberately scoped to `settings.yaml` only — `enodia.yaml` carries
+  credentials and does not gain this step, so a shared/portable install
+  directory can't get a config file silently picked up from it
 - `html.assets: inline|cdn` — `inline` (default) is byte-for-byte today's
   original fully offline single file (verified: zero `http(s)://` or
   `<script` in output); `cdn` instead loads Bootstrap/Bootswatch and

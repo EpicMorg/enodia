@@ -97,6 +97,53 @@ targets:
 	}
 }
 
+func TestLoadGenericParserCleanRegexUsesSnakeCase(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+targets:
+  - id: svc
+    product: generic
+    address: https://svc.example.com
+    parser:
+      type: regex
+      regex: 'version="([\d.]+)"'
+      clean_regex: '^(\d+\.\d+\.\d+)'
+`)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	ps := c.Targets[0].Parser
+	if ps == nil || ps.CleanRegex != `^(\d+\.\d+\.\d+)` {
+		t.Fatalf("clean_regex did not decode into ParserSpec.CleanRegex: %+v", ps)
+	}
+}
+
+func TestLoadGenericParserCleanRegexCamelCaseRejected(t *testing.T) {
+	// cleanRegex (camelCase) is not the documented spelling (D3): it must be
+	// rejected by KnownFields(true), not silently accepted or silently
+	// dropped, so a config author gets a typo error instead of a parser
+	// that quietly never cleans anything.
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+targets:
+  - id: svc
+    product: generic
+    address: https://svc.example.com
+    parser:
+      type: regex
+      regex: 'version="([\d.]+)"'
+      cleanRegex: '^(\d+\.\d+\.\d+)'
+`)
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected an error for the camelCase cleanRegex spelling")
+	}
+}
+
 func TestLoadInterpolatesBeforeParsing(t *testing.T) {
 	t.Setenv("ENODIA_TEST_ADDRESS", "jira.example.com")
 	dir := t.TempDir()

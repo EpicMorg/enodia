@@ -340,10 +340,16 @@ failing loudly over, since it usually means the wrong file (or none) is
 about to be used.
 
 **`settings.yaml`** (`--settings <path>` or `$ENODIA_SETTINGS` for an exact
-file) — same idea, with two differences: it also checks a plain `settings.`
-name (not just `enodia.settings.`), and finding nothing at all is *not* an
-error — every field just falls back to its built-in default, since this
-file is entirely optional:
+file) — same idea, with three differences: it also checks a plain `settings.`
+name (not just `enodia.settings.`), it also checks the directory containing
+the running executable (not just cwd — the actual "next to the binary" case,
+which matters most on Windows: `install.ps1` puts `enodia.exe` in
+`%LOCALAPPDATA%\enodia` and adds that to PATH, so cwd is rarely the install
+directory), and finding nothing at all is *not* an error — every field just
+falls back to its built-in default, since this file is entirely optional.
+`enodia.yaml` does not get this executable-directory step: it carries
+credentials, so it stays out of shared/portable install directories on
+purpose.
 
 1. `./enodia.settings.yaml`
 2. `./enodia.settings.yml`
@@ -353,11 +359,13 @@ file is entirely optional:
 6. `./.enodia.settings.yml`
 7. `./.settings.yaml`
 8. `./.settings.yml`
-9. `$XDG_CONFIG_HOME/enodia/settings.yaml` (`~/.config/enodia/settings.yaml`
-   if `$XDG_CONFIG_HOME` is unset)
-10. `$XDG_CONFIG_HOME/enodia/settings.yml`
-11. `/etc/enodia/settings.yaml`
-12. `/etc/enodia/settings.yml`
+9. `<directory of the running executable>/settings.yaml`
+10. `<same>/settings.yml`
+11. `$XDG_CONFIG_HOME/enodia/settings.yaml` (`~/.config/enodia/settings.yaml`
+    if `$XDG_CONFIG_HOME` is unset)
+12. `$XDG_CONFIG_HOME/enodia/settings.yml`
+13. `/etc/enodia/settings.yaml`
+14. `/etc/enodia/settings.yml`
 
 ## Third-party assets
 

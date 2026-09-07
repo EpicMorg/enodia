@@ -52,7 +52,7 @@ release pipeline and by the generic probe as a stopgap.
 ## D3 — The generic probe exists and is frozen
 
 **Decided.** `product: generic` accepts a parser spec from user config:
-`json` / `xml` / `header` / `plaintext` / `regex`, plus `cleanRegex`.
+`json` / `xml` / `header` / `plaintext` / `regex`, plus `clean_regex`.
 
 Every organisation has an in-house system that will never get a dedicated
 probe. Without an escape hatch those users are blocked on a maintainer.

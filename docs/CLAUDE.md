@@ -39,7 +39,7 @@ First parameter, always. Never `time.Sleep` for a timeout, never a package-level
 or loops is a bug.
 
 **The generic probe's vocabulary is frozen.** `json`/`xml`/`header`/`plaintext`/
-`regex` plus `cleanRegex`. Do not add conditionals, loops, multi-step requests,
+`regex` plus `clean_regex`. Do not add conditionals, loops, multi-step requests,
 variable capture or templating. Anything needing those needs a Go probe. This
 line is the whole defence against becoming a bad interpreter in YAML.
 
