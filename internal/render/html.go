@@ -183,6 +183,7 @@ func htmlInline(w io.Writer, r Report, sections []htmlViewSection) error {
 	ew := &errWriter{w: w}
 
 	ew.printf("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">\n")
+	ew.printf("<link rel=\"icon\" type=\"image/png\" href=\"data:image/png;base64,%s\">\n", faviconPNGBase64)
 	ew.printf("<title>enodia report</title>\n<style>%s</style>\n</head><body>\n", htmlCSS)
 	ew.printf("<h1>enodia report</h1>\n")
 	ew.printf("<p class=\"meta\">generated %s &middot; as of %s</p>\n",
@@ -217,6 +218,12 @@ func htmlCDN(w io.Writer, r Report, sections []htmlViewSection, theme, cdn strin
 	ew := &errWriter{w: w}
 
 	ew.printf("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">\n")
+	// CDN mode already needs internet access to render at all, so the
+	// favicon is a live link to enodia.sh rather than the base64 copy
+	// inline mode carries — no point doubling the page size for an icon
+	// this mode can just as easily fetch itself.
+	ew.printf("<link rel=\"icon\" href=\"https://enodia.sh/favicon.ico\">\n")
+	ew.printf("<link rel=\"apple-touch-icon\" href=\"https://enodia.sh/apple-touch-icon.png\">\n")
 	ew.printf("<title>enodia report</title>\n")
 	if theme == ThemeNone {
 		ew.printf("<link id=\"enodia-theme-css\" rel=\"stylesheet\">\n")
@@ -283,14 +290,18 @@ func htmlCDN(w io.Writer, r Report, sections []htmlViewSection, theme, cdn strin
 // ThemeNone, which loads neither.
 func writeHTMLFooterInline(ew *errWriter, r Report) {
 	ew.printf("<footer>\n<p>enodia &middot; <a href=\"https://github.com/EpicMorg/enodia\">"+
-		"github.com/EpicMorg/enodia</a> &middot; &copy; %d EpicMorg &middot; AGPL-3.0-or-later</p>\n</footer>\n",
+		"github.com/EpicMorg/enodia</a> &middot; <a href=\"https://enodia.sh\">enodia.sh</a> &middot; "+
+		"<a href=\"https://docs.enodia.sh\">docs.enodia.sh</a> &middot; &copy; %d EpicMorg &middot; "+
+		"AGPL-3.0-or-later</p>\n</footer>\n",
 		r.GeneratedAt.Year())
 }
 
 func writeHTMLFooterCDN(ew *errWriter, r Report, creditBootstrap bool) {
 	ew.printf("<footer class=\"mt-5 pt-3 border-top text-body-secondary small\">\n")
 	ew.printf("<p class=\"mb-1\">enodia &middot; <a href=\"https://github.com/EpicMorg/enodia\">"+
-		"github.com/EpicMorg/enodia</a> &middot; &copy; %d EpicMorg &middot; AGPL-3.0-or-later</p>\n",
+		"github.com/EpicMorg/enodia</a> &middot; <a href=\"https://enodia.sh\">enodia.sh</a> &middot; "+
+		"<a href=\"https://docs.enodia.sh\">docs.enodia.sh</a> &middot; &copy; %d EpicMorg &middot; "+
+		"AGPL-3.0-or-later</p>\n",
 		r.GeneratedAt.Year())
 	if creditBootstrap {
 		ew.printf("<p class=\"mb-0\">Styled with <a href=\"https://getbootstrap.com/\">Bootstrap</a> and " +

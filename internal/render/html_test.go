@@ -248,8 +248,44 @@ func TestHTMLFootersCreditTheProject(t *testing.T) {
 		if !strings.Contains(out, `href="https://github.com/EpicMorg/enodia"`) {
 			t.Fatalf("opts=%+v: expected a link back to the project, got:\n%s", opts, out)
 		}
+		if !strings.Contains(out, `href="https://enodia.sh"`) {
+			t.Fatalf("opts=%+v: expected a link to enodia.sh, got:\n%s", opts, out)
+		}
+		if !strings.Contains(out, `href="https://docs.enodia.sh"`) {
+			t.Fatalf("opts=%+v: expected a link to docs.enodia.sh, got:\n%s", opts, out)
+		}
 		if !strings.Contains(out, "AGPL-3.0-or-later") {
 			t.Fatalf("opts=%+v: expected the license named in the footer, got:\n%s", opts, out)
+		}
+	}
+}
+
+func TestHTMLInlineFaviconIsEmbeddedNotLinked(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `<link rel="icon" type="image/png" href="data:image/png;base64,`) {
+		t.Fatalf("expected an embedded data: URI favicon, got:\n%s", out)
+	}
+	if strings.Contains(out, "enodia.sh/favicon") || strings.Contains(out, "apple-touch-icon.png") {
+		t.Fatal("inline mode must not fetch the favicon over the network")
+	}
+}
+
+func TestHTMLCDNFaviconLinksToLiveSite(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{
+		`<link rel="icon" href="https://enodia.sh/favicon.ico">`,
+		`<link rel="apple-touch-icon" href="https://enodia.sh/apple-touch-icon.png">`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected %q, got:\n%s", want, out)
 		}
 	}
 }
