@@ -111,6 +111,26 @@ func TestLifecycleRowsToneIgnoresOtherAxes(t *testing.T) {
 	}
 }
 
+// "down" is unreachable: Lifecycle/Patch are Unknown with a zero-value
+// (SeverityNone) axis severity, which must not read as ToneGood — an
+// all-dashes row tinted green looks like "no issue" when it actually means
+// "no data".
+func TestLifecycleRowsUnknownIsToneInfoNotGood(t *testing.T) {
+	_, rows, tones := lifecycleRows(sampleReport())
+	i := findRowIndex(rows, 0, "down")
+	if tones[i] != ToneInfo {
+		t.Fatalf("got tone %q for down (LifecycleUnknown), want info", tones[i])
+	}
+}
+
+func TestDriftRowsUnknownIsToneInfoNotGood(t *testing.T) {
+	_, rows, tones := driftRows(sampleReport())
+	i := findRowIndex(rows, 0, "down")
+	if tones[i] != ToneInfo {
+		t.Fatalf("got tone %q for down (PatchUnknown), want info", tones[i])
+	}
+}
+
 func TestDriftRowsJoinsObservationVersion(t *testing.T) {
 	_, rows, _ := driftRows(sampleReport())
 	row := findRow(rows, 0, "jira-a")

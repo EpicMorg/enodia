@@ -62,6 +62,12 @@ func compactRows(r Report) (headers []string, rows [][]string, tones []RowTone) 
 // this view is focused on the lifecycle axis, so a row is red because ITS
 // lifecycle boundary is critical, not because some unrelated branch finding
 // happened to be worse.
+//
+// LifecycleUnknown is tinted ToneInfo rather than falling through to
+// severityTone's default ToneGood: SeverityNone means "checked, no issue",
+// but Unknown means "nothing to check" — usually because the target was
+// unreachable (Reason: probe_failed) — and coloring an all-dashes row green
+// reads as "this is fine" when it actually means "no data at all".
 func lifecycleRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
 	headers = []string{"ID", "PRODUCT", "LIFECYCLE", "EOL", "SUPPORT-ENDS", "DAYS-TO-EOL"}
 	for _, a := range r.Assessments {
@@ -69,13 +75,19 @@ func lifecycleRows(r Report) (headers []string, rows [][]string, tones []RowTone
 			a.ID, a.Product, string(a.Lifecycle),
 			formatDate(a.EOLDate), formatDate(a.SupportEnds), daysUntil(a.EOLDate, r.AsOf),
 		})
-		tones = append(tones, severityTone(a.LifecycleSeverity))
+		tone := severityTone(a.LifecycleSeverity)
+		if a.Lifecycle == evaluate.LifecycleUnknown {
+			tone = ToneInfo
+		}
+		tones = append(tones, tone)
 	}
 	return headers, rows, tones
 }
 
 // driftRows tones by PatchSeverity specifically, for the same reason
 // lifecycleRows uses LifecycleSeverity: this view is about the patch axis.
+// PatchUnknown gets the same ToneInfo treatment as LifecycleUnknown above,
+// and for the same reason — "unknown" is not "good".
 func driftRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
 	headers = []string{"ID", "PRODUCT", "CURRENT", "LATEST", "CYCLE", "PATCH"}
 	obsByID := indexObservations(r.Observations)
@@ -88,7 +100,11 @@ func driftRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
 			a.ID, a.Product, current,
 			firstNonEmpty(a.LatestInCycle, "-"), firstNonEmpty(a.MatchedCycle, "-"), string(a.Patch),
 		})
-		tones = append(tones, severityTone(a.PatchSeverity))
+		tone := severityTone(a.PatchSeverity)
+		if a.Patch == evaluate.PatchUnknown {
+			tone = ToneInfo
+		}
+		tones = append(tones, tone)
 	}
 	return headers, rows, tones
 }
