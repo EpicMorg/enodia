@@ -13,7 +13,7 @@
 # server.
 #
 # Env vars:
-#   ENODIA_VERSION    version tag to install, e.g. "v1.2.3" (default: latest)
+#   ENODIA_VERSION    version tag to install, e.g. "1.2.3+4" (default: latest)
 #   ENODIA_INSTALL_DIR  directory to install into (default: /usr/local/bin)
 
 set -eu
@@ -41,19 +41,18 @@ case "$arch" in
 		;;
 esac
 
-version="${ENODIA_VERSION:-}"
-if [ -z "$version" ]; then
-	version=$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" |
-		grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
-	if [ -z "$version" ]; then
-		echo "install.sh: could not determine the latest release; set ENODIA_VERSION to install a specific one" >&2
-		exit 1
-	fi
-fi
+version="${ENODIA_VERSION:-latest}"
 
 # Must match archives.name_template in .goreleaser.yaml exactly.
 archive="enodia_${os}_${arch}.tar.gz"
-base_url="https://github.com/${repo}/releases/download/${version}"
+if [ "$version" = "latest" ]; then
+	# GitHub's own alias — resolves server-side with no API call, so
+	# there's no tag_name to parse and no API rate limit to hit (unlike
+	# querying https://api.github.com/repos/.../releases/latest first).
+	base_url="https://github.com/${repo}/releases/latest/download"
+else
+	base_url="https://github.com/${repo}/releases/download/${version}"
+fi
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

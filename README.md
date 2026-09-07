@@ -187,9 +187,8 @@ HTML report (see "Reporting").
 ## Installation
 
 Not published yet. When it is, each [release](https://github.com/EpicMorg/enodia/releases)
-carries a `.deb` and `.rpm` (linux/amd64+arm64, binary at `/usr/bin/enodia`,
-an empty `/etc/enodia/` for your config) alongside the raw archives, plus a
-container image:
+carries a `.deb` and `.rpm` (linux/amd64+arm64) alongside the raw archives,
+plus a container image:
 
 ```console
 sudo dpkg -i enodia_linux_amd64.deb          # Debian/Ubuntu
@@ -198,6 +197,25 @@ sudo rpm -i enodia_linux_amd64.rpm           # Fedora/RHEL
 docker run --rm \
   -v /etc/enodia:/config:ro \
   ghcr.io/epicmorg/enodia:1 check --config /config/config.yaml
+```
+
+The `.deb`/`.rpm` install the binary at `/usr/bin/enodia`, man pages for
+every command under `/usr/share/man/man1/` (`man enodia`, `man
+enodia-collect`, ...), and create a dedicated, unprivileged `enodia` system
+user — nothing in this package needs root to run, so `enodia serve` under
+systemd shouldn't get any more than it does. Three empty directories are
+created and chowned to that user: `/etc/enodia` (`root:enodia`, `0750` —
+readable by the service via group membership, not writable by it — for your
+`enodia.yaml`/`settings.yaml`/`credentials.yaml`; the package never writes a
+config into it, a missing one is meant to be a loud error), and
+`/opt/enodia`/`/var/enodia` (`enodia:enodia`, `0750`) for whatever the
+service writes at runtime.
+
+Or, for the raw archive rather than a package:
+
+```console
+curl -sSL https://raw.githubusercontent.com/EpicMorg/enodia/master/install.sh | sh   # Linux/macOS
+irm https://raw.githubusercontent.com/EpicMorg/enodia/master/install.ps1 | iex        # Windows
 ```
 
 ## Supported platforms
