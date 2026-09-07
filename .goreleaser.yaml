@@ -82,12 +82,12 @@ checksum:
   name_template: "checksums.txt"
   algorithm: sha256
 
-# .deb/.rpm/.apk for linux/amd64+arm64 (the "enodia" build only — none of
-# these formats mean anything for darwin/windows, and the separate
-# windows-386 build has nothing to do with any of them). nfpm is a pure-Go
-# package builder, not a wrapper around dpkg-deb/rpmbuild/abuild, so this
-# needs nothing extra installed on the runner — goreleaser links it in
-# directly.
+# .deb/.rpm/.apk/.pkg.tar.zst for linux/amd64+arm64 (the "enodia" build
+# only — none of these formats mean anything for darwin/windows, and the
+# separate windows-386 build has nothing to do with any of them). nfpm is a
+# pure-Go package builder, not a wrapper around dpkg-deb/rpmbuild/abuild/
+# makepkg, so this needs nothing extra installed on the runner — goreleaser
+# links it in directly.
 nfpms:
   - id: enodia
     ids:
@@ -103,6 +103,7 @@ nfpms:
       - deb
       - rpm
       - apk
+      - archlinux
     bindir: /usr/bin
     # preinstall creates the dedicated "enodia" system user/group (rootless
     # by default — nothing in this tree requires root, and internal/serve's
