@@ -68,8 +68,10 @@ Not dates. Order of work, and what each step unblocks.
 - `internal/settings` — `settings.yaml`, personal display defaults kept
   separate from `enodia.yaml` (DECISIONS.md D19). Same resolution pattern
   as config (`internal/config/paths.go`): `--settings`, `$ENODIA_SETTINGS`,
-  `./enodia.settings.{yaml,yml}`, `./.enodia.settings.{yaml,yml}`,
-  `$XDG_CONFIG_HOME/enodia/settings.{yaml,yml}`,
+  `./enodia.settings.{yaml,yml}`, then a bare `./settings.{yaml,yml}` (the
+  `enodia.`-prefixed form wins if both exist — added after a real user
+  expected the plain name next to the binary to just work, and it didn't),
+  `./.enodia.settings.{yaml,yml}`, `$XDG_CONFIG_HOME/enodia/settings.{yaml,yml}`,
   `/etc/enodia/settings.{yaml,yml}` (`.yml` is checked too, both here and
   in `enodia.yaml`'s own search — equally common in the wild, `.yaml` wins
   ties at the same location, location still beats extension) — but unlike

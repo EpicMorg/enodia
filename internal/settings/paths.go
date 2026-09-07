@@ -25,16 +25,23 @@ var candidateNames = []string{"settings.yaml", "settings.yml"}
 //  2. $ENODIA_SETTINGS. Same rule.
 //  3. ./enodia.settings.yaml
 //  4. ./enodia.settings.yml
-//  5. ./.enodia.settings.yaml
-//  6. ./.enodia.settings.yml
-//  7. $XDG_CONFIG_HOME/enodia/settings.yaml, defaulting to
+//  5. ./settings.yaml — the bare name a plain "settings.yaml next to the
+//     binary" expectation reaches for; the enodia.-prefixed form above
+//     still wins if both exist, since config.yaml-style prod data files
+//     already train that prefix, but this file is personal and optional
+//     (D19), so it doesn't need the same collision-avoidance the
+//     credentials-bearing enodia.yaml does.
+//  6. ./settings.yml
+//  7. ./.enodia.settings.yaml
+//  8. ./.enodia.settings.yml
+//  9. $XDG_CONFIG_HOME/enodia/settings.yaml, defaulting to
 //     ~/.config/enodia/settings.yaml per the XDG basedir spec when the
 //     variable is unset.
-//  8. $XDG_CONFIG_HOME/enodia/settings.yml (same fallback)
-//  9. /etc/enodia/settings.yaml
-//  10. /etc/enodia/settings.yml
+//  10. $XDG_CONFIG_HOME/enodia/settings.yml (same fallback)
+//  11. /etc/enodia/settings.yaml
+//  12. /etc/enodia/settings.yml
 //
-// Unlike config.Locate, finding nothing at steps 3-10 is not an error: this
+// Unlike config.Locate, finding nothing at steps 3-12 is not an error: this
 // file is entirely optional (D19). Locate returns ("", nil) in that case,
 // and Resolve falls back to Default. Precedence is by location first (cwd,
 // then XDG, then /etc), and only .yaml vs .yml within the same location —
@@ -49,6 +56,7 @@ func Locate(explicit string) (string, error) {
 
 	candidates := []string{
 		"enodia.settings.yaml", "enodia.settings.yml",
+		"settings.yaml", "settings.yml",
 		".enodia.settings.yaml", ".enodia.settings.yml",
 	}
 

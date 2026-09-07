@@ -156,11 +156,14 @@ polls your entire fleet on every click is a self-inflicted denial of service.
 Collection runs on a schedule; the page shows the latest snapshot and states
 plainly when it was taken.
 
-An optional `settings.yaml` (or `.yml`; same search path and naming rules as
-`enodia.yaml` above, but a missing settings file is never an error — every
-field just falls back to its built-in default) holds personal display
-defaults: which table view `check`/`export` use when `--view` isn't passed,
-and how `export --format html` renders. For example:
+An optional settings file holds personal display defaults: which table view
+`check`/`export` use when `--view` isn't passed, and how `export --format
+html` renders. Same search locations as `enodia.yaml` above (current
+directory, `$XDG_CONFIG_HOME/enodia/`, `/etc/enodia/`; `--settings <path>` or
+`$ENODIA_SETTINGS` for an exact file), but a bare `settings.yaml`/`settings.yml`
+next to the binary works too, not just the `enodia.`-prefixed form — and
+unlike `enodia.yaml`, a missing settings file is never an error, every field
+just falls back to its built-in default. For example:
 
 ```yaml
 schemaVersion: 1
