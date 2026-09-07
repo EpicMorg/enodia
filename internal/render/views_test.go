@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/EpicMorg/enodia/internal/evaluate"
+	"github.com/EpicMorg/enodia/internal/probe"
 )
 
 func findRow(rows [][]string, idCol int, id string) []string {
@@ -72,6 +73,41 @@ func TestCompactRowsFailSeverityIsToneBad(t *testing.T) {
 	}
 }
 
+// "down" (index 3, Reason: probe_failed) must not blend into ordinary
+// SeverityWarn rows: a target answering 502 or as the wrong service
+// entirely is a different kind of problem than a policy-driven warning,
+// even though both currently carry the same SeverityWarn.
+func TestCompactRowsUnreachableIsToneInfoNotWarn(t *testing.T) {
+	_, rows, tones := compactRows(sampleReport())
+	i := findRowIndex(rows, 0, "down")
+	if tones[i] != ToneInfo {
+		t.Fatalf("got tone %q for down (probe_failed), want info", tones[i])
+	}
+}
+
+// An explicit --fail-on=reason:probe_failed escalates ReasonSeverity to
+// SeverityFail — that operator override must win and render Bad, not be
+// silently downgraded to the anomaly's usual Info by isUnreachableAnomaly.
+func TestCompactRowsEscalatedProbeFailedIsToneBadNotInfo(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "down")
+	r.Assessments[i].ReasonSeverity = evaluate.SeverityFail
+	_, rows, tones := compactRows(r)
+	j := findRowIndex(rows, 0, "down")
+	if tones[j] != ToneBad {
+		t.Fatalf("got tone %q, want bad (escalated via FailOn)", tones[j])
+	}
+}
+
+func findAssessmentIndex(assessments []evaluate.Assessment, id string) int {
+	for i, a := range assessments {
+		if a.ID == id {
+			return i
+		}
+	}
+	return -1
+}
+
 func TestLifecycleRowsShowsDatesAndDaysRemaining(t *testing.T) {
 	_, rows, _ := lifecycleRows(sampleReport())
 	row := findRow(rows, 0, "jira-a")
@@ -128,6 +164,49 @@ func TestDriftRowsUnknownIsToneInfoNotGood(t *testing.T) {
 	i := findRowIndex(rows, 0, "down")
 	if tones[i] != ToneInfo {
 		t.Fatalf("got tone %q for down (PatchUnknown), want info", tones[i])
+	}
+}
+
+// A target that answers fine but whose cycle the resolver doesn't
+// recognize (Reason: cycle_unmatched) is a real gap, not the same anomaly
+// as a target that never answered at all ("down") — it must not share
+// probe_failed's ToneInfo.
+func TestLifecycleRowsCycleUnmatchedIsToneWarnNotInfo(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "down")
+	r.Assessments[i].Reason = evaluate.ReasonCycleUnmatched
+	r.Assessments[i].ReasonSeverity = evaluate.SeverityWarn
+
+	_, rows, tones := lifecycleRows(r)
+	j := findRowIndex(rows, 0, "down")
+	if tones[j] != ToneWarn {
+		t.Fatalf("got tone %q, want warn (cycle_unmatched is a real gap, not an anomaly)", tones[j])
+	}
+}
+
+// Same case in drift, but with a real observed version present (unlike
+// "down"'s actual fixture): CURRENT shows that version, not a dash, while
+// LATEST/CYCLE are dashes and PATCH reads unknown — still not the same
+// anomaly as an unreachable target, so still ToneWarn, not ToneInfo.
+func TestDriftRowsCycleUnmatchedIsToneWarnNotInfo(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "down")
+	r.Assessments[i].Reason = evaluate.ReasonCycleUnmatched
+	r.Assessments[i].ReasonSeverity = evaluate.SeverityWarn
+	for k := range r.Observations {
+		if r.Observations[k].ID == "down" {
+			r.Observations[k] = probe.Observation{ID: "down", Product: "jira", Version: "99.9.9", Normalized: "99.9.9"}
+		}
+	}
+
+	_, rows, tones := driftRows(r)
+	row := findRow(rows, 0, "down")
+	if row[2] != "99.9.9" {
+		t.Fatalf("got current %q, want the real observed version 99.9.9, not a dash", row[2])
+	}
+	j := findRowIndex(rows, 0, "down")
+	if tones[j] != ToneWarn {
+		t.Fatalf("got tone %q, want warn (cycle_unmatched is a real gap, not an anomaly)", tones[j])
 	}
 }
 
