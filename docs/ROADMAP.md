@@ -396,12 +396,32 @@ Not dates. Order of work, and what each step unblocks.
   and only counts it as done if it exits 0; any other outcome — missing
   entirely or present-but-unusable — falls through to `$PREFIX/bin` the
   same way
+- `enodia_android_arm64` — a real Termux user hit the actual next problem
+  right after the `$PREFIX/bin` fix above: even installed, the
+  `linux_arm64` binary wouldn't exec at all on Termux, Bionic's linker
+  rejecting it with `"has unexpected e_type: 2"` (`ET_EXEC`; Android has
+  required PIE/`ET_DYN` since Lollipop). A new goreleaser build
+  (`GOOS: android`, `GOARCH: arm64`) and archive fix this properly — see
+  DECISIONS.md D20 for why a straight `-buildmode=pie` on the existing
+  `linux` build was tried and rejected (breaks Alpine/musl) in favor of
+  Go's real `android` target, and why Termux detection uses
+  `$TERMUX_VERSION` rather than the `$PREFIX` already used for the
+  install-directory fallback. `install.sh` picks the right archive
+  automatically; no change needed to how anyone invokes it
 
 ## Later
 
 - CVE correlation via OSV.dev — investigated twice, deferred both times;
   revisit only if a workable data source appears — see DECISIONS.md D18
   for exactly what was tried and why it's closed, not just deferred
+- `android/amd64`, `android/386`, `android/arm` — Go hard-requires cgo
+  against an Android NDK cross-compiler for these three (confirmed live;
+  only `android/arm64` supports pure internal linking), and this
+  project's build image carries no NDK today. Revisit if/when the shared
+  `ghcr.io/epicmorg/debian:trixie-develop` image gains one (same pattern
+  as `mingw-w64`/`llvm-mingw` for the Windows builds) — see DECISIONS.md
+  D20. Low urgency: `arm64` alone covers essentially every real Android
+  device in current use
 
 ## Deliberately not planned
 

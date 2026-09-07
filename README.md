@@ -227,6 +227,7 @@ irm https://raw.githubusercontent.com/EpicMorg/enodia/master/install.ps1 | iex  
 | Linux | amd64, arm64 | Kernel 3.2 or later — Debian 8+, Ubuntu 14.04+, RHEL/CentOS 7+ all comfortably qualify |
 | Windows | amd64, arm64, 386 | Windows 10 / Windows Server 2016 or later |
 | macOS | amd64, arm64 | macOS 12 Monterey or later |
+| Android (Termux) | arm64 only | Android 7+ ([Termux's own floor](https://github.com/termux/termux-app)) — a separate `enodia_android_arm64` build, not the Linux one (see `docs/DECISIONS.md` D20); `amd64`/`386`/`arm` aren't built yet (D20/ROADMAP) |
 
 These are the Go 1.26 toolchain's own floor (confirmed against
 [go.dev/wiki/MinimumRequirements](https://go.dev/wiki/MinimumRequirements)

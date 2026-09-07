@@ -635,3 +635,75 @@ Bootstrap's own Alert component needs that whole JS bundle to dismiss
 itself, and the four-line vanilla-JS click handler already living in this
 report's one `<script>` tag (see `cdnModeScript`) does the same thing
 without adding a second CDN fetch just for one button.
+
+---
+
+## D20 — Termux/Android gets its own `android_arm64` build, not a PIE hack on `linux_arm64`
+
+**Decided.** A separate goreleaser build (`GOOS: android`, `GOARCH: arm64`
+only) and archive (`enodia_android_arm64.tar.gz`), and `install.sh` picks
+it over the plain `linux_arm64` one whenever `$TERMUX_VERSION` is set.
+
+Found live, via `get.enodia.sh/unix` on a real Termux device: the
+`linux_arm64` binary failed to exec at all, Bionic's dynamic linker
+rejecting it with `"... has unexpected e_type: 2"`. `e_type: 2` is
+`ET_EXEC` — Android has refused to exec anything but a PIE (`ET_DYN`)
+binary since Lollipop, a kernel/linker-level policy, not a libc quirk.
+`uname -s` still reports `Linux` on Termux (same kernel), so `install.sh`'s
+existing OS detection alone can't tell a real Linux userspace apart from
+an Android one.
+
+**Why not just add `-buildmode=pie` to the existing `linux` build?**
+Verified live (via `qemu-user` inside `debian:trixie`/`alpine:3.20`
+containers) that this trades one platform's breakage for another's: Go's
+PIE binaries for `linux/arm64` carry a hardcoded `PT_INTERP` of
+`/lib/ld-linux-aarch64.so.1` — real glibc systems (Debian) happen to have
+that path and load fine, but Alpine (musl, no such path at all) fails with
+`No such file or directory` before the binary's own code ever runs, even
+though the binary needs no actual shared library (`readelf -d` shows zero
+`NEEDED` entries either way — Go's runtime is still fully static, cgo or
+not). Alpine is a real shipped target here (the `.apk` package), so this
+would fix Termux by breaking a platform already in production.
+
+**The actual fix is `GOOS=android`, a distinct target Go already
+supports.** Built and verified live: `CGO_ENABLED=0 GOOS=android
+GOARCH=arm64 go build` produces `ET_DYN` with `PT_INTERP` set to
+`/system/bin/linker64` — a real path guaranteed to exist on any Android
+device (part of the base system image, entirely outside Termux's own
+`$PREFIX` sandbox), so it carries none of the musl/glibc path-guessing
+problem the PIE hack above has.
+
+**Termux detection uses `$TERMUX_VERSION`, not the `$PREFIX` install.sh
+already checks for its directory-writability fallback.** `$PREFIX` is
+Termux's own variable too, but it's a generic enough name that other,
+unrelated shells/build environments occasionally export it for their own
+reasons. That ambiguity is a low-stakes risk for the writability fallback
+(worst case: installs into an unexpected-but-harmless directory) but a
+high-stakes one here — guessing wrong means downloading a binary this
+process's real OS categorically cannot execute at all, no fallback
+possible. `$TERMUX_VERSION` is Termux's own unambiguous self-identifying
+variable, set in every interactive Termux shell, and not a name plausibly
+reused elsewhere.
+
+**Only `arm64`, not `amd64`/`386`/`arm` too.** Verified live: Go's
+`android/arm64` is the only android `GOARCH` supporting pure internal
+linking (`CGO_ENABLED=0`, no extra toolchain). `android/amd64`,
+`android/386`, and `android/arm` all hard-require external (cgo) linking
+against an Android NDK cross-compiler — `"requires external (cgo) linking,
+but cgo is not enabled"`, not something a build flag works around. Nothing
+in this project's build image (`ghcr.io/epicmorg/debian:trixie-develop`)
+carries the NDK today, unlike `mingw-w64`/`llvm-mingw` for the Windows
+builds. `arm64` alone covers essentially every real Android device in use
+today (32-bit Android and x86 Android are both long past relevance), so
+this is deferred rather than blocking — see ROADMAP.md's "Later".
+
+**Rules out:** `-buildmode=pie` on the existing `linux` build (breaks
+Alpine, see above). Detecting Termux via `$PREFIX` alone for the OS/archive
+decision (too easily a false positive elsewhere, and the failure mode of a
+false positive here is total, not recoverable). Building all four android
+`GOARCH`es now (needs an NDK this project doesn't have access to add to
+the shared build image without the user's own separate work there).
+
+**Cost accepted:** a fifth goreleaser build id and a third archive OS to
+keep straight. `install.sh` gained one more branch. android/{amd64,386,arm}
+stay unsupported until the build image gains an NDK.
