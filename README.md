@@ -247,14 +247,20 @@ polls your entire fleet on every click is a self-inflicted denial of service.
 Collection runs on a schedule; the page shows the latest snapshot and states
 plainly when it was taken.
 
-An optional `settings.yaml` holds personal display defaults: which table view
-`check`/`export` use when `--view` isn't passed, and how `export --format
-html` renders — see "File locations" below for every name and directory it's
-searched in, and why a missing one is never an error the way a missing
-`enodia.yaml` is. For example:
+An optional `settings.yaml` holds personal display defaults: which format
+`export` uses when `--format` isn't passed, which table view `check`/`export`
+use when `--view` isn't passed, and how `export --format html` renders — see
+"File locations" below for every name and directory it's searched in, and why
+a missing one is never an error the way a missing `enodia.yaml` is. For
+example:
 
 ```yaml
 schemaVersion: 1
+
+export:
+  # used whenever `export` is run without --format; the built-in default
+  # stays json either way
+  default_format: html
 
 render:
   # compact (default) | lifecycle | drift | fleet

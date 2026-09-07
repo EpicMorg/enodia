@@ -29,7 +29,9 @@ var exportCmd = &cobra.Command{
 	Long: `export writes one self-contained file (D14: nothing here serves it —
 nginx, a cron job, or a systemd timer regenerating it is what does).
 
---format selects json, prometheus, or html.
+--format selects json, prometheus, or html. When --format is not passed,
+settings.yaml's export.default_format applies instead, if set; the
+built-in default stays json either way.
 
 --view restricts an html export to one view (compact, lifecycle, drift, or
 fleet) instead of all four stacked sections; ignored by json/prometheus,
@@ -53,9 +55,28 @@ func init() {
 }
 
 func runExportCmd(cmd *cobra.Command, _ []string) error {
-	if exportFormatFlag != "html" && exportFormats[exportFormatFlag] == nil {
+	// format falls back to settings.yaml's export.default_format only when
+	// --format itself was never passed — an explicit --format always wins,
+	// exactly like --view already does against html.view. This is also why
+	// settings is resolved here at all rather than only inside the html
+	// branch below: "which format" is settings' business the moment
+	// --format is left unset, not only once html is already decided.
+	format := exportFormatFlag
+	var st *settings.Settings
+	if !cmd.Flags().Changed("format") {
+		resolved, err := settings.Resolve(settingsFlag)
+		if err != nil {
+			return &ExitError{Code: 1, Err: err}
+		}
+		st = resolved
+		if st.Export.DefaultFormat != "" {
+			format = st.Export.DefaultFormat
+		}
+	}
+
+	if format != "html" && exportFormats[format] == nil {
 		return &ExitError{Code: 2, Err: fmt.Errorf(
-			`format %q is not supported; use "json", "prometheus", or "html"`, exportFormatFlag)}
+			`format %q is not supported; use "json", "prometheus", or "html"`, format)}
 	}
 
 	inv, err := loadInventory(cmd.Context(), cmd, exportFromFlag)
@@ -76,18 +97,21 @@ func runExportCmd(cmd *cobra.Command, _ []string) error {
 		out = f
 	}
 
-	if exportFormatFlag == "html" {
-		opts, err := htmlExportOptions(cmd)
-		if err != nil {
-			return &ExitError{Code: 2, Err: err}
+	if format == "html" {
+		if st == nil { // --format html was passed explicitly; not resolved above
+			resolved, err := settings.Resolve(settingsFlag)
+			if err != nil {
+				return &ExitError{Code: 2, Err: err}
+			}
+			st = resolved
 		}
-		if err := render.HTML(out, report, opts); err != nil {
+		if err := render.HTML(out, report, htmlExportOptions(cmd, st)); err != nil {
 			return &ExitError{Code: 1, Err: err}
 		}
 		return nil
 	}
 
-	if err := exportFormats[exportFormatFlag](out, report); err != nil {
+	if err := exportFormats[format](out, report); err != nil {
 		return &ExitError{Code: 1, Err: err}
 	}
 	return nil
@@ -103,16 +127,12 @@ var exportFormats = map[string]func(io.Writer, render.Report) error{
 }
 
 // htmlExportOptions resolves export --format html's asset mode, view,
-// theme and CDN: --view (if passed) beats settings.yaml's html.view, which
-// beats "" (all four sections, the original behaviour). Assets/theme/CDN
-// come from settings.yaml only, no flag — D19 treats them as a
-// per-operator default to set once, not a per-export choice.
-func htmlExportOptions(cmd *cobra.Command) (render.HTMLOptions, error) {
-	st, err := settings.Resolve(settingsFlag)
-	if err != nil {
-		return render.HTMLOptions{}, err
-	}
-
+// theme and CDN from st (already resolved by the caller): --view (if
+// passed) beats settings.yaml's html.view, which beats "" (all four
+// sections, the original behaviour). Assets/theme/CDN come from
+// settings.yaml only, no flag — D19 treats them as a per-operator default
+// to set once, not a per-export choice.
+func htmlExportOptions(cmd *cobra.Command, st *settings.Settings) render.HTMLOptions {
 	view := st.HTML.View
 	if cmd.Flags().Changed("view") {
 		view = exportViewFlag
@@ -123,5 +143,5 @@ func htmlExportOptions(cmd *cobra.Command) (render.HTMLOptions, error) {
 		View:   render.View(view),
 		Theme:  st.EffectiveTheme(),
 		CDN:    st.HTML.CDN,
-	}, nil
+	}
 }
