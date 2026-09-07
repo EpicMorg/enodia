@@ -138,20 +138,39 @@ Not dates. Order of work, and what each step unblocks.
 - Tests on recorded fixtures, offline, `-race` clean; every new probe
   live-verified against a real instance (Docker or the user's own
   production) before being written, not just against hand-built fixtures
-
-## Later
-
-- CI: build inside the user's own `epicmorg/debian:trixie-develop` image
-  (carries Go, mingw-w64, and now llvm-mingw with `$LLVM_MINGW_DIR`)
-  instead of `apt-get install mingw-w64` in release.yml — this is what
-  would give real releases (not just local/manual runs) the windows/arm64
-  icon. Scope still open — pending decision is whether this replaces only
-  the windows-resources step (a plain `docker run` before
-  `goreleaser-action`, no risk to the existing native `go build`/docker
-  buildx/cosign steps) or the whole release job runs inside the image
-  (needs docker-in-docker for buildx/push and confirmation cosign's OIDC
-  flow still works from inside a container) — explicitly deferred, not
-  decided
+- CI: `release.yml`'s job now runs inside `epicmorg/debian:trixie-develop`
+  (`container:`, not a `docker run` step) — the whole point being that
+  image already carries Go, mingw-w64, and llvm-mingw, so real tagged
+  releases now get the windows/arm64 icon too, with nothing left to
+  install except a bare `docker` CLI + buildx plugin (the image ships
+  neither). This is *not* docker-in-docker: the job's own container
+  bind-mounts the runner's existing docker socket
+  (`-v /var/run/docker.sock:/var/run/docker.sock`) and talks to it as a
+  sibling container — confirmed live, no `--privileged` needed, since the
+  image already runs as root by default. Release trigger is a tag matching
+  `*.*.*+*`, plus an explicit `git merge-base --is-ancestor` step
+  confirming the tagged commit is actually reachable from `origin/master`
+  — the tag-shape filter alone can't express "and it came from master".
+  Tags are `MAJOR.MINOR.PATCH+BUILD`, no `v` prefix (e.g. `1.2.3+4`), not
+  the originally-requested `X.Y.Z.B`: confirmed live that goreleaser
+  hard-fails ("invalid semantic version") on a literal four-dot tag unless
+  `--skip=validate`, which also disables its dirty-worktree check — not
+  something to run permanently. `+BUILD` is valid semver build metadata
+  and parses cleanly with no flags. Makefile's `VERSION_CSV` (the Windows
+  resource's FILEVERSION) now extracts all four numbers from this shape.
+  One thing `+` breaks that `.` wouldn't have: Docker tag syntax flatly
+  disallows it (confirmed: `docker tag foo:1.2.3+4` — "invalid reference
+  format") — `.goreleaser.yaml`'s `dockers_v2.tags` now applies
+  `{{ replace .Version "+" "-" }}` before it ever reaches a tag; the OCI
+  `image.version` annotation keeps the raw `+4` since annotations have no
+  such restriction. Verified as much of this locally as is safe without
+  touching the real repo/registry: the container image's docker-socket
+  mount, apt-installing `docker.io`/`docker-buildx` inside it, goreleaser
+  parsing `1.2.3+4`/`+4` tags cleanly, `VERSION_CSV` extracting all four
+  parts, and the `replace` template function itself (proven via a real
+  local build+archive run) — not an actual push to `ghcr.io/epicmorg/enodia`
+  or a real GitHub release, since faking that needs real credentials
+  against their live infrastructure
 - Revisit CVE correlation via OSV.dev if a workable data source appears —
   see DECISIONS.md D18 for exactly what was tried and why it's closed, not
   just deferred
