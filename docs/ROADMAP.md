@@ -363,6 +363,17 @@ Not dates. Order of work, and what each step unblocks.
   value surfaces through the exact same `format %q is not supported`
   check `--format` itself already goes through, no second definition of
   "valid" to keep in sync
+- `install.sh` now falls back to `$PREFIX/bin` when the target install
+  directory isn't writable and there's no `sudo` to retry with — Termux
+  (and other sandboxed userland-prefix environments) ship neither a
+  writable `/usr/local/bin` nor a `sudo` binary at all, so the script
+  used to hard-fail trying to exec a command that doesn't exist. Kept
+  generic on purpose, no name-based "is this Termux" branch: `$PREFIX` is
+  that environment's own "where my stuff goes" variable, and its
+  presence plus a missing `sudo` already describes the situation without
+  guessing an OS by name. `uname`-based OS/arch detection is untouched —
+  Termux reports `Linux`/`aarch64` like any other Android-on-ARM device,
+  so only the install-directory fallback needed to change
 
 ## Later
 
