@@ -1,0 +1,35 @@
+[
+  {
+    "cycle": "26.04",
+    "codename": "Resolute Raccoon",
+    "lts": true,
+    "releaseDate": "2026-04-23",
+    "eol": "2031-05-29",
+    "latest": "26.04.1",
+    "latestReleaseDate": "2026-08-31",
+    "support": "2031-05-29",
+    "extendedSupport": "2036-04-23"
+  },
+  {
+    "cycle": "25.10",
+    "codename": "Questing Quokka",
+    "releaseDate": "2025-10-09",
+    "eol": "2026-07-01",
+    "latest": "25.10",
+    "latestReleaseDate": "2025-10-09",
+    "lts": false,
+    "support": "2026-07-01",
+    "extendedSupport": false
+  },
+  {
+    "cycle": "25.04",
+    "codename": "Plucky Puffin",
+    "releaseDate": "2025-04-17",
+    "eol": "2026-01-17",
+    "latest": "25.04",
+    "latestReleaseDate": "2025-04-17",
+    "lts": false,
+    "support": "2026-01-17",
+    "extendedSupport": false
+  }
+]

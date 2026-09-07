@@ -1,0 +1,38 @@
+[
+  {
+    "cycle": "8.10",
+    "releaseDate": "2026-07-29",
+    "eol": false,
+    "latest": "8.10.1",
+    "latestReleaseDate": "2026-08-17",
+    "lts": false,
+    "support": true
+  },
+  {
+    "cycle": "8.8",
+    "releaseDate": "2026-05-25",
+    "eol": false,
+    "latest": "8.8.2",
+    "latestReleaseDate": "2026-08-17",
+    "lts": false,
+    "support": "2026-07-29"
+  },
+  {
+    "cycle": "8.6",
+    "releaseDate": "2026-02-11",
+    "eol": false,
+    "latest": "8.6.6",
+    "latestReleaseDate": "2026-08-17",
+    "lts": false,
+    "support": "2026-05-25"
+  },
+  {
+    "cycle": "8.4",
+    "releaseDate": "2025-11-18",
+    "eol": false,
+    "latest": "8.4.6",
+    "latestReleaseDate": "2026-08-17",
+    "lts": false,
+    "support": "2026-02-11"
+  }
+]

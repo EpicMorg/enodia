@@ -1,0 +1,221 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# docs/ROADMAP.md, "Then — packaging": binaries, checksums, signatures.
+# See DECISIONS.md D17 for why cosign keyless (no key to manage or leak)
+# and dockers_v2 (goreleaser's current multi-arch mechanism — the name is
+# provisional upstream, it will become plain "dockers" in goreleaser v3).
+version: 2
+
+project_name: enodia
+
+before:
+  hooks:
+    - go mod tidy
+    # Bakes an icon + version resource into the windows/amd64 and
+    # windows/386 builds (see Makefile's windows-resources and
+    # build/windows/). Skips silently if mingw-w64 isn't installed on the
+    # runner — see release.yml — rather than failing every platform's
+    # release over a Windows-only extra. windows/arm64 below has no
+    # equivalent: Debian's mingw-w64 ships no aarch64-w64-mingw32-windres,
+    # only i686/x86_64.
+    - sh -c 'make windows-resources || true'
+    # Man pages (see Makefile's "man" target and cmd/enodia/genman_cmd.go),
+    # packaged below via nfpms.contents. Not wrapped in `|| true`: unlike
+    # the Windows resources, there's no missing-cross-compiler case to
+    # tolerate here — a failure is a real bug.
+    - make man
+
+builds:
+  - id: enodia
+    main: ./cmd/enodia
+    binary: enodia
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.buildVersion={{ .Version }}
+      - -X main.buildCommit={{ .Commit }}
+      - -X main.buildDate={{ .Date }}
+
+  # 386 is its own build, not appended to enodia's goarch list above: Go
+  # has never supported darwin/386 (32-bit Intel Mac support was dropped
+  # years before this project existed), so a shared goarch list would
+  # break the darwin build the moment 386 was added to it.
+  - id: enodia-windows-386
+    main: ./cmd/enodia
+    binary: enodia
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - "386"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.buildVersion={{ .Version }}
+      - -X main.buildCommit={{ .Commit }}
+      - -X main.buildDate={{ .Date }}
+
+archives:
+  - id: enodia
+    ids:
+      - enodia
+      - enodia-windows-386
+    name_template: "enodia_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+# .deb/.rpm/.apk/.pkg.tar.zst for linux/amd64+arm64 (the "enodia" build
+# only — none of these formats mean anything for darwin/windows, and the
+# separate windows-386 build has nothing to do with any of them). nfpm is a
+# pure-Go package builder, not a wrapper around dpkg-deb/rpmbuild/abuild/
+# makepkg, so this needs nothing extra installed on the runner — goreleaser
+# links it in directly.
+nfpms:
+  - id: enodia
+    ids:
+      - enodia
+    package_name: enodia
+    file_name_template: "enodia_{{ .Os }}_{{ .Arch }}"
+    vendor: EpicMorg
+    homepage: https://github.com/EpicMorg/enodia
+    maintainer: "EpicMorg <developer@epicm.org>"
+    description: Service inventory and lifecycle (EOL) monitoring
+    license: AGPL-3.0-or-later
+    formats:
+      - deb
+      - rpm
+      - apk
+      - archlinux
+    bindir: /usr/bin
+    # preinstall creates the dedicated "enodia" system user/group (rootless
+    # by default — nothing in this tree requires root, and internal/serve's
+    # long-running HTTP server is the case that actually matters);
+    # postinstall chowns the three directories below to it. Ownership is
+    # set there rather than baked into contents.file_info.owner/group
+    # because a .deb's payload carries numeric UIDs resolved at *build*
+    # time, and "enodia" the user exists only on whatever machine actually
+    # installs the package, never on the CI runner that builds it.
+    scripts:
+      preinstall: build/nfpm/preinstall.sh
+      postinstall: build/nfpm/postinstall.sh
+    contents:
+      # An empty, correctly-permissioned directory for enodia.yaml/
+      # settings.yaml/credentials.yaml — the package never writes a config
+      # into it: a missing enodia.yaml is meant to be a loud error (see
+      # internal/config.Locate), not something papered over with a sample
+      # file nobody asked for.
+      - dst: /etc/enodia
+        type: dir
+        file_info:
+          mode: 0750
+      # State/export directories: nothing in the code hardcodes these paths
+      # today (the resolver cache uses os.UserCacheDir() instead — see
+      # docs/DECISIONS.md), but a systemd-managed rootless service needs
+      # somewhere of its own to write to, and these are the conventional
+      # FHS spots for it. Empty placeholders; postinstall.sh owns them.
+      - dst: /opt/enodia
+        type: dir
+        file_info:
+          mode: 0750
+      - dst: /var/enodia
+        type: dir
+        file_info:
+          mode: 0750
+      # build/man/*.1.gz is generated by `make man` (before.hooks above)
+      # right before nfpm reads this list — never committed, see
+      # .gitignore.
+      - src: build/man/*.1.gz
+        dst: /usr/share/man/man1
+
+# Cosign keyless signing (Sigstore): the CI job's GitHub OIDC identity IS the
+# signing key, so there is no private key to generate, store as a secret, or
+# ever leak. Anyone can verify the binary was built by this repo's release
+# workflow via `cosign verify-blob --certificate-identity-regexp` against
+# the transparency log — no key distribution problem on either side.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    artifacts: checksum
+    output: true
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - --yes
+
+dockers_v2:
+  - images:
+      - ghcr.io/epicmorg/enodia
+    # .Version is MAJOR.MINOR.PATCH+BUILD (release.yml's tag scheme) — "+"
+    # is not a legal character in a Docker/OCI tag at all (confirmed live:
+    # `docker tag foo:1.2.3+4` is flatly refused, "invalid reference
+    # format"), so it must be replaced, not merely hoped to work, before
+    # it ever reaches a tags: entry here.
+    tags:
+      - '{{ replace .Version "+" "-" }}'
+      - "{{ if not .Prerelease }}{{ .Major }}{{ end }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    annotations:
+      "org.opencontainers.image.description": "Service inventory and lifecycle (EOL) monitoring"
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.name": "{{ .ProjectName }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+      "org.opencontainers.image.licenses": "AGPL-3.0-or-later"
+
+# Signs the pushed image the same way as the checksums above: the CI job's
+# OIDC identity, verifiable against the container's own digest.
+docker_signs:
+  - cmd: cosign
+    artifacts: manifests
+    output: true
+    args:
+      - sign
+      - "${artifact}@${digest}"
+      - --yes
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^test:"
+      - "^test\\("
+      - "^chore(\\(.+\\))?:"
+      - "^docs(\\(.+\\))?:"
+      - "^ci(\\(.+\\))?:"
+      - "^Merge "
+  groups:
+    - title: "Features"
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 100
+    - title: "Fixes"
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 200
+    - title: "Other"
+      order: 9999
+
+release:
+  prerelease: auto
