@@ -2,8 +2,9 @@
 #
 # Manual dev-build snapshot: the same cross-compiled binaries + checksums
 # release.yml produces, minus everything release-specific (no GitHub
-# Release, no GHCR image, no cosign signing) — just the archives, uploaded
-# as this run's own artifacts.
+# Release, no GHCR image, no cosign signing) — just the archives, each
+# uploaded as its own separate artifact on this run (one per platform, not
+# one shared zip bundling all of them together).
 #
 # Deliberately workflow_dispatch only, never on push: this job runs inside
 # epicmorg/debian:trixie-develop (see release.yml for why — Go, mingw-w64,
@@ -46,12 +47,58 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # One artifact per file, not one shared name across a multi-file
+      # path: — actions/upload-artifact zips everything under a single
+      # name together into one bundle, which is exactly what a build meant
+      # to be grabbed per-platform shouldn't do. Filenames are
+      # .goreleaser.yaml's own archive name_template; goreleaser fails the
+      # whole job already if one is missing, so if-no-files-found: error
+      # here is just a second, more specific check.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: enodia-develop-${{ github.sha }}
-          path: |
-            dist/*.tar.gz
-            dist/*.zip
-            dist/checksums.txt
+          name: enodia_linux_amd64
+          path: dist/enodia_linux_amd64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_arm64
+          path: dist/enodia_linux_arm64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_darwin_amd64
+          path: dist/enodia_darwin_amd64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_darwin_arm64
+          path: dist/enodia_darwin_arm64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_windows_amd64
+          path: dist/enodia_windows_amd64.zip
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_windows_arm64
+          path: dist/enodia_windows_arm64.zip
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_windows_386
+          path: dist/enodia_windows_386.zip
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: checksums
+          path: dist/checksums.txt
           if-no-files-found: error
           retention-days: 14

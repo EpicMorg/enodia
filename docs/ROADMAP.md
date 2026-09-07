@@ -173,8 +173,11 @@ Not dates. Order of work, and what each step unblocks.
   (automatic on `pull_request`) — the same `epicmorg/debian:trixie-develop`
   container as `release.yml`, `goreleaser release --snapshot --clean
   --skip=docker,sign` (no docker CLI needed at all here, since neither
-  ever touches GHCR or cosign), archives + `checksums.txt` uploaded as the
-  run's own artifacts via `actions/upload-artifact`. `develop.yml` is
+  ever touches GHCR or cosign), each of the 7 archives plus `checksums.txt`
+  uploaded as its own separate `actions/upload-artifact` — one artifact
+  per platform, not one shared name across a multi-file `path:`, which
+  bundles everything into a single zip a per-platform download shouldn't
+  have to unpack. `develop.yml` is
   deliberately never triggered by a push: pulling a ~5GB image on every
   commit to `develop` would make ordinary iteration there unworkable;
   `pr.yml` accepts that same cost automatically because a PR is a
