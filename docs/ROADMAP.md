@@ -269,18 +269,33 @@ Not dates. Order of work, and what each step unblocks.
   never a policy `Severity` (D7), even though it drives the same visual
   vocabulary. Inline mode ignores tones entirely (no Bootstrap loaded to
   give the classes meaning); `Table` (plain text) ignores them too.
-- Fixed: an unreachable target's `lifecycle`/`drift` rows read `ToneGood`
-  (green) even though every cell was a dash — `PatchUnknown`/
-  `LifecycleUnknown` both leave their axis's `Severity` at the zero value
-  (`SeverityNone`), which `severityTone`'s default case maps to green, the
-  same as an axis that was actually checked and found fine. `compact`
-  never showed this because `OverallSeverity()` also folds in
-  `ReasonSeverity` (`probe_failed` floors at `SeverityWarn`), but
-  `lifecycle`/`drift` deliberately tone by their own axis alone (see
-  above) and that axis has no signal at all when there's no data. Both
-  views now check for `PatchUnknown`/`LifecycleUnknown` specifically and
-  tone those `ToneInfo` (blue) instead — "no data" is a different color
-  from "checked, no issue", not a variant of good
+- Fixed, in two passes: an unreachable target's `lifecycle`/`drift` rows
+  read `ToneGood` (green) even though every cell was a dash —
+  `PatchUnknown`/`LifecycleUnknown` both leave their axis's `Severity` at
+  the zero value (`SeverityNone`), which `severityTone`'s default case
+  maps to green, the same as an axis that was actually checked and found
+  fine. First pass: both views tone any `PatchUnknown`/`LifecycleUnknown`
+  row `ToneInfo` (blue) — better than green, but still wrong for a
+  *reachable* target whose `Reason` is `cycle_unmatched` (the vendor's
+  calendar just doesn't track that cycle) or `resolver_error`: those
+  aren't the same anomaly as a target that never answered at all, and
+  painting them the same blue buried a real, actionable gap (a
+  since-live example: TeamCity instances answering fine, with a real
+  observed version, whose cycle just isn't in endoflife.date) under the
+  same color as "this is actually broken". Second pass: `compact` had the
+  opposite problem — `probe_failed` rows blended into ordinary
+  `SeverityWarn` ones (both floor at the same severity via
+  `ReasonSeverity`), so an actual 502 or wrong-service-entirely target
+  read no differently from a real policy warning and got lost among them.
+  Landed as `isUnreachableAnomaly` (true only for `Reason: probe_failed`,
+  and only when policy hasn't escalated it to `SeverityFail` via
+  `--fail-on=reason:probe_failed` — that override still renders Bad, on
+  purpose) plus `unknownAxisTone`, used by all three views:
+  `lifecycle`/`drift` tone `PatchUnknown`/`LifecycleUnknown` via
+  `unknownAxisTone` (`ToneInfo` for a genuine anomaly, else the axis's own
+  `ReasonSeverity` tone — `ToneWarn` for `cycle_unmatched`); `compact`
+  tones by `OverallSeverity()` as before, except a genuine anomaly always
+  renders `ToneInfo` regardless of what severity math alone would pick
 - Tests on recorded fixtures, offline, `-race` clean; every new probe
   live-verified against a real instance (Docker or the user's own
   production) before being written, not just against hand-built fixtures

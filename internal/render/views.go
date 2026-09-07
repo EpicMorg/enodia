@@ -53,21 +53,53 @@ func compactRows(r Report) (headers []string, rows [][]string, tones []RowTone) 
 			a.ID, a.Product, string(a.Patch), string(a.Lifecycle), string(a.Branch),
 			string(a.OverallSeverity()), firstNonEmpty(string(a.Reason), "-"),
 		})
-		tones = append(tones, severityTone(a.OverallSeverity()))
+		tone := severityTone(a.OverallSeverity())
+		if isUnreachableAnomaly(a) {
+			tone = ToneInfo
+		}
+		tones = append(tones, tone)
 	}
 	return headers, rows, tones
+}
+
+// isUnreachableAnomaly reports whether a's Reason is a genuine reachability
+// failure — the target didn't answer at all — that policy hasn't explicitly
+// escalated to a hard Fail via FailOn. This is the one condition every view
+// renders as ToneInfo (blue) instead of whatever severity math would
+// otherwise pick: a target returning a 502 or answering as the wrong
+// service entirely is a different kind of problem than a policy-driven
+// warning or fail, and must not blend into either — its ReasonSeverity
+// defaults to the same SeverityWarn a real finding gets, which is right for
+// OverallSeverity()'s "does this need attention at all" purpose, but wrong
+// as a row color if it can't be told apart from an ordinary warning. An
+// explicit `--fail-on=reason:probe_failed` still wins and renders Bad, since
+// that's the operator overriding this exact judgement on purpose.
+func isUnreachableAnomaly(a evaluate.Assessment) bool {
+	return a.Reason == evaluate.ReasonProbeFailed && a.ReasonSeverity != evaluate.SeverityFail
+}
+
+// unknownAxisTone picks the tone for a lifecycle/drift row whose own axis
+// has no data (LifecycleUnknown/PatchUnknown) — not on that axis's own
+// Severity, which is always the zero value (SeverityNone, mapping to
+// ToneGood) when there's nothing to evaluate, but on WHY there's no data.
+// A genuine reachability anomaly (isUnreachableAnomaly) stays visually
+// distinct as ToneInfo; every other reason (a resolver error, or a cycle
+// the vendor's calendar simply doesn't track) uses that reason's own
+// severity tone directly — a target that answers us fine but whose cycle
+// the vendor doesn't track is a real gap (ToneWarn), not the same anomaly
+// as a target not answering at all.
+func unknownAxisTone(a evaluate.Assessment) RowTone {
+	if isUnreachableAnomaly(a) {
+		return ToneInfo
+	}
+	return severityTone(a.ReasonSeverity)
 }
 
 // lifecycleRows tones by LifecycleSeverity specifically, not OverallSeverity:
 // this view is focused on the lifecycle axis, so a row is red because ITS
 // lifecycle boundary is critical, not because some unrelated branch finding
-// happened to be worse.
-//
-// LifecycleUnknown is tinted ToneInfo rather than falling through to
-// severityTone's default ToneGood: SeverityNone means "checked, no issue",
-// but Unknown means "nothing to check" — usually because the target was
-// unreachable (Reason: probe_failed) — and coloring an all-dashes row green
-// reads as "this is fine" when it actually means "no data at all".
+// happened to be worse. LifecycleUnknown is the one exception — see
+// unknownAxisTone.
 func lifecycleRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
 	headers = []string{"ID", "PRODUCT", "LIFECYCLE", "EOL", "SUPPORT-ENDS", "DAYS-TO-EOL"}
 	for _, a := range r.Assessments {
@@ -77,7 +109,7 @@ func lifecycleRows(r Report) (headers []string, rows [][]string, tones []RowTone
 		})
 		tone := severityTone(a.LifecycleSeverity)
 		if a.Lifecycle == evaluate.LifecycleUnknown {
-			tone = ToneInfo
+			tone = unknownAxisTone(a)
 		}
 		tones = append(tones, tone)
 	}
@@ -86,8 +118,13 @@ func lifecycleRows(r Report) (headers []string, rows [][]string, tones []RowTone
 
 // driftRows tones by PatchSeverity specifically, for the same reason
 // lifecycleRows uses LifecycleSeverity: this view is about the patch axis.
-// PatchUnknown gets the same ToneInfo treatment as LifecycleUnknown above,
-// and for the same reason — "unknown" is not "good".
+// PatchUnknown is the one exception — see unknownAxisTone. Note this can
+// fire even when CURRENT shows a real version, not a dash: cycle_unmatched
+// means the target answered with a real version the vendor's calendar just
+// doesn't recognize, which is exactly the "reachable, real data, still a
+// gap" case unknownAxisTone (ToneWarn here) exists to tell apart from an
+// actually unreachable target (ToneInfo, current/latest/cycle all dashes
+// too since there was never an observed version to show).
 func driftRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
 	headers = []string{"ID", "PRODUCT", "CURRENT", "LATEST", "CYCLE", "PATCH"}
 	obsByID := indexObservations(r.Observations)
@@ -102,7 +139,7 @@ func driftRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
 		})
 		tone := severityTone(a.PatchSeverity)
 		if a.Patch == evaluate.PatchUnknown {
-			tone = ToneInfo
+			tone = unknownAxisTone(a)
 		}
 		tones = append(tones, tone)
 	}
