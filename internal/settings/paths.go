@@ -37,19 +37,31 @@ var candidateNames = []string{"settings.yaml", "settings.yml"}
 //  9. ./.settings.yaml — the dotfile counterpart of the bare form above,
 //     same as enodia.yaml/.enodia.yaml already pair up.
 //  10. ./.settings.yml
-//  11. $XDG_CONFIG_HOME/enodia/settings.yaml, defaulting to
+//  11. <directory containing the running executable>/settings.yaml — the
+//     actual "next to the binary" case, distinct from cwd: a portable
+//     install (unzip anywhere, no package manager) is run from whatever
+//     directory the operator happens to be standing in, which on Windows
+//     in particular is essentially never the install directory itself
+//     (install.ps1 defaults to %LOCALAPPDATA%\enodia, added to PATH — the
+//     whole point of PATH is that cwd stops mattering). Deliberately
+//     limited to settings.yaml: this file is optional display preferences
+//     (D19), so a wrong or hijacked one in a shared install directory is a
+//     cosmetic problem at worst. enodia.yaml carries credentials and stays
+//     off this list — config.Locate does not gain an equivalent step.
+//  12. <same>/settings.yml
+//  13. $XDG_CONFIG_HOME/enodia/settings.yaml, defaulting to
 //     ~/.config/enodia/settings.yaml per the XDG basedir spec when the
 //     variable is unset.
-//  12. $XDG_CONFIG_HOME/enodia/settings.yml (same fallback)
-//  13. /etc/enodia/settings.yaml
-//  14. /etc/enodia/settings.yml
+//  14. $XDG_CONFIG_HOME/enodia/settings.yml (same fallback)
+//  15. /etc/enodia/settings.yaml
+//  16. /etc/enodia/settings.yml
 //
-// Unlike config.Locate, finding nothing at steps 3-14 is not an error: this
+// Unlike config.Locate, finding nothing at steps 3-16 is not an error: this
 // file is entirely optional (D19). Locate returns ("", nil) in that case,
 // and Resolve falls back to Default. Precedence is by location first (cwd,
-// then XDG, then /etc), and only naming (enodia.-prefixed vs bare vs
-// dotfile, and .yaml vs .yml) within the same location — a cwd .yml still
-// beats an XDG .yaml.
+// then the executable's directory, then XDG, then /etc), and only naming
+// (enodia.-prefixed vs bare vs dotfile, and .yaml vs .yml) within the same
+// location — a cwd .yml still beats an XDG .yaml.
 func Locate(explicit string) (string, error) {
 	if explicit != "" {
 		return mustExist(explicit)
@@ -66,6 +78,9 @@ func Locate(explicit string) (string, error) {
 	}
 
 	var dirs []string
+	if exeDir := executableDir(); exeDir != "" {
+		dirs = append(dirs, exeDir)
+	}
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		dirs = append(dirs, filepath.Join(xdg, "enodia"))
 	} else if home, err := os.UserHomeDir(); err == nil {
@@ -85,6 +100,22 @@ func Locate(explicit string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// executableDir resolves the directory containing the running binary, or
+// "" if that can't be determined (os.Executable is best-effort on some
+// platforms per its own docs). Symlinks are resolved so a PATH shim (e.g. a
+// version manager) doesn't make settings.yaml appear to live somewhere the
+// real binary never runs from.
+func executableDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = resolved
+	}
+	return filepath.Dir(exe)
 }
 
 func mustExist(path string) (string, error) {

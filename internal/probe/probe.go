@@ -109,13 +109,20 @@ type TLSSettings struct {
 
 // ParserSpec is the frozen escape hatch used by the generic probe. It is
 // deliberately not extended: anything needing a conditional belongs in Go.
+//
+// Explicit yaml tags matter here: without them, yaml.v3 falls back to the
+// lowercased Go field name with no word boundaries, so CleanRegex would only
+// parse as "cleanregex" — not the "clean_regex" that docs/DECISIONS.md (D3)
+// and docs/CLAUDE.md document, and that internal/config.TargetSpec's own
+// sibling fields (ca_file, min_version, allow_insecure_transport, ...) all
+// follow.
 type ParserSpec struct {
-	Type       string            `json:"type"`                 // json, xml, header, plaintext, regex
-	Key        string            `json:"key,omitempty"`        // dotted path, XPath-ish tag, or header name
-	Regex      string            `json:"regex,omitempty"`      // for type: regex
-	CleanRegex string            `json:"cleanRegex,omitempty"` // first capture group wins
-	Line       int               `json:"line,omitempty"`       // for type: plaintext
-	Namespaces map[string]string `json:"namespaces,omitempty"`
+	Type       string            `json:"type"                  yaml:"type"`
+	Key        string            `json:"key,omitempty"         yaml:"key,omitempty"`         // dotted path, XPath-ish tag, or header name
+	Regex      string            `json:"regex,omitempty"       yaml:"regex,omitempty"`       // for type: regex
+	CleanRegex string            `json:"cleanRegex,omitempty"  yaml:"clean_regex,omitempty"` // first capture group wins
+	Line       int               `json:"line,omitempty"        yaml:"line,omitempty"`        // for type: plaintext
+	Namespaces map[string]string `json:"namespaces,omitempty"  yaml:"namespaces,omitempty"`
 }
 
 // Target is one entry from the user's config, resolved and ready to probe.
