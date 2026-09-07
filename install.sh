@@ -15,6 +15,12 @@
 # Env vars:
 #   ENODIA_VERSION    version tag to install, e.g. "1.2.3+4" (default: latest)
 #   ENODIA_INSTALL_DIR  directory to install into (default: /usr/local/bin)
+#
+# If install_dir isn't writable and there's no sudo to retry with, but
+# $PREFIX is set and its bin/ is writable (Termux and similar userland-
+# prefix environments), that's used instead — no separate script or
+# name-based "is this Termux" check, just the same curl|sh one-liner
+# working there too.
 
 set -eu
 
@@ -68,9 +74,22 @@ tar -xzf "$tmp/$archive" -C "$tmp" enodia
 
 if [ -w "$install_dir" ]; then
 	install -m 0755 "$tmp/enodia" "$install_dir/enodia"
-else
+elif command -v sudo >/dev/null 2>&1; then
 	echo "install.sh: $install_dir is not writable, retrying with sudo..."
 	sudo install -m 0755 "$tmp/enodia" "$install_dir/enodia"
+elif [ -n "${PREFIX:-}" ] && [ -w "$PREFIX/bin" ]; then
+	# No sudo and no way to become root: every sandboxed userland-prefix
+	# environment (Termux is the common one) looks like this, and $PREFIX
+	# is that environment's own "where my stuff goes" variable — not
+	# something worth a name-based special case when the two objective
+	# facts (no sudo, $PREFIX set and writable) already say the same thing.
+	install_dir="$PREFIX/bin"
+	echo "install.sh: no sudo available; installing into \$PREFIX/bin ($install_dir) instead"
+	install -m 0755 "$tmp/enodia" "$install_dir/enodia"
+else
+	echo "install.sh: $install_dir is not writable and no sudo is available" \
+		"(set \$ENODIA_INSTALL_DIR to a writable directory)" >&2
+	exit 1
 fi
 
 echo "install.sh: installed $("$install_dir/enodia" version) to $install_dir/enodia"
