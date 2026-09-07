@@ -16,10 +16,12 @@
 #   ENODIA_VERSION    version tag to install, e.g. "1.2.3+4" (default: latest)
 #   ENODIA_INSTALL_DIR  directory to install into (default: /usr/local/bin)
 #
-# If install_dir isn't writable and there's no sudo to retry with, but
-# $PREFIX is set and its bin/ is writable (Termux and similar userland-
-# prefix environments), that's used instead — no separate script or
-# name-based "is this Termux" check, just the same curl|sh one-liner
+# If install_dir isn't writable and sudo doesn't actually work (missing,
+# or present but unusable — Termux's own optional `sudo` package exists on
+# PATH but just prints "No superuser binary detected" on an unrooted
+# device), but $PREFIX is set and its bin/ is writable (Termux and similar
+# userland-prefix environments), that's used instead — no separate script
+# or name-based "is this Termux" check, just the same curl|sh one-liner
 # working there too.
 
 set -eu
@@ -72,24 +74,38 @@ echo "install.sh: verifying checksum..."
 
 tar -xzf "$tmp/$archive" -C "$tmp" enodia
 
+installed=0
 if [ -w "$install_dir" ]; then
 	install -m 0755 "$tmp/enodia" "$install_dir/enodia"
+	installed=1
 elif command -v sudo >/dev/null 2>&1; then
 	echo "install.sh: $install_dir is not writable, retrying with sudo..."
-	sudo install -m 0755 "$tmp/enodia" "$install_dir/enodia"
-elif [ -n "${PREFIX:-}" ] && [ -w "$PREFIX/bin" ]; then
-	# No sudo and no way to become root: every sandboxed userland-prefix
-	# environment (Termux is the common one) looks like this, and $PREFIX
-	# is that environment's own "where my stuff goes" variable — not
-	# something worth a name-based special case when the two objective
-	# facts (no sudo, $PREFIX set and writable) already say the same thing.
-	install_dir="$PREFIX/bin"
-	echo "install.sh: no sudo available; installing into \$PREFIX/bin ($install_dir) instead"
-	install -m 0755 "$tmp/enodia" "$install_dir/enodia"
-else
-	echo "install.sh: $install_dir is not writable and no sudo is available" \
-		"(set \$ENODIA_INSTALL_DIR to a writable directory)" >&2
-	exit 1
+	# A present `sudo` binary isn't proof it actually works — Termux's own
+	# optional `sudo` package exists on PATH but fails outright ("No
+	# superuser binary detected") on a device with no `su` to escalate to.
+	# Only treat this as done if it actually exits 0; otherwise fall
+	# through to the $PREFIX check below instead of hard-failing here.
+	if sudo install -m 0755 "$tmp/enodia" "$install_dir/enodia"; then
+		installed=1
+	fi
+fi
+
+if [ "$installed" -eq 0 ]; then
+	if [ -n "${PREFIX:-}" ] && [ -w "$PREFIX/bin" ]; then
+		# No working way to become root: every sandboxed userland-prefix
+		# environment (Termux is the common one) looks like this, and
+		# $PREFIX is that environment's own "where my stuff goes" variable —
+		# not something worth a name-based special case when the two
+		# objective facts (no usable sudo, $PREFIX set and writable) already
+		# say the same thing.
+		install_dir="$PREFIX/bin"
+		echo "install.sh: no usable sudo; installing into \$PREFIX/bin ($install_dir) instead"
+		install -m 0755 "$tmp/enodia" "$install_dir/enodia"
+	else
+		echo "install.sh: $install_dir is not writable and no usable sudo is available" \
+			"(set \$ENODIA_INSTALL_DIR to a writable directory)" >&2
+		exit 1
+	fi
 fi
 
 echo "install.sh: installed $("$install_dir/enodia" version) to $install_dir/enodia"
