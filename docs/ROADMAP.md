@@ -801,13 +801,42 @@ Not dates. Order of work, and what each step unblocks.
   Docker Hub images found under that name are unrelated helper tools (fan
   controllers, ZFS-unlock scripts), not TrueNAS itself — see
   DECISIONS.md D23.
-- Eighteen SSH/OS-identification products made it in total across this
-  request; eight more names did not (plus `truenas`, considered
+- Eighteen SSH/OS-identification products made it in total across the
+  original request; eight more names did not (plus `truenas`, considered
   separately above), each for a specific, confirmed-live reason
   (licensing, no obtainable image, or the target genuinely not fitting
   the use case) rather than a blanket "too hard" — see DECISIONS.md
   **D23** for the full accounting: `nixos`, `fortios`, `cisco-ios-xe`,
   `steamos`, `tails`, `linuxmint`, `eurolinux`, `postmarketos`.
+- Three more SSH/OS-identification probes, added after the original
+  request as a deliberate "what's actually popular that we skipped"
+  follow-up rather than more items off the same list:
+  - `astra-linux` (`internal/probe/astralinux.go`) — Debian-based (its own
+    `/etc/os-release` carries `ID_LIKE=debian`), but not part of
+    `osReleaseFamilyProbe`: confirmed live (`epicmorg/astralinux:1.7-main`/
+    `:1.8-main`, the user's own build) that `VERSION_ID` there reads
+    `"1.8_x86-64"` — an architecture suffix baked into the version string,
+    not a clean one. `/etc/astra_version` has none of that: a plain
+    `"1.8.6"`/`"1.7.9"`, the real point release. No `DefaultResolver`:
+    endoflife.date has no Astra Linux calendar (confirmed 404 under
+    `astra`/`astralinux`/`astra-linux`).
+  - `redos` — joined `osReleaseFamilyProbe` directly, no special-casing
+    needed: confirmed live (`alrdockerhub/redos:7.3.1`, a community image
+    whose `os-release` content — `HOME_URL`/`BUG_REPORT_URL` pointing at
+    `red-soft.ru` — matches the real vendor, not just the image's name)
+    `ID="redos"`, `VERSION_ID="7.3.1"`. No `DefaultResolver` either
+    (confirmed 404 under `redos`/`red-os`).
+  - `openeuler` — also joined `osReleaseFamilyProbe` directly: confirmed
+    live via `vmactions/openeuler-vm` (24.03-LTS-SP4, the action's default
+    release) `ID="openEuler"` — capital E, a real quirk of the vendor's
+    own file, not a typo — `VERSION_ID="24.03"`. No `DefaultResolver`
+    (confirmed 404 under `openeuler`).
+  - Considered and passed on in the same pass: `nixos/nix` on Docker Hub
+    re-examined at the user's suggestion — confirmed live it reports the
+    *Nix package manager's* own version (`nix (Nix) 2.35.2`), an entirely
+    different versioning scheme from NixOS the distribution, and still has
+    no `/etc/os-release` at all (`uname -a` shows a bare Debian host
+    kernel). Doesn't change D23's `nixos` deferral.
 
 ## Next
 
