@@ -77,6 +77,7 @@ func TestOSReleaseFamilyRealFixtures(t *testing.T) {
 		"openeuler":     {"openeuler_24.03.txt", osReleaseFamilyProbe{product: "openeuler", match: osReleaseIDEquals("openEuler")}, "24.03"},
 		"gentoo":        {"gentoo_2.18.txt", osReleaseFamilyProbe{product: "gentoo", match: osReleaseIDEquals("gentoo")}, "2.18"},
 		"kali-linux":    {"kali-linux_2026.3.txt", osReleaseFamilyProbe{product: "kali-linux", match: osReleaseIDEquals("kali")}, "2026.3"},
+		"photon":        {"photon_5.0.txt", osReleaseFamilyProbe{product: "photon", match: osReleaseIDEquals("photon")}, "5.0"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) { runOSReleaseFamilyTest(t, tc) })

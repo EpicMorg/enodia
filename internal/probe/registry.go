@@ -105,6 +105,10 @@ var builtin = []Probe{
 	owncastProbe{},
 	perforceSwarmProbe{},
 	pgadminProbe{},
+	// Official top-level photon:5.0 (Docker's Official Images program,
+	// not vmware/photon's own stale repo which stops at 2.0): ID=photon,
+	// VERSION_ID=5.0.
+	osReleaseFamilyProbe{product: "photon", summary: "VMware Photon OS", resolver: ResolverRef{Type: "endoflife", ID: "photon"}, match: osReleaseIDEquals("photon")},
 	phpmyadminProbe{},
 	portainerProbe{},
 	postgresExporterProbe{},

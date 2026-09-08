@@ -854,6 +854,15 @@ Not dates. Order of work, and what each step unblocks.
   `VERSION_ID` above. No `DefaultResolver`: no endoflife.date calendar
   either (confirmed 404 under `kali`/`kali-linux`), for the same
   rolling-release reason.
+- `photon` probe — genuinely missed from the original SSH-probe request
+  list (it was in the user's very first message, never made it into the
+  task list this got built from). Joined `osReleaseFamilyProbe` directly:
+  confirmed live via the official top-level `photon:5.0` image (Docker's
+  Official Images program — not `vmware/photon`'s own Docker Hub repo,
+  which is stale and stops at `2.0`) `ID=photon`, `VERSION_ID=5.0`.
+  `DefaultResolver: endoflife:photon` (note: the endoflife.date slug is
+  `photon`, not `photon-os` — confirmed live, the latter 404s) — cycle
+  `"5.0"` matches exactly.
 
 ## Next
 
