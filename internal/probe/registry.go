@@ -40,6 +40,7 @@ var builtin = []Probe{
 	sshProbe{},
 	teamcityProbe{},
 	testrailProbe{},
+	traefikProbe{},
 	vaultProbe{},
 	bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden"},
 	vcenterProbe{},
