@@ -687,6 +687,19 @@ Not dates. Order of work, and what each step unblocks.
   `owncast`, `portainer`, `vaultwarden`, `oauth2-proxy`, `testrail`,
   `zou`, or `perforce-swarm` — no coverage advantage over GitHub
   Releases for any product actually blocked on this today
+- `zou` wired to `cgwire/kitsu`, not `cgwire/zou`: confirmed live that
+  `cgwire/zou` publishes bare git tags only (`v1.0.70` latest), no
+  GitHub Releases objects at all — this project's GitHub Releases
+  resolver reads the Releases API, so it finds nothing there today.
+  `cgwire/kitsu` (the Vue.js UI Zou serves — confirmed live, no version
+  endpoint of its own) has real Releases (`v1.0.59` latest) and is what
+  this deployment strategically tracks anyway: a production Zou with no
+  Kitsu in front of it is not a real deployment shape here. The two
+  repos' version numbers do diverge (Zou's backend runs ahead), so this
+  is "latest known Kitsu release," not a precise match for the backend
+  version `/api/status` reports — accepted for now. A `zou`-specific
+  tags-based resolver stays possible later if that gap turns out to
+  matter enough to build
 
 ## Next
 
