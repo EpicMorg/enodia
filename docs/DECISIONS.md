@@ -833,7 +833,7 @@ first — not one added solely to unblock this single product.
 
 ---
 
-## D23 — SSH/OS-identification probes: twenty-four made it in, three did not, for concrete reasons
+## D23 — SSH/OS-identification probes: twenty-five made it in, three did not, for concrete reasons
 
 **Decided.** `internal/probe/osrelease.go`'s family probe (D9: checks an
 identity field, here `/etc/os-release`'s `ID`) covers debian, ubuntu,
@@ -910,12 +910,13 @@ the `vmactions` GitHub org) — it was unblocked separately, see the
 "Revisited: five more products unblocked via real ISO rootfs captures"
 note below — so this was a real, if unusually convenient, narrowing of
 the blocker for these four products via one mechanism, not a blanket fix
-for the whole list. `truenas` was also
-considered and stays deferred: no vmactions coverage, no Docker image
-that runs the actual appliance (the ones found on Docker Hub are
-unrelated helper tools — fan controllers, ZFS-unlock scripts — not
-TrueNAS itself), and its own installer is ISO-only like the
-pre-vmactions state of `openbsd`/`netbsd` was.
+for the whole list. `truenas` was considered at the same time and
+initially stayed deferred for the same reasons (no vmactions coverage,
+no Docker image running the actual appliance, ISO-only installer) — it
+was unblocked separately, later, the same way `proxmox` was: the user
+put a real TrueNAS install on a disposable test box and read
+`/etc/version` off it directly. See the "Revisited" note further below
+for `truenasProbe`'s own detail.
 
 **Revisited: `macos` unblocked immediately** — this entry originally
 listed it as blocked on exactly one thing, a real Mac to verify against,
@@ -992,3 +993,30 @@ supported products.
 
 **`tails` was separately, explicitly ruled out for good** ("cross it
 off entirely") rather than revisited — see the "Rules out" note above.
+
+**Revisited: `proxmox` and `truenas` both unblocked the same day,
+via real disposable test infrastructure the user provided directly.**
+`proxmox` — confirmed live against a real Proxmox VE 9.2.2 host: `GET
+/api2/json/version` needs auth (401 without it), and the token shape is
+exactly what Proxmox's own docs describe:
+`Authorization: PVEAPIToken=user@realm!tokenid=secret`. This needed no
+new `AuthKind` — it's a plain `Authorization` header value, and
+`AuthTokenHeader` already defaults to that header when none is
+specified — so `proxmoxProbe` (`internal/probe/proxmox.go`) is the
+first HTTP probe among everything added in this SSH-probe push. The
+alternative auth shape, a username/password ticket flow (`POST
+/access/ticket` for a session cookie plus a CSRF token), is deliberately
+not supported: the same heavier session-login shape D22 already rejected
+for Redmine, and Proxmox's own documentation recommends the token for
+unattended automation anyway. `truenas` (`internal/probe/truenas.go`) —
+the user then repurposed the same box for TrueNAS and read
+`/etc/version` off it directly: a plain `"25.10.7"`, confirmed live,
+with no os-release involved (TrueNAS's own `/etc/os-release` reports the
+Debian 12 base underneath it, not TrueNAS itself — the same D9 gap
+`astra-linux`'s messy `VERSION_ID` had, solved the same way: a
+dedicated file, not the family probe). This is deliberately an interim
+probe: TrueNAS has its own documented HTTP API, a better long-term fit
+for this project's usual shape, intended to eventually take over with
+this SSH-based one staying as a fallback — not a redesign forced by
+new information, just the natural order things arrived in (a live SSH
+target first, API verification later).
