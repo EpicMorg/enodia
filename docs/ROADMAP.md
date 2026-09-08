@@ -5,14 +5,14 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 42 products: apache (httpd alias), the atlassian
+- `internal/probe` — 43 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, generic, gitlab,
   grafana, haproxy, harbor, jellyfin, jenkins, keycloak, mattermost,
   mongodb, mysql, nextcloud, nexus, nginx, oauth2-proxy, owncast,
-  perforce-swarm, portainer, postgres_exporter, postgresql, redis,
-  sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, wordpress,
-  youtrack, zabbix, zou (kitsu alias)
+  perforce-swarm, phpmyadmin, portainer, postgres_exporter, postgresql,
+  redis, sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter,
+  wordpress, youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -562,6 +562,13 @@ Not dates. Order of work, and what each step unblocks.
   separate hooks) — this project's first probe that tries a second
   anonymous endpoint when the first one comes back without what it
   needs, rather than failing straight to `ErrNotSupported`
+- `phpmyadmin` probe — the version field inside the login page's own
+  `CommonParams.setAll({...})` JS bootstrap call, which phpMyAdmin's own
+  JS uses for every AJAX request it makes, so it ships on every page —
+  no separate version endpoint needed. Confirmed live against a real
+  phpmyadmin/phpmyadmin container. A JS object literal with unquoted
+  keys, not JSON, so this is a text match rather than a
+  `json.Unmarshal`
 
 ## Next
 
@@ -569,8 +576,8 @@ Not dates. Order of work, and what each step unblocks.
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
   ESXi), `forgejo`, `graylog`, `jaeger`, `kibana`, `logstash`,
-  `opensearch`, `phpmyadmin`, `proftpd`, `routeros` (MikroTik RouterOS —
-  matches endoflife.date's own product slug)
+  `opensearch`, `proftpd`, `routeros` (MikroTik RouterOS — matches
+  endoflife.date's own product slug)
 
 ## Later
 
