@@ -33,6 +33,7 @@ var builtin = []Probe{
 	&atlassianProbe{product: "jira", typeID: "jira", resolver: "jira-software", summary: "Atlassian Jira (Data Center)"},
 	keycloakProbe{},
 	kibanaProbe{},
+	logstashProbe{},
 	mattermostProbe{},
 	mongodbProbe{},
 	mysqlProbe{},

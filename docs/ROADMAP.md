@@ -5,11 +5,11 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 46 products: apache (httpd alias), the atlassian
+- `internal/probe` — 47 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, forgejo, generic,
   gitlab, grafana, graylog, haproxy, harbor, jellyfin, jenkins, keycloak,
-  kibana, mattermost, mongodb, mysql, nextcloud, nexus, nginx,
+  kibana, logstash, mattermost, mongodb, mysql, nextcloud, nexus, nginx,
   oauth2-proxy, owncast, perforce-swarm, phpmyadmin, portainer,
   postgres_exporter, postgresql, redis, sonarqube, ssh, teamcity,
   testrail, traefik, vault, vcenter, wordpress, youtrack, zabbix, zou
@@ -588,14 +588,19 @@ Not dates. Order of work, and what each step unblocks.
   Elasticsearch): the reply carries the full version even while
   answering 503 ("not ready yet") during startup, so 503 is accepted as
   OK and the body read regardless
+- `logstash` probe — `GET /` on Logstash's own HTTP monitoring API (port
+  9600, not the Elasticsearch or Kibana ports), which has no built-in
+  auth at all — meant to be firewalled off rather than
+  credential-protected. Confirmed live against a real
+  docker.elastic.co/logstash/logstash container
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
-  ESXi), `jaeger`, `logstash`, `opensearch`, `proftpd`, `routeros`
-  (MikroTik RouterOS — matches endoflife.date's own product
+  ESXi), `jaeger`, `opensearch`, `proftpd`, `routeros` (MikroTik
+  RouterOS — matches endoflife.date's own product
   slug)
 
 ## Later
