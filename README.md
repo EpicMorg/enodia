@@ -35,7 +35,7 @@ You describe your services once. Enodia handles the rest.
 > and per-product probe notes.
 
 > **Status: 1.0.** The full pipeline (collect → inventory → evaluate →
-> render), 75 probes, `settings.yaml`, and the release/packaging pipeline are
+> render), 76 probes, `settings.yaml`, and the release/packaging pipeline are
 > all implemented and used against real production infrastructure. See the
 > [latest release](https://github.com/EpicMorg/enodia/releases/latest) for
 > downloads.
