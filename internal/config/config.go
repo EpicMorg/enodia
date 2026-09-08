@@ -63,6 +63,10 @@ type CredentialSpec struct {
 	Header   string `yaml:"header,omitempty"`
 	Username string `yaml:"username,omitempty"`
 	Password string `yaml:"password,omitempty"`
+
+	// PrivateKeyFile and Passphrase are for kind: ssh-key.
+	PrivateKeyFile string `yaml:"private_key_file,omitempty"`
+	Passphrase     string `yaml:"passphrase,omitempty"`
 }
 
 // TargetSpec is one service entry from config.

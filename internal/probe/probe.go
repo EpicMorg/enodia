@@ -28,6 +28,7 @@ const (
 	AuthTokenHeader AuthKind = "token-header" // PRIVATE-TOKEN, X-Vault-Token, ...
 	AuthBasic       AuthKind = "basic"
 	AuthPassword    AuthKind = "password" // Redis AUTH, SQL connect, ...
+	AuthSSHKey      AuthKind = "ssh-key"  // SSH public-key auth
 )
 
 // AuthSpec is what a probe declares it needs. It lets `config validate` reject
@@ -83,10 +84,16 @@ type Credentials struct {
 	Header   string // header name, for token-header
 	Username string
 	Password string
+
+	// PrivateKeyFile and Passphrase are for AuthSSHKey. PrivateKeyFile is a
+	// plain filesystem path, read the same way TLSSettings.CAFile is: no
+	// relative-path resolution magic, just os.ReadFile.
+	PrivateKeyFile string
+	Passphrase     string // decrypts PrivateKeyFile; empty for an unencrypted key
 }
 
 func (c Credentials) IsZero() bool {
-	return c.Value == "" && c.Password == "" && c.Username == ""
+	return c.Value == "" && c.Password == "" && c.Username == "" && c.PrivateKeyFile == ""
 }
 
 // String prevents credentials from leaking through %v or %s.

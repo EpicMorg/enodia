@@ -713,11 +713,67 @@ Not dates. Order of work, and what each step unblocks.
   today would compare against a silently wrong reference rather than no
   reference at all
 
+- SSH-based OS-identification probes: a new `sshRunCommand` transport
+  (`internal/probe/sshexec.go`) opens one SSH connection, runs one command,
+  and returns its stdout — sized to what these probes need, not a
+  general-purpose remote-exec client (D10). This needed
+  `golang.org/x/crypto/ssh`, the project's first non-stdlib,
+  non-cobra/yaml dependency (asked first, per docs/CLAUDE.md's "do not add
+  dependencies without asking" — approved: it's the Go team's own
+  extended-stdlib package and the only realistic way to speak SSH auth from
+  Go). `Credentials` gained `PrivateKeyFile`/`Passphrase` and a new
+  `AuthSSHKey` kind alongside the existing password auth; `PrivateKeyFile`
+  is read the same plain-filesystem-path way `TLSSettings.CAFile` already
+  is, no relative-path resolution magic. Host key verification reuses
+  `Target.TLS`'s existing `pin_sha256`/`insecure` vocabulary (D13) instead
+  of inventing a parallel SSH-specific config dialect — `pin_sha256` here
+  hashes the SSH host key's wire encoding instead of a DER certificate, but
+  it's the same "pin a fingerprint or say insecure and get warned" shape.
+  Verified live end-to-end against a real `debian:bookworm-slim` container
+  running actual `sshd` (both password and ed25519 private-key auth), which
+  is also where the auth-vs-network error split came from:
+  `golang.org/x/crypto/ssh` has no typed sentinel for "credentials
+  rejected", but a real server's rejection message was confirmed to always
+  contain `"unable to authenticate"`, which is what `sshHandshakeErr`
+  matches on rather than guessing. Unit tests run the client against a real
+  in-process `ssh.ServerConfig` server (same library, real handshake/auth/
+  exec, not a hand-rolled protocol stub) rather than a live container, the
+  same tradeoff `mongoServer`'s raw TCP listener already makes for the
+  mongodb probe.
+- `osReleaseFamilyProbe` (`internal/probe/osrelease.go`): reads
+  `/etc/os-release` over SSH — the systemd-standardized identity file — and
+  checks its `ID` field (D9). Registered for twelve distros, each verified
+  against a real container's actual `/etc/os-release` (captured as this
+  probe's testdata, one file per distro): `debian`, `ubuntu`, `fedora`,
+  `rhel` (via Red Hat's own free `ubi9` image — real RHEL, not a rebuild),
+  `rocky-linux`, `almalinux`, `oracle-linux` (`ID=ol`), `amazon-linux`
+  (`ID=amzn`), `alpine-linux`, `opensuse` (matched by an `"opensuse"`
+  prefix so it also covers Tumbleweed's `ID=opensuse-tumbleweed`, though
+  only Leap has a real fixture here), and `slackware` (`vbatts/slackware:
+  14.2` — turned out to ship `/etc/os-release` despite older docs saying
+  Slackware doesn't). `centos-stream` needed a second field: it shares
+  `ID=centos` with legacy, EOL CentOS Linux, and is told apart by
+  `NAME="CentOS Stream"` instead. All twelve already have real
+  endoflife.date calendars (confirmed live via the API), wired as
+  `DefaultResolver` directly — no `github` fallback needed anywhere in
+  this batch, unlike most of this project's earlier probes.
+- Investigated and **not** added to this batch, each for a real,
+  confirmed-live reason (see "Later" below for the ones worth writing up
+  properly): `linuxmint` (no publicly pullable container correctly reports
+  Mint's own identity — the one found, `linuxmintd/mint22-amd64`, is Mint's
+  own CI build chroot and its `/etc/os-release` reports the underlying
+  Ubuntu base instead), `eurolinux` (no pullable Docker image found under
+  any plausible name), `nixos` (the only accessible `nixos/*` image is the
+  Nix package manager on a minimal non-NixOS base — confirmed live it has
+  no `/etc/os-release` at all — real NixOS needs a VM, not a container).
+
 ## Next
 
-Empty: every product that was tracked here across this project's probe
-build-out has landed in Done above. Add new entries as new probes get
-requested.
+- `linuxmint`, `eurolinux`, `nixos`, `postmarketos`, `steamos`, `tails`,
+  `oracle-solaris`, `macos`, `fortios`, `cisco-ios-xe`, `freebsd`,
+  `openbsd`, `netbsd` — SSH/OS-identification probes still being
+  investigated one at a time; several look headed for a written "Later"
+  deferral rather than an implementation, same as Kafka/Redmine (D21/D22).
 
 ## Later
 
