@@ -830,3 +830,107 @@ choice, not an oversight, the same direction WordPress's ecosystem has
 been pushed by hardening guides), or a real, generalizable case for
 form-login-with-CSRF support landing in this tree for its own reasons
 first — not one added solely to unblock this single product.
+
+---
+
+## D23 — SSH/OS-identification probes: thirteen distros made it in, twelve did not, for concrete reasons
+
+**Decided.** `internal/probe/osrelease.go`'s family probe (D9: checks an
+identity field, here `/etc/os-release`'s `ID`) covers debian, ubuntu,
+fedora, rhel, rocky-linux, almalinux, oracle-linux, amazon-linux,
+opensuse, alpine-linux, centos-stream, slackware, and freebsd (at
+`/var/run/os-release` — see osrelease.go's doc comment). Every one of
+these was checked against a real, live system, not assumed from
+documentation. This entry records exactly why the other twelve names on
+the original request list are not implemented — each for a different,
+confirmed-live reason, not a blanket "too hard":
+
+- **`openbsd`, `netbsd`, `nixos`** — none of these publish a ready-to-boot,
+  pre-installed VM/cloud image the way FreeBSD's own VM-IMAGES program
+  does. Confirmed live: OpenBSD's `amd64` release directory
+  (`ftp.openbsd.org`) offers only `install77.img`/`miniroot77.img` —
+  installer media, not a bootable system; NetBSD's release tree
+  (`cdn.netbsd.org`) is the same shape (`installation/{cdrom,miniroot,
+  ramdisk}`, no pre-built disk image); NixOS's own download page offers
+  only `nixos-{minimal,graphical}-*.iso` live-installer images, and the
+  one plausible shortcut — `nixos/nix` on Docker Hub — turned out to be
+  the Nix package manager on a minimal non-NixOS base with no
+  `/etc/os-release` at all (confirmed live: `cat` on it fails outright).
+  Getting any of these three running means scripting a full unattended
+  install (OpenBSD's `autoinstall(8)` response-file flow, NetBSD's
+  `sysinst` response file, or a NixOS `nixos-install` from the live ISO)
+  — categorically more engineering than every other registration in this
+  family, which are either an already-running server (the Linux distros)
+  or, for FreeBSD, an official run-anywhere cloud image. Deferred rather
+  than half-built; `osReleaseFamilyProbe` already has everything it needs
+  (a `path` override, exactly what FreeBSD uses) the moment a bootable
+  target exists to verify against, and endoflife.date already has real
+  `openbsd`/`netbsd` calendars confirmed live (NixOS's own `nixos` slug
+  too) ready to wire in unchanged.
+- **`oracle-solaris`** — same shape of blocker as the three above, plus a
+  licensing one: Oracle gates ISO downloads behind an OTN click-through
+  license agreement tied to an Oracle account, not something this project
+  fetches unattended, and x86 Solaris under QEMU/TCG (no real SPARC
+  hardware here) is not a combination confirmed to work at all. Not
+  attempted for this reason rather than a live check coming back negative.
+- **`fortios`, `cisco-ios-xe`** — both are licensed commercial network
+  appliances with no freely obtainable test image (Fortinet's FortiGate
+  VM and Cisco's CSR1000v/Catalyst 8000v both require a vendor account,
+  an accepted EULA, and in Cisco's case a CML/VIRL entitlement — none
+  obtainable anonymously here). Both also raise a real design question
+  this project has not needed to answer yet: FortiGate has a documented
+  REST API (`/api/v2/monitor/system/status`) and IOS-XE has
+  RESTCONF/NETCONF, either of which fits this project's existing
+  HTTP-probe shape far better than screen-scraping an interactive CLI
+  session over SSH (the RouterOS probe already made exactly this call —
+  HTTP REST over SSH CLI — for the same reason). Shipping either without
+  a real device to confirm the actual response shape would be precisely
+  the "confident-looking guess about vendor API shapes" docs/CLAUDE.md's
+  "Working style" section warns against, so both stay unimplemented
+  rather than written blind.
+- **`macos`** — no live check performed; not a vendor-API-shape question
+  but a licensing/legal one. Apple's macOS Software License Agreement
+  restricts running macOS in a virtual machine to genuine Apple hardware,
+  and no such hardware exists in this project's build/test environment.
+  `sw_vers -productVersion`/`-productName` over SSH is the well-documented
+  real mechanism (not in question), but this project's own rule of
+  verifying against a real system before shipping a probe cannot be
+  satisfied here without a real Mac, which would need to come from the
+  user.
+- **`steamos`** — Arch-based and does carry `/etc/os-release` with
+  `ID=steamos`, but it is built for one specific console/handheld
+  appliance (the Steam Deck), ships no server-shaped install medium at
+  all, and is not designed to run an unattended, persistent `sshd` as a
+  fleet member — a materially different use case from every other entry
+  in this family. Not pursued.
+- **`tails`** — a live, amnesic, privacy-focused OS that boots fresh from
+  read-only media on every start and is deliberately designed to discard
+  state and resist exactly the kind of unattended, persistent,
+  credentialed remote access this probe family requires. Implementing
+  this would work against what the product is for, not merely be hard to
+  test. Not pursued, on principle rather than a tooling gap.
+- **`linuxmint`** — no publicly pullable container correctly reports
+  Mint's own identity. The one image found on Docker Hub under a
+  plausible name, `linuxmintd/mint22-amd64`, is Linux Mint's own CI
+  package-build chroot; confirmed live that its `/etc/os-release` reports
+  `ID=ubuntu` (the underlying base it's built from), not `ID=linuxmint` —
+  using it would mean shipping a "linuxmint" probe that actually verifies
+  Ubuntu, exactly the D9 failure mode this whole family exists to prevent.
+- **`eurolinux`** — no pullable Docker image found under any plausible
+  name (`eurolinux/eurolinux`, `eurolinux/eurolinux9`,
+  `andrey01/eurolinux9` all confirmed to not exist on Docker Hub).
+  EuroLinux's own distribution channels are ISO/cloud-marketplace images,
+  not container-friendly ones.
+- **`postmarketos`** — no pullable Docker image found
+  (`postmarketos/postmarketos` confirmed absent from Docker Hub), and the
+  project's own primary install targets are ARM phones/tablets, not the
+  x86 server fleets this project's probes otherwise target — a real
+  mismatch with the use case, on top of the missing image.
+
+**Rules out:** shipping any of the twelve above today. **Does not rule
+out** revisiting any single one later — each bullet names exactly what
+would change the answer (a real device from the user, someone publishing
+a missing image, or a generalizable unattended-install mechanism landing
+in this tree for its own reasons), the same shape of "closed, not merely
+deferred" versus "open, pending one concrete thing" distinction D18/D21/
+D22 already draw.

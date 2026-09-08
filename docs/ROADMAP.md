@@ -757,23 +757,30 @@ Not dates. Order of work, and what each step unblocks.
   endoflife.date calendars (confirmed live via the API), wired as
   `DefaultResolver` directly — no `github` fallback needed anywhere in
   this batch, unlike most of this project's earlier probes.
-- Investigated and **not** added to this batch, each for a real,
-  confirmed-live reason (see "Later" below for the ones worth writing up
-  properly): `linuxmint` (no publicly pullable container correctly reports
-  Mint's own identity — the one found, `linuxmintd/mint22-amd64`, is Mint's
-  own CI build chroot and its `/etc/os-release` reports the underlying
-  Ubuntu base instead), `eurolinux` (no pullable Docker image found under
-  any plausible name), `nixos` (the only accessible `nixos/*` image is the
-  Nix package manager on a minimal non-NixOS base — confirmed live it has
-  no `/etc/os-release` at all — real NixOS needs a VM, not a container).
+- `freebsd` added to the `osReleaseFamilyProbe` family at a different
+  path: FreeBSD generates `/var/run/os-release` itself, dynamically at
+  boot (`/etc/rc.d/os-release`), in the same `KEY=VALUE` shape Linux
+  distros ship statically. No Docker image exists for FreeBSD, so this was
+  verified live by booting FreeBSD's own official cloud `qcow2` (from
+  `download.freebsd.org`'s `VM-IMAGES` program, the same kind of "real
+  vendor-published VM image" precedent RouterOS's CHR download set)
+  under QEMU with a `cloud-localds` NoCloud seed for SSH-key auth —
+  confirmed `ID=freebsd`, `VERSION_ID="15.1"` really is what a live
+  instance reports, not documentation. `osReleaseFamilyProbe` gained a
+  `path` field for exactly this case.
+- Thirteen distros made it into this family; twelve more names from the
+  same request did not, each for a specific, confirmed-live reason
+  (licensing, no obtainable image, or the target genuinely not fitting the
+  use case) rather than a blanket "too hard" — see DECISIONS.md **D23**
+  for the full accounting: `openbsd`, `netbsd`, `nixos`, `oracle-solaris`,
+  `fortios`, `cisco-ios-xe`, `macos`, `steamos`, `tails`, `linuxmint`,
+  `eurolinux`, `postmarketos`.
 
 ## Next
 
-- `linuxmint`, `eurolinux`, `nixos`, `postmarketos`, `steamos`, `tails`,
-  `oracle-solaris`, `macos`, `fortios`, `cisco-ios-xe`, `freebsd`,
-  `openbsd`, `netbsd` — SSH/OS-identification probes still being
-  investigated one at a time; several look headed for a written "Later"
-  deferral rather than an implementation, same as Kafka/Redmine (D21/D22).
+Empty: every product that was tracked here across this project's probe
+build-out has landed in Done above. Add new entries as new probes get
+requested.
 
 ## Later
 
@@ -803,6 +810,32 @@ Not dates. Order of work, and what each step unblocks.
   as `mingw-w64`/`llvm-mingw` for the Windows builds) — see DECISIONS.md
   D20. Low urgency: `arm64` alone covers essentially every real Android
   device in current use
+- `openbsd`, `netbsd`, `nixos`, `oracle-solaris` — installer-only; none of
+  these publish a bootable pre-installed VM/cloud image the way FreeBSD's
+  own VM-IMAGES program does, so covering them means scripting a full
+  unattended install first, not writing a probe. `oracle-solaris` also has
+  an OTN license click-through blocking even the install media. Revisit if
+  a real target becomes available, or if unattended-install support lands
+  in this tree for its own reasons — see DECISIONS.md D23
+- `fortios`, `cisco-ios-xe` — both have a documented HTTP API (FortiGate
+  REST, IOS-XE RESTCONF/NETCONF) that would fit this project's existing
+  probe shape better than SSH CLI-scraping, but both are licensed
+  commercial appliances with no freely obtainable test image, so neither
+  the CLI nor the API shape has been confirmed live — see DECISIONS.md D23
+- `macos` — the real mechanism (`sw_vers` over SSH) isn't in question, but
+  Apple's EULA restricts macOS virtualization to genuine Apple hardware,
+  which this project's environment doesn't have — see DECISIONS.md D23
+- `steamos`, `tails` — neither fits this probe family's use case:
+  `steamos` ships no server-shaped install medium and isn't meant to run
+  persistent `sshd`; `tails` is a live, amnesic OS deliberately designed
+  to resist unattended persistent access, which is a principled reason,
+  not a tooling gap — see DECISIONS.md D23
+- `linuxmint`, `eurolinux`, `postmarketos` — no publicly available image
+  correctly represents the product: the one Mint image found on Docker Hub
+  reports its underlying Ubuntu base instead of Mint's own identity,
+  EuroLinux publishes no pullable container under any plausible name, and
+  postmarketOS is ARM-phone-focused with no x86 image and a different use
+  case from this project's server fleets anyway — see DECISIONS.md D23
 
 ## Deliberately not planned
 
