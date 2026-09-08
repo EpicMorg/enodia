@@ -21,6 +21,7 @@ var builtin = []Probe{
 	clickhouseProbe{},
 	&atlassianProbe{product: "confluence", typeID: "confluence", resolver: "confluence", summary: "Atlassian Confluence (Data Center)"},
 	elasticsearchProbe{},
+	esxiProbe{},
 	forgejoProbe{},
 	genericProbe{},
 	gitlabProbe{},
