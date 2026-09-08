@@ -78,6 +78,11 @@ func TestOSReleaseFamilyRealFixtures(t *testing.T) {
 		"gentoo":        {"gentoo_2.18.txt", osReleaseFamilyProbe{product: "gentoo", match: osReleaseIDEquals("gentoo")}, "2.18"},
 		"kali-linux":    {"kali-linux_2026.3.txt", osReleaseFamilyProbe{product: "kali-linux", match: osReleaseIDEquals("kali")}, "2026.3"},
 		"photon":        {"photon_5.0.txt", osReleaseFamilyProbe{product: "photon", match: osReleaseIDEquals("photon")}, "5.0"},
+		"nixos":         {"nixos_26.05.txt", osReleaseFamilyProbe{product: "nixos", match: osReleaseIDEquals("nixos")}, "26.05"},
+		"steamos":       {"steamos_2.txt", osReleaseFamilyProbe{product: "steamos", match: osReleaseIDEquals("steamos")}, "2"},
+		"eurolinux":     {"eurolinux_8.10.txt", osReleaseFamilyProbe{product: "eurolinux", match: osReleaseIDEquals("eurolinux")}, "8.10"},
+		"linuxmint":     {"linuxmint_22.3.txt", osReleaseFamilyProbe{product: "linuxmint", match: osReleaseIDEquals("linuxmint")}, "22.3"},
+		"postmarketos":  {"postmarketos_v26.06.txt", osReleaseFamilyProbe{product: "postmarketos", match: osReleaseIDEquals("postmarketos")}, "v26.06"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) { runOSReleaseFamilyTest(t, tc) })
