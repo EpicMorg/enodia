@@ -5,13 +5,14 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 38 products: apache (httpd alias), the atlassian
+- `internal/probe` — 39 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
-  bitwarden/vaultwarden, elasticsearch, generic, gitlab, grafana,
-  haproxy, harbor, jellyfin, jenkins, keycloak, mattermost, mysql,
-  nextcloud, nginx, oauth2-proxy, owncast, perforce-swarm, portainer,
-  postgres_exporter, postgresql, redis, sonarqube, ssh, teamcity,
-  testrail, traefik, vault, vcenter, youtrack, zabbix, zou (kitsu alias)
+  bitwarden/vaultwarden, clickhouse, elasticsearch, generic, gitlab,
+  grafana, haproxy, harbor, jellyfin, jenkins, keycloak, mattermost,
+  mysql, nextcloud, nginx, oauth2-proxy, owncast, perforce-swarm,
+  portainer, postgres_exporter, postgresql, redis, sonarqube, ssh,
+  teamcity, testrail, traefik, vault, vcenter, youtrack, zabbix, zou
+  (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -517,16 +518,28 @@ Not dates. Order of work, and what each step unblocks.
   `DefaultResolver` uses endoflife.date's actual slug
   `apache-http-server` directly — both `apache` and `httpd` were
   confirmed to just 301-redirect there
+- `clickhouse` probe — runs `SELECT version()` against the HTTP interface
+  (port 8123) and reads the bare TabSeparated reply (a single-column,
+  single-row result is just the value and a newline — nothing to
+  unmarshal). Confirmed live against a real clickhouse/clickhouse-server
+  container: recent images require `CLICKHOUSE_PASSWORD` to be set at
+  all (no blank default-user password to fall back to, unlike older
+  installs) — an unauthenticated request gets a normal 401, already
+  ordinary `ErrAuth` via `FetchHTTP`, nothing clickhouse-specific needed.
+  The reply is checked against a "looks like a version" pattern before
+  being trusted, since a bare-text response has nothing else to
+  distinguish a real reply from an unrelated service answering 200 at
+  that address
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
-  fixture, registered in `registry.go`, alphabetical): `clickhouse`,
-  `esxi` (VMware ESXi), `forgejo`, `graylog`, `jaeger`, `kafka`, `kibana`,
-  `logstash`, `mongodb`, `nexus` (Sonatype Nexus Repository),
-  `opensearch`, `phpmyadmin`, `proftpd`, `redmine`, `routeros` (MikroTik
-  RouterOS — matches endoflife.date's own product slug), `wordpress`
+  fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
+  ESXi), `forgejo`, `graylog`, `jaeger`, `kafka`, `kibana`, `logstash`,
+  `mongodb`, `nexus` (Sonatype Nexus Repository), `opensearch`,
+  `phpmyadmin`, `proftpd`, `redmine`, `routeros` (MikroTik RouterOS —
+  matches endoflife.date's own product slug), `wordpress`
 
 ## Later
 

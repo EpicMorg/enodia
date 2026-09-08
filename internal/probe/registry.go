@@ -18,6 +18,7 @@ var builtin = []Probe{
 	&atlassianProbe{product: "bamboo", typeID: "bamboo", resolver: "bamboo", summary: "Atlassian Bamboo (Data Center)"},
 	&atlassianProbe{product: "bitbucket", typeID: "stash", resolver: "bitbucket", summary: "Atlassian Bitbucket (Data Center)"},
 	bitwardenFamilyProbe{product: "bitwarden", summary: "Bitwarden (self-hosted)"},
+	clickhouseProbe{},
 	&atlassianProbe{product: "confluence", typeID: "confluence", resolver: "confluence", summary: "Atlassian Confluence (Data Center)"},
 	elasticsearchProbe{},
 	genericProbe{},
