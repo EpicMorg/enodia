@@ -51,6 +51,7 @@ var builtin = []Probe{
 	vaultProbe{},
 	bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden"},
 	vcenterProbe{},
+	wordpressProbe{},
 	youtrackProbe{},
 	zabbixProbe{},
 	zouProbe{},
