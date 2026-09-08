@@ -39,6 +39,11 @@ var builtin = []Probe{
 	// fedora:latest: ID=fedora, VERSION_ID=44.
 	osReleaseFamilyProbe{product: "fedora", summary: "Fedora Linux", resolver: ResolverRef{Type: "endoflife", ID: "fedora"}, match: osReleaseIDEquals("fedora")},
 	forgejoProbe{},
+	// FreeBSD generates /var/run/os-release itself at boot, in the same
+	// KEY=VALUE shape Linux distros ship statically at /etc/os-release.
+	// Verified live via QEMU (FreeBSD's own official cloud qcow2, no Docker
+	// image exists): ID=freebsd, VERSION_ID="15.1".
+	osReleaseFamilyProbe{product: "freebsd", summary: "FreeBSD", resolver: ResolverRef{Type: "endoflife", ID: "freebsd"}, match: osReleaseIDEquals("freebsd"), path: "/var/run/os-release"},
 	genericProbe{},
 	gitlabProbe{},
 	grafanaProbe{},

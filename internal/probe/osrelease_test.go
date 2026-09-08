@@ -31,8 +31,12 @@ type osReleaseFamilyTestCase struct {
 func runOSReleaseFamilyTest(t *testing.T, tc osReleaseFamilyTestCase) {
 	t.Helper()
 	fixture := loadOSReleaseFixture(t, tc.fixture)
+	path := tc.probe.path
+	if path == "" {
+		path = "/etc/os-release"
+	}
 	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
-		"cat /etc/os-release": fixture,
+		"cat " + path: fixture,
 	})
 
 	target := Target{
@@ -67,6 +71,7 @@ func TestOSReleaseFamilyRealFixtures(t *testing.T) {
 		"alpine-linux":  {"alpine-linux_3.24.1.txt", osReleaseFamilyProbe{product: "alpine-linux", match: osReleaseIDEquals("alpine")}, "3.24.1"},
 		"slackware":     {"slackware_14.2.txt", osReleaseFamilyProbe{product: "slackware", match: osReleaseIDEquals("slackware")}, "14.2"},
 		"centos-stream": {"centos-stream_9.txt", osReleaseFamilyProbe{product: "centos-stream", match: func(f map[string]string) bool { return f["ID"] == "centos" && f["NAME"] == "CentOS Stream" }}, "9"},
+		"freebsd":       {"freebsd_15.1.txt", osReleaseFamilyProbe{product: "freebsd", match: osReleaseIDEquals("freebsd"), path: "/var/run/os-release"}, "15.1"},
 		"opensuse":      {"opensuse_16.0.txt", osReleaseFamilyProbe{product: "opensuse", match: func(f map[string]string) bool { return len(f["ID"]) >= 8 && f["ID"][:8] == "opensuse" }}, "16.0"},
 	}
 	for name, tc := range cases {
