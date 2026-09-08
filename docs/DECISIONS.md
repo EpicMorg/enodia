@@ -723,3 +723,25 @@ the shared build image without the user's own separate work there).
 **Cost accepted:** a fifth goreleaser build id and a third archive OS to
 keep straight. `install.sh` gained one more branch. android/{amd64,386,arm}
 stay unsupported until the build image gains an NDK.
+
+**Revisited: rooted devices (Magisk/KernelSU) can still fail to exec the
+binary as a normal user, even though it's the right archive.** Live
+report: worked fine after `su` + a full path, failed as the ordinary
+Termux user with the binary's own path showing up where an argument
+should be (cobra: `unknown command "<path-to-enodia>" for "enodia"`) —
+confirmed this reproduces on a plain `enodia version`, not just from
+inside `install.sh`, so it's not this project's shell script. Matches a
+known, open, already-being-fixed upstream bug:
+[termux-exec#40](https://github.com/termux/termux-exec/issues/40) —
+`termux-exec`'s own C code fails to recognize "alternative entrypoint"
+process contexts (Magisk, KernelSU, `run-as`, ADB) when exempting
+`/system/bin/linker64` from Android's execution restrictions, and a
+rooted device commonly puts even an ordinary Termux session into exactly
+that kind of context. The documented upstream workaround is the same
+`su`-based one that resolved it here; two PRs fixing the context
+detection are open upstream but not yet merged. Nothing to change on
+this side — this is `termux-exec`'s own linker-exemption logic
+misidentifying the process context it's running in, not something a
+downstream binary's build or `install.sh` can route around. Expected to
+not reproduce at all on a non-rooted device, which never enters one of
+these alternate contexts in the first place.
