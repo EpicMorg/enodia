@@ -29,6 +29,7 @@ var builtin = []Probe{
 	mattermostProbe{},
 	mysqlProbe{},
 	nextcloudProbe{},
+	nginxProbe{},
 	owncastProbe{},
 	perforceSwarmProbe{},
 	portainerProbe{},

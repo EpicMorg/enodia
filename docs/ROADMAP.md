@@ -5,10 +5,10 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 31 products: the atlassian family (jira/confluence/
+- `internal/probe` — 32 products: the atlassian family (jira/confluence/
   bitbucket/bamboo), artifactory, bitwarden/vaultwarden, elasticsearch,
   generic, gitlab, grafana, jellyfin, jenkins, keycloak, mattermost, mysql,
-  nextcloud, owncast, perforce-swarm, portainer, postgresql, redis,
+  nextcloud, nginx, owncast, perforce-swarm, portainer, postgresql, redis,
   sonarqube, ssh, teamcity, testrail, vault, vcenter, youtrack, zabbix, zou
   (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
@@ -447,6 +447,16 @@ Not dates. Order of work, and what each step unblocks.
   against a real, internet-facing instance: needs no credentials, and an
   anonymous caller asking for extra fields (buildDate, edition, ...) just
   gets them silently dropped — only `version` comes back
+- `nginx` probe — the `Server` response header, the only anonymous version
+  source nginx has at all (`/stub_status` gives connection counters, never
+  a version). Confirmed live against real `nginx:1.27.4` containers: any
+  status code (301/403/404/50x, not just 200) still carries it, but
+  `server_tokens off` — common hardening — stamps a bare `Server: nginx`
+  with no version, which this probe cannot work around; classified as
+  `ErrNotSupported` (decided explicitly, not assumed: this is confirmed
+  nginx, just a deployment whose own config makes the version
+  unavailable, the same sense postgres's/mysql's unsupported-auth-method
+  cases already stretch that sentinel to cover)
 
 ## Next
 
@@ -455,9 +465,9 @@ Not dates. Order of work, and what each step unblocks.
   fixture, registered in `registry.go`, alphabetical): `apache` (httpd),
   `clickhouse`, `esxi` (VMware ESXi), `forgejo`, `graylog`, `haproxy`,
   `harbor`, `jaeger`, `kafka`, `kibana`, `logstash`, `mongodb`, `nexus`
-  (Sonatype Nexus Repository), `nginx`, `opensearch`, `phpmyadmin`,
-  `proftpd`, `redmine`, `routeros` (MikroTik RouterOS — matches
-  endoflife.date's own product slug), `wordpress`
+  (Sonatype Nexus Repository), `opensearch`, `phpmyadmin`, `proftpd`,
+  `redmine`, `routeros` (MikroTik RouterOS — matches endoflife.date's own
+  product slug), `wordpress`
 
 ## Later
 
