@@ -5,12 +5,12 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 33 products: the atlassian family (jira/confluence/
+- `internal/probe` — 34 products: the atlassian family (jira/confluence/
   bitbucket/bamboo), artifactory, bitwarden/vaultwarden, elasticsearch,
   generic, gitlab, grafana, jellyfin, jenkins, keycloak, mattermost, mysql,
   nextcloud, nginx, oauth2-proxy, owncast, perforce-swarm, portainer,
-  postgresql, redis, sonarqube, ssh, teamcity, testrail, vault, vcenter,
-  youtrack, zabbix, zou (kitsu alias)
+  postgresql, redis, sonarqube, ssh, teamcity, testrail, traefik, vault,
+  vcenter, youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -466,6 +466,14 @@ Not dates. Order of work, and what each step unblocks.
   are in the same boat. The `--footer` flag can replace or hide ("-")
   that line entirely — same shape of problem as nginx's `server_tokens
   off` above, same `ErrNotSupported` classification
+- `traefik` probe — `GET /api/version`. Confirmed live against a real
+  `traefik:v3.1` container: needs no credentials under
+  `--api.insecure=true`; a stock instance (neither `--api` nor
+  `--api.insecure` set — the default) answers plain 404 here, already
+  covered by `FetchHTTP`'s existing 404-is-`ErrNotSupported` handling, no
+  special-casing needed. `AuthBasic` accepted for the documented "secure"
+  deployment shape (API router wired behind Traefik's own
+  BasicAuth/DigestAuth middleware)
 
 ## Next
 
