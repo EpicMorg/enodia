@@ -5,10 +5,10 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 44 products: apache (httpd alias), the atlassian
+- `internal/probe` — 45 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, forgejo, generic,
-  gitlab, grafana, haproxy, harbor, jellyfin, jenkins, keycloak,
+  gitlab, grafana, graylog, haproxy, harbor, jellyfin, jenkins, keycloak,
   mattermost, mongodb, mysql, nextcloud, nexus, nginx, oauth2-proxy,
   owncast, perforce-swarm, phpmyadmin, portainer, postgres_exporter,
   postgresql, redis, sonarqube, ssh, teamcity, testrail, traefik, vault,
@@ -576,15 +576,19 @@ Not dates. Order of work, and what each step unblocks.
   answer 403 on this endpoint too, already ordinary `ErrAuth` via
   `FetchHTTP`'s existing 401-or-403 handling, nothing forgejo-specific
   needed
+- `graylog` probe — `GET /api/`, the REST API's own root discovery
+  document, confirmed live against a real graylog/graylog container
+  (plus the MongoDB and Elasticsearch it depends on) to answer with no
+  credentials at all
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
-  ESXi), `graylog`, `jaeger`, `kibana`, `logstash`, `opensearch`,
-  `proftpd`, `routeros` (MikroTik RouterOS — matches
-  endoflife.date's own product slug)
+  ESXi), `jaeger`, `kibana`, `logstash`, `opensearch`, `proftpd`,
+  `routeros` (MikroTik RouterOS — matches endoflife.date's own product
+  slug)
 
 ## Later
 
