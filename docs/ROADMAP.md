@@ -5,15 +5,15 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 52 products: apache (httpd alias), the atlassian
+- `internal/probe` — 53 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, esxi, forgejo,
   generic, gitlab, grafana, graylog, haproxy, harbor, jaeger, jellyfin,
-  jenkins, keycloak, kibana, logstash, mattermost, mongodb, mysql,
-  nextcloud, nexus, nginx, oauth2-proxy, opensearch, owncast,
+  jenkins, keycloak, kibana, kitsu, logstash, mattermost, mongodb,
+  mysql, nextcloud, nexus, nginx, oauth2-proxy, opensearch, owncast,
   perforce-swarm, phpmyadmin, portainer, postgres_exporter, postgresql,
   proftpd, redis, routeros, sonarqube, ssh, teamcity, testrail, traefik,
-  vault, vcenter, wordpress, youtrack, zabbix, zou (kitsu alias)
+  vault, vcenter, wordpress, youtrack, zabbix, zou
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -687,19 +687,18 @@ Not dates. Order of work, and what each step unblocks.
   `owncast`, `portainer`, `vaultwarden`, `oauth2-proxy`, `testrail`,
   `zou`, or `perforce-swarm` — no coverage advantage over GitHub
   Releases for any product actually blocked on this today
-- `zou` wired to `cgwire/kitsu`, not `cgwire/zou`: confirmed live that
-  `cgwire/zou` publishes bare git tags only (`v1.0.70` latest), no
-  GitHub Releases objects at all — this project's GitHub Releases
-  resolver reads the Releases API, so it finds nothing there today.
-  `cgwire/kitsu` (the Vue.js UI Zou serves — confirmed live, no version
-  endpoint of its own) has real Releases (`v1.0.59` latest) and is what
-  this deployment strategically tracks anyway: a production Zou with no
-  Kitsu in front of it is not a real deployment shape here. The two
-  repos' version numbers do diverge (Zou's backend runs ahead), so this
-  is "latest known Kitsu release," not a precise match for the backend
-  version `/api/status` reports — accepted for now. A `zou`-specific
-  tags-based resolver stays possible later if that gap turns out to
-  matter enough to build
+- `zou` and `kitsu` split into two distinct products (previously "zou"
+  with "kitsu" as a mere spelling alias) so each can carry its own
+  resolver: confirmed live that `cgwire/zou` publishes bare git tags
+  only (`v1.0.70` latest), no GitHub Releases objects at all — this
+  project's GitHub Releases resolver reads the Releases API, so it
+  finds nothing there today, and `product: zou` stays resolver-less
+  rather than borrow a different component's numbers. `cgwire/kitsu`
+  (the Vue.js UI Zou serves — confirmed live, no version endpoint of
+  its own) has real Releases (`v1.0.59` latest) and is what a
+  deployment actually named "kitsu" in config strategically tracks
+  anyway. `zouProbe` became `zouFamilyProbe{product, summary,
+  resolver}`, the same shape as `bitwardenFamilyProbe`
 
 ## Next
 

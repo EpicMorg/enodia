@@ -9,37 +9,35 @@ import (
 	"time"
 )
 
-// zouProbe reads /api/status for the version.
+// zouFamilyProbe reads /api/status for the version. "Kitsu" is the
+// commonly known brand for CG-Wire's production-tracking stack, but Kitsu
+// itself is a Vue.js frontend with no version endpoint of its own; what
+// actually answers /api/status — confirmed live, including on a host
+// literally named "kitsu" in DNS — is Zou, the API backend Kitsu talks to.
 //
-// "Kitsu" is the commonly known brand for CG-Wire's production-tracking
-// stack, but Kitsu itself is a Vue.js frontend with no version endpoint of
-// its own; what actually answers /api/status — confirmed live, including
-// on a host literally named "kitsu" in DNS — is Zou, the API backend Kitsu
-// talks to. So the product here is "zou", with "kitsu" kept as an alias for
-// anyone reaching for the name they actually know the stack by.
-type zouProbe struct{}
+// "zou" and "kitsu" are registered as two distinct products, not one
+// product with an alias, because they need different resolvers: Zou's own
+// repo, cgwire/zou, publishes bare git tags only (confirmed live: its
+// Releases API returns an empty list), which this project's GitHub
+// Releases resolver can't read at all; cgwire/kitsu has real Releases and
+// is what a deployment actually named "kitsu" in config strategically
+// tracks. The two repos' version numbers do diverge (Zou's backend runs
+// ahead of Kitsu's), so `product: zou` stays resolver-less rather than
+// comparing against the wrong component's numbers under the more
+// technically precise name.
+type zouFamilyProbe struct {
+	product  string
+	summary  string
+	resolver ResolverRef // zero value: no resolver at all
+}
 
-func (zouProbe) Meta() Meta {
+func (p zouFamilyProbe) Meta() Meta {
 	return Meta{
-		Product:       "zou",
-		Summary:       "Zou (CG-Wire / Kitsu backend)",
-		Aliases:       []string{"kitsu"},
-		DefaultScheme: "https",
-		Auth:          AuthSpec{Required: false},
-		// No endoflife.date calendar under zou, kitsu or cg-wire (all
-		// confirmed 404) — GitHub Releases instead, deliberately pointed
-		// at cgwire/kitsu rather than cgwire/zou: Kitsu (the UI) is what
-		// this deployment strategically tracks — a production Zou without
-		// Kitsu in front of it is not a real deployment shape — and
-		// cgwire/zou publishes bare tags only (confirmed live: its
-		// Releases API returns an empty list), which this resolver
-		// mechanism can't read at all today. The two repos' version
-		// numbers do diverge (Zou's backend releases run ahead of
-		// Kitsu's), so this is "latest known Kitsu release" context, not
-		// a precise match for the backend version /api/status reports —
-		// accepted as good enough for now. A separate zou-tags-based
-		// resolver remains possible later if that gap turns out to matter.
-		DefaultResolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"},
+		Product:         p.product,
+		Summary:         p.summary,
+		DefaultScheme:   "https",
+		Auth:            AuthSpec{Required: false},
+		DefaultResolver: p.resolver,
 	}
 }
 
@@ -55,7 +53,7 @@ type zouStatus struct {
 	IndexerUp       bool   `json:"indexer-up"`
 }
 
-func (zouProbe) Probe(ctx context.Context, t Target) (Observation, error) {
+func (zouFamilyProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	start := time.Now()
 	obs := Observation{
 		Kind: "observation", ID: t.ID, Name: t.Name, Product: t.Product,
