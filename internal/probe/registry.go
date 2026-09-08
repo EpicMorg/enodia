@@ -41,6 +41,7 @@ var builtin = []Probe{
 	nexusProbe{},
 	nginxProbe{},
 	oauth2ProxyProbe{},
+	opensearchProbe{},
 	owncastProbe{},
 	perforceSwarmProbe{},
 	phpmyadminProbe{},
