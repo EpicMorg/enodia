@@ -786,3 +786,47 @@ not a raw request/reply over the broker's own port), off by default, and
 its own port/auth model. That is a new kind of probe transport, not a
 one-file addition alongside mysql.go/redis.go/mongodb.go — deferred rather
 than folded in as a variant of this decision.
+
+---
+
+## D22 — No Redmine probe: version needs a session-cookie login, not just credentials
+
+**Decided (for now).** Not implemented. `redmine` stays off the roadmap's
+"Next" list, blocked pending a workable auth path — same shape of decision
+as D18 and D21.
+
+Confirmed live against a real `redmine:latest` instance (actual version
+7.0.1, read from `lib/redmine/version.rb`): nowhere anonymous discloses
+it.
+
+- The homepage, `/login`, and every static asset checked carry no version
+  anywhere — no meta tag, no HTTP header, no footer text beyond "Powered
+  by Redmine © `<year>` Jean-Philippe Lang".
+- Redmine's own Atom feeds (`/issues.atom`, `/news.atom`, ...) do emit a
+  `<generator uri="https://www.redmine.org/">Redmine</generator>` tag —
+  contrast the `wordpress` probe's feed generator, which is exactly this
+  shape but with a `version` attribute Redmine's simply doesn't carry.
+- The one page that does show it, `/admin/info`, requires an
+  authenticated session and redirects an anonymous request straight to
+  `/login` — confirmed this happens even with a correct `Authorization:
+  Basic` header (`admin`/`admin`, Redmine's own well-known default): HTTP
+  Basic is not accepted on this controller action at all, only a session
+  cookie obtained by actually submitting the login form.
+- REST API JSON endpoints (`/issues.json`, checked anonymously) carry no
+  application-version field either — this isn't only a web-UI limitation.
+
+**Rules out:** every existing `AuthKind` (`bearer`, `token-header`,
+`basic`, `password`). None of them represent "POST a login form carrying
+a CSRF token read off a prior GET, then keep the session cookie for a
+second request" — a fundamentally heavier flow than any probe in this
+tree performs today, closer to browser automation than to
+`Authorization: <scheme> <value>`. Building it as a Redmine-specific
+one-off would also mean Target growing a cookie jar for exactly one
+probe, which no other probe needs.
+
+**What would unblock this:** either Redmine adding version disclosure
+somewhere genuinely anonymous (unlikely — this reads as a deliberate
+choice, not an oversight, the same direction WordPress's ecosystem has
+been pushed by hardening guides), or a real, generalizable case for
+form-login-with-CSRF support landing in this tree for its own reasons
+first — not one added solely to unblock this single product.

@@ -569,8 +569,8 @@ Not dates. Order of work, and what each step unblocks.
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
   ESXi), `forgejo`, `graylog`, `jaeger`, `kibana`, `logstash`,
-  `opensearch`, `phpmyadmin`, `proftpd`, `redmine`, `routeros` (MikroTik
-  RouterOS — matches endoflife.date's own product slug)
+  `opensearch`, `phpmyadmin`, `proftpd`, `routeros` (MikroTik RouterOS —
+  matches endoflife.date's own product slug)
 
 ## Later
 
@@ -584,6 +584,14 @@ Not dates. Order of work, and what each step unblocks.
   RMI, its own port, off by default), a new kind of probe this project
   doesn't have yet — see DECISIONS.md D21 for what was tried and why an
   ApiVersions-based guess was rejected, not just deferred
+- `redmine` probe — nowhere anonymous discloses the version at all
+  (confirmed live: not the homepage, not headers, not the Atom feeds'
+  own `<generator>` tag, which — unlike `wordpress`'s — carries no
+  version attribute). The one page that does, `/admin/info`, needs a
+  session cookie from an actual form login with a CSRF token, which no
+  existing `AuthKind` represents and no probe in this tree does today —
+  see DECISIONS.md D22 for what was tried and why HTTP Basic against
+  that page doesn't work either
 - `android/amd64`, `android/386`, `android/arm` — Go hard-requires cgo
   against an Android NDK cross-compiler for these three (confirmed live;
   only `android/arm64` supports pure internal linking), and this
