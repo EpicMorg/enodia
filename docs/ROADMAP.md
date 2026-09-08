@@ -790,13 +790,24 @@ Not dates. Order of work, and what each step unblocks.
   see DECISIONS.md **D23**'s "Revisited" note for the full detail,
   including why this doesn't also unblock `nixos` (no vmactions
   equivalent exists for it).
-- Seventeen SSH/OS-identification products made it in total across this
-  request; eight more names did not, each for a specific, confirmed-live
-  reason (licensing, no obtainable image, or the target genuinely not
-  fitting the use case) rather than a blanket "too hard" — see
-  DECISIONS.md **D23** for the full accounting: `nixos`, `fortios`,
-  `cisco-ios-xe`, `steamos`, `tails`, `linuxmint`, `eurolinux`,
-  `postmarketos`.
+- `opnsense` probe (`internal/probe/opnsense.go`) — a new request added
+  mid-batch, unblocked the same way as the three above: vmactions publishes
+  `opnsense-vm` too. OPNsense sits on a FreeBSD base with no
+  `/etc/os-release` and its version split across several files under
+  `/usr/local/opnsense/version/`, so this runs `opnsense-version` instead
+  — OPNsense's own wrapper, confirmed live to print "OPNsense 26.7
+  (amd64)" in one command.
+- `truenas` considered and deferred: no vmactions coverage, and the only
+  Docker Hub images found under that name are unrelated helper tools (fan
+  controllers, ZFS-unlock scripts), not TrueNAS itself — see
+  DECISIONS.md D23.
+- Eighteen SSH/OS-identification products made it in total across this
+  request; eight more names did not (plus `truenas`, considered
+  separately above), each for a specific, confirmed-live reason
+  (licensing, no obtainable image, or the target genuinely not fitting
+  the use case) rather than a blanket "too hard" — see DECISIONS.md
+  **D23** for the full accounting: `nixos`, `fortios`, `cisco-ios-xe`,
+  `steamos`, `tails`, `linuxmint`, `eurolinux`, `postmarketos`.
 
 ## Next
 
@@ -834,10 +845,15 @@ requested.
   device in current use
 - `nixos` — installer-only, no bootable pre-installed VM/cloud image the
   way FreeBSD's own VM-IMAGES program has, and no vmactions equivalent
-  either (unlike `openbsd`/`netbsd`/`oracle-solaris`, now implemented —
-  see Done above). Revisit if a real target becomes available, or if
-  unattended-install support lands in this tree for its own reasons —
-  see DECISIONS.md D23
+  either (unlike `openbsd`/`netbsd`/`oracle-solaris`/`opnsense`, now
+  implemented — see Done above). Revisit if a real target becomes
+  available, or if unattended-install support lands in this tree for its
+  own reasons — see DECISIONS.md D23
+- `truenas` — no vmactions coverage, and no Docker image runs the actual
+  appliance (only unrelated helper tools turned up on Docker Hub under
+  that name); its own installer is ISO-only, the same shape of blocker
+  `openbsd`/`netbsd` had before vmactions covered them — see
+  DECISIONS.md D23
 - `fortios`, `cisco-ios-xe` — both have a documented HTTP API (FortiGate
   REST, IOS-XE RESTCONF/NETCONF) that would fit this project's existing
   probe shape better than SSH CLI-scraping, but both are licensed

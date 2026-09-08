@@ -833,7 +833,7 @@ first — not one added solely to unblock this single product.
 
 ---
 
-## D23 — SSH/OS-identification probes: seventeen made it in, eight did not, for concrete reasons
+## D23 — SSH/OS-identification probes: eighteen made it in, eight did not, for concrete reasons
 
 **Decided.** `internal/probe/osrelease.go`'s family probe (D9: checks an
 identity field, here `/etc/os-release`'s `ID`) covers debian, ubuntu,
@@ -917,31 +917,43 @@ in this tree for its own reasons), the same shape of "closed, not merely
 deferred" versus "open, pending one concrete thing" distinction D18/D21/
 D22 already draw.
 
-**Revisited: `openbsd`, `netbsd`, and `oracle-solaris` unblocked via
-vmactions** — this entry originally listed all three as blocked on the
-same thing, no obtainable pre-installed image, and a fourth option turned
-up: [vmactions](https://vmactions.org) publishes GitHub Actions
-(`openbsd-vm`, `netbsd-vm`, `solaris-vm`) that boot real, pre-built QEMU
-VM images specifically for CI use — a fork of `vmactions/shell-openbsd`
-with a small custom `workflow_dispatch` job (`run: uname -sr`, etc.) got
+**Revisited: `openbsd`, `netbsd`, `oracle-solaris`, and (a new request)
+`opnsense` unblocked via vmactions** — this entry originally listed the
+first three as blocked on the same thing, no obtainable pre-installed
+image, and a fourth option turned up: [vmactions](https://vmactions.org)
+publishes GitHub Actions (`openbsd-vm`, `netbsd-vm`, `solaris-vm`,
+`opnsense-vm`) that boot real, pre-built QEMU VM images specifically for
+CI use — a fork of `vmactions/shell-openbsd` with a small custom
+`workflow_dispatch` job per OS (just `run: uname -sr` or similar) got
 each identity string back in the job's own log in 1-2 minutes, no
-interactive session or manual QEMU/autoinstall work needed. `unameFamilyProbe`
-(`internal/probe/uname.go`) now covers `openbsd` (`uname -sr` →
-"OpenBSD 7.9") and `netbsd` ("NetBSD 11.0") — neither ships an
-os-release-equivalent file, so `uname -sr`'s "\<name\> \<release\>" is the
-identity source instead of D9's usual identity-field check. `oracle-solaris`
-(`internal/probe/solaris.go`) reads `/etc/release` instead: `uname -sr` on
-Solaris only ever reports the SunOS kernel version ("SunOS 5.11" for
-every Solaris 11.x release, decoupled from the product version), while
-`/etc/release`'s own "Oracle Solaris 11.4 X86" line carries the real one.
-vmactions' `solaris-vm` builds and republishes Oracle's own
-free-to-redistribute Solaris 11.4 CBE (Common Build Environment, meant
-for exactly this kind of CI use), not something obtained by working
-around Oracle's OTN license. `nixos` has no vmactions equivalent
-(confirmed live: no matching repo in the `vmactions` GitHub org), so it
-stays deferred above — this was a real, if unusually convenient,
-narrowing of the blocker for three products, not a blanket fix for the
-whole list.
+interactive session or manual QEMU/autoinstall work needed.
+`unameFamilyProbe` (`internal/probe/uname.go`) now covers `openbsd`
+(`uname -sr` → "OpenBSD 7.9") and `netbsd` ("NetBSD 11.0") — neither
+ships an os-release-equivalent file, so `uname -sr`'s
+"\<name\> \<release\>" is the identity source instead of D9's usual
+identity-field check. `oracle-solaris` (`internal/probe/solaris.go`)
+reads `/etc/release` instead: `uname -sr` on Solaris only ever reports
+the SunOS kernel version ("SunOS 5.11" for every Solaris 11.x release,
+decoupled from the product version), while `/etc/release`'s own
+"Oracle Solaris 11.4 X86" line carries the real one. vmactions'
+`solaris-vm` builds and republishes Oracle's own free-to-redistribute
+Solaris 11.4 CBE (Common Build Environment, meant for exactly this kind
+of CI use), not something obtained by working around Oracle's OTN
+license. `opnsense` (`internal/probe/opnsense.go`) — a new request,
+never in the original blocked list — sits on a FreeBSD base with no
+`/etc/os-release` and no single obvious identity file (its version is
+split across several files under `/usr/local/opnsense/version/`), so it
+runs `opnsense-version` instead, OPNsense's own wrapper that already
+picks the right one and prints "OPNsense 26.7 (amd64)" in one command.
+`nixos` has no vmactions equivalent (confirmed live: no matching repo in
+the `vmactions` GitHub org), so it stays deferred above — this was a
+real, if unusually convenient, narrowing of the blocker for these four
+products, not a blanket fix for the whole list. `truenas` was also
+considered and stays deferred: no vmactions coverage, no Docker image
+that runs the actual appliance (the ones found on Docker Hub are
+unrelated helper tools — fan controllers, ZFS-unlock scripts — not
+TrueNAS itself), and its own installer is ISO-only like the
+pre-vmactions state of `openbsd`/`netbsd` was.
 
 **Revisited: `macos` unblocked immediately** — this entry originally
 listed it as blocked on exactly one thing, a real Mac to verify against,
