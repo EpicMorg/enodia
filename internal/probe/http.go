@@ -3,6 +3,7 @@
 package probe
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
@@ -27,6 +28,7 @@ type Request struct {
 	Path       string
 	Method     string // defaults to GET
 	Accept     string
+	Body       []byte // request body, e.g. a JSON-RPC envelope; nil for none
 	Headers    map[string]string
 	OKStatuses []int // statuses that are not failures (Jenkins answers on 403)
 }
@@ -65,7 +67,11 @@ func FetchHTTP(ctx context.Context, t Target, r Request) (*http.Response, error)
 		method = http.MethodGet
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
+	var bodyReader io.Reader
+	if r.Body != nil {
+		bodyReader = bytes.NewReader(r.Body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUnreachable, err)
 	}
