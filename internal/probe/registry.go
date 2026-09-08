@@ -25,6 +25,7 @@ var builtin = []Probe{
 	genericProbe{},
 	gitlabProbe{},
 	grafanaProbe{},
+	graylogProbe{},
 	haproxyProbe{},
 	harborProbe{},
 	jellyfinProbe{},
