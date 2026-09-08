@@ -408,6 +408,17 @@ Not dates. Order of work, and what each step unblocks.
   `$TERMUX_VERSION` rather than the `$PREFIX` already used for the
   install-directory fallback. `install.sh` picks the right archive
   automatically; no change needed to how anyone invokes it
+- Found on the same real device right after that fix, on a **rooted**
+  phone specifically: the correct `android_arm64` binary still failed to
+  exec as the ordinary Termux user (worked fine under `su` + a full
+  path) — matches a known, open, already-being-fixed upstream bug,
+  `termux-exec`'s own linker-exemption logic not recognizing Magisk/
+  KernelSU/`run-as`/ADB process contexts
+  ([termux-exec#40](https://github.com/termux/termux-exec/issues/40)).
+  Nothing changed here: this is upstream's own bug in a process-context
+  check, not something this project's build or `install.sh` can route
+  around — see DECISIONS.md D20's "Revisited". Expected to not reproduce
+  on a non-rooted device at all
 - The container image now also pushes to `docker.io/epicmorg/enodia` and
   Quay, not GHCR alone — same tags, same multi-arch manifest, three
   `docker/login-action` steps in `release.yml` ahead of the one
