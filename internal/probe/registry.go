@@ -61,6 +61,10 @@ var builtin = []Probe{
 	jellyfinProbe{},
 	jenkinsProbe{},
 	&atlassianProbe{product: "jira", typeID: "jira", resolver: "jira-software", summary: "Atlassian Jira (Data Center)"},
+	// kalilinux/kali-rolling: ID=kali, VERSION_ID="2026.3" — a dated
+	// rolling-release snapshot, not a discrete version; no endoflife.date
+	// calendar exists for the same reason (confirmed 404).
+	osReleaseFamilyProbe{product: "kali-linux", summary: "Kali Linux", match: osReleaseIDEquals("kali")},
 	keycloakProbe{},
 	kibanaProbe{},
 	zouFamilyProbe{product: "kitsu", summary: "Kitsu (CG-Wire / Zou frontend)", resolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"}},
