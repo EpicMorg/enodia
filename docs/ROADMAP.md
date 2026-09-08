@@ -5,14 +5,14 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 43 products: apache (httpd alias), the atlassian
+- `internal/probe` — 44 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
-  bitwarden/vaultwarden, clickhouse, elasticsearch, generic, gitlab,
-  grafana, haproxy, harbor, jellyfin, jenkins, keycloak, mattermost,
-  mongodb, mysql, nextcloud, nexus, nginx, oauth2-proxy, owncast,
-  perforce-swarm, phpmyadmin, portainer, postgres_exporter, postgresql,
-  redis, sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter,
-  wordpress, youtrack, zabbix, zou (kitsu alias)
+  bitwarden/vaultwarden, clickhouse, elasticsearch, forgejo, generic,
+  gitlab, grafana, haproxy, harbor, jellyfin, jenkins, keycloak,
+  mattermost, mongodb, mysql, nextcloud, nexus, nginx, oauth2-proxy,
+  owncast, perforce-swarm, phpmyadmin, portainer, postgres_exporter,
+  postgresql, redis, sonarqube, ssh, teamcity, testrail, traefik, vault,
+  vcenter, wordpress, youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -569,14 +569,21 @@ Not dates. Order of work, and what each step unblocks.
   phpmyadmin/phpmyadmin container. A JS object literal with unquoted
   keys, not JSON, so this is a text match rather than a
   `json.Unmarshal`
+- `forgejo` probe — `GET /api/v1/version`, the same Gitea-API-compatible
+  path Forgejo (a Gitea fork) still ships. Confirmed live against a real
+  codeberg.org/forgejo/forgejo container: anonymous by default; a real
+  hardening option, `REQUIRE_SIGNIN_VIEW = true`, confirmed live to
+  answer 403 on this endpoint too, already ordinary `ErrAuth` via
+  `FetchHTTP`'s existing 401-or-403 handling, nothing forgejo-specific
+  needed
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
-  ESXi), `forgejo`, `graylog`, `jaeger`, `kibana`, `logstash`,
-  `opensearch`, `proftpd`, `routeros` (MikroTik RouterOS — matches
+  ESXi), `graylog`, `jaeger`, `kibana`, `logstash`, `opensearch`,
+  `proftpd`, `routeros` (MikroTik RouterOS — matches
   endoflife.date's own product slug)
 
 ## Later
