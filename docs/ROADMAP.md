@@ -5,14 +5,14 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 39 products: apache (httpd alias), the atlassian
+- `internal/probe` — 40 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, generic, gitlab,
   grafana, haproxy, harbor, jellyfin, jenkins, keycloak, mattermost,
-  mysql, nextcloud, nginx, oauth2-proxy, owncast, perforce-swarm,
-  portainer, postgres_exporter, postgresql, redis, sonarqube, ssh,
-  teamcity, testrail, traefik, vault, vcenter, youtrack, zabbix, zou
-  (kitsu alias)
+  mongodb, mysql, nextcloud, nginx, oauth2-proxy, owncast,
+  perforce-swarm, portainer, postgres_exporter, postgresql, redis,
+  sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, youtrack,
+  zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -530,6 +530,16 @@ Not dates. Order of work, and what each step unblocks.
   being trusted, since a bare-text response has nothing else to
   distinguish a real reply from an unrelated service answering 200 at
   that address
+- `mongodb` probe — D10 in its purest new form since mysql: runs the
+  `buildInfo` command over the raw wire protocol (OP_MSG) and reads its
+  "version" field, hand-encoding the one BSON command document it sends
+  and decoding just enough of the reply to find that field — no client
+  library, same level of effort as mysql.go's handshake parser and
+  redis.go's RESP codec. Confirmed live against two real mongo:7
+  containers, one with no access control at all and one with `--auth`
+  and a root user configured: both returned the exact same full
+  buildInfo document with zero credentials sent — `buildInfo` is one of
+  the small set of commands MongoDB always answers before authentication
 
 ## Next
 
@@ -537,9 +547,9 @@ Not dates. Order of work, and what each step unblocks.
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
   ESXi), `forgejo`, `graylog`, `jaeger`, `kafka`, `kibana`, `logstash`,
-  `mongodb`, `nexus` (Sonatype Nexus Repository), `opensearch`,
-  `phpmyadmin`, `proftpd`, `redmine`, `routeros` (MikroTik RouterOS —
-  matches endoflife.date's own product slug), `wordpress`
+  `nexus` (Sonatype Nexus Repository), `opensearch`, `phpmyadmin`,
+  `proftpd`, `redmine`, `routeros` (MikroTik RouterOS — matches
+  endoflife.date's own product slug), `wordpress`
 
 ## Later
 
