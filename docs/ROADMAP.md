@@ -5,14 +5,14 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 41 products: apache (httpd alias), the atlassian
+- `internal/probe` — 42 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, generic, gitlab,
   grafana, haproxy, harbor, jellyfin, jenkins, keycloak, mattermost,
   mongodb, mysql, nextcloud, nexus, nginx, oauth2-proxy, owncast,
   perforce-swarm, portainer, postgres_exporter, postgresql, redis,
-  sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, youtrack,
-  zabbix, zou (kitsu alias)
+  sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, wordpress,
+  youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -550,6 +550,18 @@ Not dates. Order of work, and what each step unblocks.
   Apache, no config toggle to strip this to a bare `Nexus` is documented
   or was found, but the parser degrades to `ErrNotSupported` rather than
   assuming it can never happen
+- `wordpress` probe — tries the RSS feed's `<generator>` line
+  (`/?feed=rss2`, the query-string form that works with or without pretty
+  permalinks — confirmed live: a stock install without permalinks
+  configured 404s on `/feed/` but answers this form) before falling back
+  to the homepage's `<meta name="generator">` tag. The feed is tried
+  first because reading wp-includes/default-filters.php's actual hook
+  registrations confirmed it survives the single most common hardening
+  step (`remove_action('wp_head', 'wp_generator')` only touches the
+  homepage tag, since feeds register `the_generator()` on their own
+  separate hooks) — this project's first probe that tries a second
+  anonymous endpoint when the first one comes back without what it
+  needs, rather than failing straight to `ErrNotSupported`
 
 ## Next
 
@@ -558,7 +570,7 @@ Not dates. Order of work, and what each step unblocks.
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
   ESXi), `forgejo`, `graylog`, `jaeger`, `kibana`, `logstash`,
   `opensearch`, `phpmyadmin`, `proftpd`, `redmine`, `routeros` (MikroTik
-  RouterOS — matches endoflife.date's own product slug), `wordpress`
+  RouterOS — matches endoflife.date's own product slug)
 
 ## Later
 
