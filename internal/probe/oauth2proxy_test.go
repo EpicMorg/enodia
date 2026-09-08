@@ -82,7 +82,7 @@ func TestOAuth2ProxyProbeMeta(t *testing.T) {
 	if m.Auth.Required {
 		t.Fatal("the sign-in page is inherently public")
 	}
-	if m.DefaultResolver.Type != "" {
-		t.Fatalf("got resolver %+v, want none — endoflife.date has no oauth2-proxy calendar yet", m.DefaultResolver)
+	if m.DefaultResolver.Type != "github" || m.DefaultResolver.ID != "oauth2-proxy/oauth2-proxy" {
+		t.Fatalf("got resolver %+v, want github/oauth2-proxy/oauth2-proxy (no endoflife.date calendar yet)", m.DefaultResolver)
 	}
 }

@@ -25,8 +25,10 @@ func (portainerProbe) Meta() Meta {
 		Summary:       "Portainer",
 		DefaultScheme: "https",
 		Auth:          AuthSpec{Required: false},
-		// No DefaultResolver: endoflife.date has no portainer calendar
-		// (confirmed: GET .../api/portainer.json is a 404).
+		// No endoflife.date calendar (confirmed: GET .../api/portainer.json
+		// is a 404) — GitHub Releases instead: "latest version" only, no
+		// eol/support/lts, same as postgres_exporter's own resolver.
+		DefaultResolver: ResolverRef{Type: "github", ID: "portainer/portainer"},
 	}
 }
 

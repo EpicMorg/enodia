@@ -26,8 +26,10 @@ func (jellyfinProbe) Meta() Meta {
 		Summary:       "Jellyfin",
 		DefaultScheme: "https",
 		Auth:          AuthSpec{Required: false},
-		// No DefaultResolver: endoflife.date has no jellyfin calendar
-		// (confirmed: GET .../api/jellyfin.json is a 404).
+		// No endoflife.date calendar (confirmed: GET .../api/jellyfin.json
+		// is a 404) — GitHub Releases instead: "latest version" only, no
+		// eol/support/lts, same as postgres_exporter's own resolver.
+		DefaultResolver: ResolverRef{Type: "github", ID: "jellyfin/jellyfin"},
 	}
 }
 

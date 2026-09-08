@@ -29,10 +29,12 @@ func (oauth2ProxyProbe) Meta() Meta {
 		Summary:       "oauth2-proxy",
 		DefaultScheme: "https",
 		Auth:          AuthSpec{Required: false},
-		// No DefaultResolver yet: endoflife.date has no oauth2-proxy
-		// calendar today. The user intends to submit one upstream later,
-		// alongside teamcity and perforce-swarm (see their own "No
-		// DefaultResolver" comments) — wire this up once it exists.
+		// No endoflife.date calendar today — GitHub Releases instead:
+		// "latest version" only, no eol/support/lts, same as
+		// postgres_exporter's own resolver. Revisit if the user's planned
+		// endoflife.date submission (alongside teamcity and
+		// perforce-swarm) ever lands.
+		DefaultResolver: ResolverRef{Type: "github", ID: "oauth2-proxy/oauth2-proxy"},
 	}
 }
 

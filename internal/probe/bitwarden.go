@@ -22,18 +22,18 @@ import (
 // The endpoint needs no credentials on either — client apps use it to
 // check server compatibility before login exists.
 type bitwardenFamilyProbe struct {
-	product string
-	summary string
+	product  string
+	summary  string
+	resolver ResolverRef // zero value: no resolver at all
 }
 
 func (p bitwardenFamilyProbe) Meta() Meta {
 	return Meta{
-		Product:       p.product,
-		Summary:       p.summary,
-		DefaultScheme: "https",
-		Auth:          AuthSpec{Required: false},
-		// No DefaultResolver: endoflife.date has neither a "bitwarden" nor
-		// a "vaultwarden" calendar (both confirmed 404).
+		Product:         p.product,
+		Summary:         p.summary,
+		DefaultScheme:   "https",
+		Auth:            AuthSpec{Required: false},
+		DefaultResolver: p.resolver,
 	}
 }
 
