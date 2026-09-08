@@ -837,6 +837,16 @@ Not dates. Order of work, and what each step unblocks.
     different versioning scheme from NixOS the distribution, and still has
     no `/etc/os-release` at all (`uname -a` shows a bare Debian host
     kernel). Doesn't change D23's `nixos` deferral.
+- `gentoo` probe — a follow-up "what's actually popular" pick, not part of
+  the original request. Joined `osReleaseFamilyProbe` directly: confirmed
+  live via the official `gentoo/stage3` image (published under
+  gentoo.org's own Docker Hub org) `ID=gentoo`, `VERSION_ID=2.18` — the
+  latter is Gentoo Base System's own release number (also visible at
+  `/etc/gentoo-release`: "Gentoo Base System release 2.18"), not a distro
+  version in the usual sense, since Gentoo is rolling-release. No
+  `DefaultResolver`: endoflife.date has no `gentoo` calendar (confirmed
+  404), which fits — a rolling release has no discrete EOL cycles to
+  track in the first place.
 
 ## Next
 

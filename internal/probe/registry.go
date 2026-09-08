@@ -47,6 +47,11 @@ var builtin = []Probe{
 	// image exists): ID=freebsd, VERSION_ID="15.1".
 	osReleaseFamilyProbe{product: "freebsd", summary: "FreeBSD", resolver: ResolverRef{Type: "endoflife", ID: "freebsd"}, match: osReleaseIDEquals("freebsd"), path: "/var/run/os-release"},
 	genericProbe{},
+	// gentoo/stage3 (official gentoo.org image): ID=gentoo, VERSION_ID=2.18
+	// — Gentoo Base System's own release number, not a distro version in
+	// the traditional sense (Gentoo is rolling-release; no endoflife.date
+	// calendar exists, confirmed 404, for the same reason).
+	osReleaseFamilyProbe{product: "gentoo", summary: "Gentoo Linux", match: osReleaseIDEquals("gentoo")},
 	gitlabProbe{},
 	grafanaProbe{},
 	graylogProbe{},
