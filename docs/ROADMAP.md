@@ -777,13 +777,26 @@ Not dates. Order of work, and what each step unblocks.
   needing a real Apple device (Apple's EULA rules out virtualizing macOS
   on anything else), and unblocked the same day once one was reachable
   over SSH.
-- Thirteen distros made it into the os-release family; eleven more names
-  from the same request did not, each for a specific, confirmed-live
+- `openbsd`, `netbsd` probes (`internal/probe/uname.go`,
+  `unameFamilyProbe`) and `oracle-solaris` (`internal/probe/solaris.go`) —
+  all three were listed as blocked (no obtainable pre-installed image) and
+  unblocked the same day via [vmactions](https://vmactions.org): GitHub
+  Actions that boot real, pre-built QEMU VM images for CI use. A forked
+  `vmactions/shell-openbsd` with a small custom `workflow_dispatch` job
+  got each identity string back in 1-2 minutes. `openbsd`/`netbsd` use
+  `uname -sr` (neither ships an os-release-equivalent file); `oracle-solaris`
+  reads `/etc/release` instead, since `uname -sr` there only ever reports
+  the SunOS kernel version, decoupled from the actual Solaris release —
+  see DECISIONS.md **D23**'s "Revisited" note for the full detail,
+  including why this doesn't also unblock `nixos` (no vmactions
+  equivalent exists for it).
+- Seventeen SSH/OS-identification products made it in total across this
+  request; eight more names did not, each for a specific, confirmed-live
   reason (licensing, no obtainable image, or the target genuinely not
   fitting the use case) rather than a blanket "too hard" — see
-  DECISIONS.md **D23** for the full accounting: `openbsd`, `netbsd`,
-  `nixos`, `oracle-solaris`, `fortios`, `cisco-ios-xe`, `steamos`, `tails`,
-  `linuxmint`, `eurolinux`, `postmarketos`.
+  DECISIONS.md **D23** for the full accounting: `nixos`, `fortios`,
+  `cisco-ios-xe`, `steamos`, `tails`, `linuxmint`, `eurolinux`,
+  `postmarketos`.
 
 ## Next
 
@@ -819,13 +832,12 @@ requested.
   as `mingw-w64`/`llvm-mingw` for the Windows builds) — see DECISIONS.md
   D20. Low urgency: `arm64` alone covers essentially every real Android
   device in current use
-- `openbsd`, `netbsd`, `nixos`, `oracle-solaris` — installer-only; none of
-  these publish a bootable pre-installed VM/cloud image the way FreeBSD's
-  own VM-IMAGES program does, so covering them means scripting a full
-  unattended install first, not writing a probe. `oracle-solaris` also has
-  an OTN license click-through blocking even the install media. Revisit if
-  a real target becomes available, or if unattended-install support lands
-  in this tree for its own reasons — see DECISIONS.md D23
+- `nixos` — installer-only, no bootable pre-installed VM/cloud image the
+  way FreeBSD's own VM-IMAGES program has, and no vmactions equivalent
+  either (unlike `openbsd`/`netbsd`/`oracle-solaris`, now implemented —
+  see Done above). Revisit if a real target becomes available, or if
+  unattended-install support lands in this tree for its own reasons —
+  see DECISIONS.md D23
 - `fortios`, `cisco-ios-xe` — both have a documented HTTP API (FortiGate
   REST, IOS-XE RESTCONF/NETCONF) that would fit this project's existing
   probe shape better than SSH CLI-scraping, but both are licensed

@@ -833,7 +833,7 @@ first — not one added solely to unblock this single product.
 
 ---
 
-## D23 — SSH/OS-identification probes: fourteen made it in, eleven did not, for concrete reasons
+## D23 — SSH/OS-identification probes: seventeen made it in, eight did not, for concrete reasons
 
 **Decided.** `internal/probe/osrelease.go`'s family probe (D9: checks an
 identity field, here `/etc/os-release`'s `ID`) covers debian, ubuntu,
@@ -847,34 +847,23 @@ not assumed from documentation. This entry records exactly why the other
 eleven names on the original request list are not implemented — each for
 a different, confirmed-live reason, not a blanket "too hard":
 
-- **`openbsd`, `netbsd`, `nixos`** — none of these publish a ready-to-boot,
-  pre-installed VM/cloud image the way FreeBSD's own VM-IMAGES program
-  does. Confirmed live: OpenBSD's `amd64` release directory
-  (`ftp.openbsd.org`) offers only `install77.img`/`miniroot77.img` —
-  installer media, not a bootable system; NetBSD's release tree
-  (`cdn.netbsd.org`) is the same shape (`installation/{cdrom,miniroot,
-  ramdisk}`, no pre-built disk image); NixOS's own download page offers
-  only `nixos-{minimal,graphical}-*.iso` live-installer images, and the
-  one plausible shortcut — `nixos/nix` on Docker Hub — turned out to be
-  the Nix package manager on a minimal non-NixOS base with no
+- **`nixos`** — no ready-to-boot, pre-installed VM/cloud image, unlike
+  FreeBSD's own VM-IMAGES program. NixOS's own download page offers only
+  `nixos-{minimal,graphical}-*.iso` live-installer images, and the one
+  plausible shortcut — `nixos/nix` on Docker Hub — turned out to be the
+  Nix package manager on a minimal non-NixOS base with no
   `/etc/os-release` at all (confirmed live: `cat` on it fails outright).
-  Getting any of these three running means scripting a full unattended
-  install (OpenBSD's `autoinstall(8)` response-file flow, NetBSD's
-  `sysinst` response file, or a NixOS `nixos-install` from the live ISO)
-  — categorically more engineering than every other registration in this
-  family, which are either an already-running server (the Linux distros)
-  or, for FreeBSD, an official run-anywhere cloud image. Deferred rather
-  than half-built; `osReleaseFamilyProbe` already has everything it needs
-  (a `path` override, exactly what FreeBSD uses) the moment a bootable
-  target exists to verify against, and endoflife.date already has real
-  `openbsd`/`netbsd` calendars confirmed live (NixOS's own `nixos` slug
-  too) ready to wire in unchanged.
-- **`oracle-solaris`** — same shape of blocker as the three above, plus a
-  licensing one: Oracle gates ISO downloads behind an OTN click-through
-  license agreement tied to an Oracle account, not something this project
-  fetches unattended, and x86 Solaris under QEMU/TCG (no real SPARC
-  hardware here) is not a combination confirmed to work at all. Not
-  attempted for this reason rather than a live check coming back negative.
+  Getting it running means scripting a `nixos-install` from the live ISO —
+  categorically more engineering than every other registration in this
+  family, which are either an already-running server, an official
+  run-anywhere cloud image (FreeBSD), or (see the Revisited note below) a
+  pre-built VM a third party already maintains for CI use. No vmactions
+  equivalent exists for NixOS either (checked live: no `nixos-vm`/`*-nixos*`
+  repo in the `vmactions` GitHub org). Deferred rather than half-built;
+  `osReleaseFamilyProbe` already has everything it needs (a `path`
+  override, exactly what FreeBSD uses) the moment a bootable target
+  exists to verify against, and endoflife.date already has a real `nixos`
+  calendar confirmed live, ready to wire in unchanged.
 - **`fortios`, `cisco-ios-xe`** — both are licensed commercial network
   appliances with no freely obtainable test image (Fortinet's FortiGate
   VM and Cisco's CSR1000v/Catalyst 8000v both require a vendor account,
@@ -920,13 +909,39 @@ a different, confirmed-live reason, not a blanket "too hard":
   x86 server fleets this project's probes otherwise target — a real
   mismatch with the use case, on top of the missing image.
 
-**Rules out:** shipping any of the eleven above today. **Does not rule
+**Rules out:** shipping any of the eight above today. **Does not rule
 out** revisiting any single one later — each bullet names exactly what
 would change the answer (a real device from the user, someone publishing
 a missing image, or a generalizable unattended-install mechanism landing
 in this tree for its own reasons), the same shape of "closed, not merely
 deferred" versus "open, pending one concrete thing" distinction D18/D21/
 D22 already draw.
+
+**Revisited: `openbsd`, `netbsd`, and `oracle-solaris` unblocked via
+vmactions** — this entry originally listed all three as blocked on the
+same thing, no obtainable pre-installed image, and a fourth option turned
+up: [vmactions](https://vmactions.org) publishes GitHub Actions
+(`openbsd-vm`, `netbsd-vm`, `solaris-vm`) that boot real, pre-built QEMU
+VM images specifically for CI use — a fork of `vmactions/shell-openbsd`
+with a small custom `workflow_dispatch` job (`run: uname -sr`, etc.) got
+each identity string back in the job's own log in 1-2 minutes, no
+interactive session or manual QEMU/autoinstall work needed. `unameFamilyProbe`
+(`internal/probe/uname.go`) now covers `openbsd` (`uname -sr` →
+"OpenBSD 7.9") and `netbsd` ("NetBSD 11.0") — neither ships an
+os-release-equivalent file, so `uname -sr`'s "\<name\> \<release\>" is the
+identity source instead of D9's usual identity-field check. `oracle-solaris`
+(`internal/probe/solaris.go`) reads `/etc/release` instead: `uname -sr` on
+Solaris only ever reports the SunOS kernel version ("SunOS 5.11" for
+every Solaris 11.x release, decoupled from the product version), while
+`/etc/release`'s own "Oracle Solaris 11.4 X86" line carries the real one.
+vmactions' `solaris-vm` builds and republishes Oracle's own
+free-to-redistribute Solaris 11.4 CBE (Common Build Environment, meant
+for exactly this kind of CI use), not something obtained by working
+around Oracle's OTN license. `nixos` has no vmactions equivalent
+(confirmed live: no matching repo in the `vmactions` GitHub org), so it
+stays deferred above — this was a real, if unusually convenient,
+narrowing of the blocker for three products, not a blanket fix for the
+whole list.
 
 **Revisited: `macos` unblocked immediately** — this entry originally
 listed it as blocked on exactly one thing, a real Mac to verify against,

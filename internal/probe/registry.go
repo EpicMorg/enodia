@@ -63,10 +63,14 @@ var builtin = []Probe{
 	mattermostProbe{},
 	mongodbProbe{},
 	mysqlProbe{},
+	// Captured via vmactions/netbsd-vm (see uname.go): `uname -sr` -> "NetBSD 11.0".
+	unameFamilyProbe{product: "netbsd", summary: "NetBSD", resolver: ResolverRef{Type: "endoflife", ID: "netbsd"}, unameName: "NetBSD"},
 	nextcloudProbe{},
 	nexusProbe{},
 	nginxProbe{},
 	oauth2ProxyProbe{},
+	// Captured via vmactions/openbsd-vm (see uname.go): `uname -sr` -> "OpenBSD 7.9".
+	unameFamilyProbe{product: "openbsd", summary: "OpenBSD", resolver: ResolverRef{Type: "endoflife", ID: "openbsd"}, unameName: "OpenBSD"},
 	opensearchProbe{},
 	// opensuse/leap:latest: ID="opensuse-leap", VERSION_ID="16.0". Tumbleweed
 	// (ID="opensuse-tumbleweed") isn't covered by a real fixture here but
@@ -77,6 +81,9 @@ var builtin = []Probe{
 	}},
 	// oraclelinux:9: ID="ol", VERSION_ID="9.8".
 	osReleaseFamilyProbe{product: "oracle-linux", summary: "Oracle Linux", resolver: ResolverRef{Type: "endoflife", ID: "oracle-linux"}, match: osReleaseIDEquals("ol")},
+	// Captured via vmactions/solaris-vm (see solaris.go): /etc/release's
+	// "Oracle Solaris 11.4 X86" line.
+	oracleSolarisProbe{},
 	owncastProbe{},
 	perforceSwarmProbe{},
 	pgadminProbe{},
