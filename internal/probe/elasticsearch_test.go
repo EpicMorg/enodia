@@ -72,6 +72,23 @@ func TestElasticsearchProbeUnauthorizedIsErrAuth(t *testing.T) {
 	}
 }
 
+// D9: product: elasticsearch pointed at a real OpenSearch must fail, not
+// silently report OpenSearch's version as Elasticsearch's. Uses the real
+// opensearch fixture, which carries version.distribution: "opensearch".
+func TestElasticsearchProbeRejectsRealOpenSearch(t *testing.T) {
+	fixture := loadOpenSearchFixture(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(fixture)
+	}))
+	defer srv.Close()
+
+	p := elasticsearchProbe{}
+	_, err := p.Probe(context.Background(), target(srv.URL, "elasticsearch"))
+	if !errors.Is(err, ErrNotSupported) {
+		t.Fatalf("got %v, want ErrNotSupported", err)
+	}
+}
+
 func TestElasticsearchProbeMalformedJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("not json"))

@@ -21,6 +21,15 @@ import (
 // request anonymously over plain HTTP with an identical body. Both are
 // genuine deployments, so Required stays false and only AuthBasic, the one
 // scheme actually exercised, is offered.
+//
+// D9 (product is declared explicitly, probe verifies): OpenSearch is a
+// fork of Elasticsearch 7.10.2 that kept this same GET / shape almost
+// unchanged, so without a check this probe would happily report an
+// OpenSearch cluster's version as Elasticsearch's. Confirmed live against
+// a real opensearchproject/opensearch container that the one reliable
+// difference is `version.distribution: "opensearch"`, a field a genuine
+// Elasticsearch reply never carries — see opensearch.go, which runs the
+// same check in reverse.
 type elasticsearchProbe struct{}
 
 func (elasticsearchProbe) Meta() Meta {
@@ -39,6 +48,7 @@ func (elasticsearchProbe) Meta() Meta {
 type elasticsearchInfo struct {
 	ClusterName string `json:"cluster_name"`
 	Version     struct {
+		Distribution  string `json:"distribution"` // "opensearch" on an OpenSearch reply; absent on real Elasticsearch
 		Number        string `json:"number"`
 		BuildHash     string `json:"build_hash"`
 		LuceneVersion string `json:"lucene_version"`
@@ -71,6 +81,9 @@ func (elasticsearchProbe) Probe(ctx context.Context, t Target) (Observation, err
 	var info elasticsearchInfo
 	if err := json.Unmarshal(body, &info); err != nil {
 		return obs, fmt.Errorf("%w: GET / is not valid JSON: %w", ErrUnparseable, err)
+	}
+	if info.Version.Distribution == "opensearch" {
+		return obs, fmt.Errorf("%w: this host reports version.distribution=\"opensearch\" — it's OpenSearch, not Elasticsearch", ErrNotSupported)
 	}
 	if info.Version.Number == "" {
 		return obs, fmt.Errorf("%w: GET / response carries no version.number", ErrUnparseable)

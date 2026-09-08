@@ -5,15 +5,15 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 47 products: apache (httpd alias), the atlassian
+- `internal/probe` — 48 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, forgejo, generic,
   gitlab, grafana, graylog, haproxy, harbor, jellyfin, jenkins, keycloak,
   kibana, logstash, mattermost, mongodb, mysql, nextcloud, nexus, nginx,
-  oauth2-proxy, owncast, perforce-swarm, phpmyadmin, portainer,
-  postgres_exporter, postgresql, redis, sonarqube, ssh, teamcity,
-  testrail, traefik, vault, vcenter, wordpress, youtrack, zabbix, zou
-  (kitsu alias)
+  oauth2-proxy, opensearch, owncast, perforce-swarm, phpmyadmin,
+  portainer, postgres_exporter, postgresql, redis, sonarqube, ssh,
+  teamcity, testrail, traefik, vault, vcenter, wordpress, youtrack,
+  zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -593,15 +593,27 @@ Not dates. Order of work, and what each step unblocks.
   auth at all — meant to be firewalled off rather than
   credential-protected. Confirmed live against a real
   docker.elastic.co/logstash/logstash container
+- `opensearch` probe — `GET /`, the same endpoint and shape as
+  `elasticsearch` (OpenSearch is a fork of Elasticsearch 7.10.2 that
+  kept it almost unchanged). Confirmed live against real containers of
+  both that the one reliable discriminator is
+  `version.distribution: "opensearch"`, absent on a genuine
+  Elasticsearch reply — each probe now rejects the other product's real
+  fixture as `ErrNotSupported` (D9). Found and fixed in passing:
+  `elasticsearch.go` had no product check at all before this and would
+  have silently reported an OpenSearch cluster's version as
+  Elasticsearch's. Security posture confirmed to match
+  `elasticsearch`'s exactly: HTTPS + Basic auth required by default
+  (`OPENSEARCH_INITIAL_ADMIN_PASSWORD` must be set at all), or fully
+  anonymous with the real, documented `DISABLE_SECURITY_PLUGIN=true`
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
-  ESXi), `jaeger`, `opensearch`, `proftpd`, `routeros` (MikroTik
-  RouterOS — matches endoflife.date's own product
-  slug)
+  ESXi), `jaeger`, `proftpd`, `routeros` (MikroTik RouterOS — matches
+  endoflife.date's own product slug)
 
 ## Later
 
