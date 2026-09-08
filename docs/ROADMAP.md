@@ -5,15 +5,15 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 53 products: apache (httpd alias), the atlassian
+- `internal/probe` — 54 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, esxi, forgejo,
   generic, gitlab, grafana, graylog, haproxy, harbor, jaeger, jellyfin,
   jenkins, keycloak, kibana, kitsu, logstash, mattermost, mongodb,
   mysql, nextcloud, nexus, nginx, oauth2-proxy, opensearch, owncast,
-  perforce-swarm, phpmyadmin, portainer, postgres_exporter, postgresql,
-  proftpd, redis, routeros, sonarqube, ssh, teamcity, testrail, traefik,
-  vault, vcenter, wordpress, youtrack, zabbix, zou
+  perforce-swarm, pgadmin, phpmyadmin, portainer, postgres_exporter,
+  postgresql, proftpd, redis, routeros, sonarqube, ssh, teamcity,
+  testrail, traefik, vault, vcenter, wordpress, youtrack, zabbix, zou
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -699,6 +699,19 @@ Not dates. Order of work, and what each step unblocks.
   deployment actually named "kitsu" in config strategically tracks
   anyway. `zouProbe` became `zouFamilyProbe{product, summary,
   resolver}`, the same shape as `bitwardenFamilyProbe`
+- `pgadmin` probe — decodes the `?ver=NNNNN` cache-busting query string
+  pgAdmin appends to every static asset on its own login page (anonymous
+  by design — it has to render before any session exists). Confirmed
+  against a real dpage/pgadmin4 container, both the live page and its
+  own source (`version.py`): `NNNNN` is `APP_VERSION_INT`, documented
+  there as `[X]XYYZZ` (release/revision/suffix) — `91700` decodes to
+  release 9, revision 17, suffix 00 (GA), matching the real version
+  exactly. No `DefaultResolver`: endoflife.date has no pgadmin calendar,
+  and pgadmin-org/pgadmin4's own GitHub tags use the shape `REL-9_17` —
+  internal/version's numeric-spine extraction would read that as bare
+  `9`, losing the revision, so wiring the GitHub Releases resolver here
+  today would compare against a silently wrong reference rather than no
+  reference at all
 
 ## Next
 

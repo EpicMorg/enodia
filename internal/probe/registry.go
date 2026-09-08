@@ -47,6 +47,7 @@ var builtin = []Probe{
 	opensearchProbe{},
 	owncastProbe{},
 	perforceSwarmProbe{},
+	pgadminProbe{},
 	phpmyadminProbe{},
 	portainerProbe{},
 	postgresExporterProbe{},
