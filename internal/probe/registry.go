@@ -58,6 +58,8 @@ var builtin = []Probe{
 	kibanaProbe{},
 	zouFamilyProbe{product: "kitsu", summary: "Kitsu (CG-Wire / Zou frontend)", resolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"}},
 	logstashProbe{},
+	// Verified live via sw_vers over SSH against a real Mac (macOS 15.4).
+	macosProbe{},
 	mattermostProbe{},
 	mongodbProbe{},
 	mysqlProbe{},
