@@ -863,6 +863,38 @@ Not dates. Order of work, and what each step unblocks.
   `DefaultResolver: endoflife:photon` (note: the endoflife.date slug is
   `photon`, not `photon-os` — confirmed live, the latter 404s) — cycle
   `"5.0"` matches exactly.
+- `nixos`, `steamos`, `eurolinux`, `linuxmint`, `postmarketos` all
+  unblocked the same day, via a different route than any other
+  registration in this family: the user downloaded each product's own
+  official installer ISO, extracted its rootfs, and pasted the real
+  `/etc/os-release`. All five joined `osReleaseFamilyProbe` directly
+  (`ID=nixos`/`steamos`/`eurolinux`/`linuxmint`/`postmarketos`
+  respectively) — see DECISIONS.md D23's "Revisited: five more products
+  unblocked via real ISO rootfs captures" for the exact fields and, for
+  `steamos`, why the original "wrong use case" reasoning no longer
+  applies now that a legitimate target exists (the user corrected this
+  directly, the same way `macos`'s "no Apple hardware" blocker resolved
+  once a real Mac was reachable).
+- `centos` probe (plain, legacy CentOS Linux — as opposed to
+  `centos-stream`) added on request: real fleets still run EOL CentOS
+  5/6/7 regardless of upstream's own lifecycle, which is exactly the
+  situation this project exists to surface. Not part of
+  `osReleaseFamilyProbe`: confirmed live that CentOS 5 and 6 predate the
+  os-release convention entirely, while `/etc/redhat-release` covers the
+  whole RHEL family further back — `internal/probe/centos.go` reads that
+  instead, with a pattern that deliberately excludes CentOS Stream's own
+  `/etc/redhat-release` text ("CentOS Stream release 9") so a Stream
+  instance is never misidentified as this product.
+- `proxmox` probe unblocked the same day it was written up as deferred:
+  the user provided a real, disposable test VM (Proxmox VE 9.2.2) with
+  an API token. Confirmed live: `GET /api2/json/version` needs auth (401
+  without it), and the API token shape is exactly documented —
+  `Authorization: PVEAPIToken=user@realm!tokenid=secret`, which needs no
+  new `AuthKind` since it's a plain `Authorization` header value and
+  `AuthTokenHeader` already defaults to that header. The username/password
+  ticket flow (session cookie + CSRF token) is not supported — same
+  heavier shape D22 already rejected for Redmine, and Proxmox's own docs
+  recommend the token for unattended automation anyway.
 
 ## Next
 
@@ -909,35 +941,15 @@ requested.
   that name); its own installer is ISO-only, the same shape of blocker
   `openbsd`/`netbsd` had before vmactions covered them — see
   DECISIONS.md D23
-- `proxmox` — no vmactions coverage either, and installing it via QEMU
-  ourselves means driving its Debian-based installer under pure TCG
-  emulation (no `/dev/kvm` on this project's build environment) just to
-  reach a single `GET /api2/json/version` call — a lot of engineering for
-  one endpoint whose real JSON shape is otherwise well-documented and
-  stable (used by terraform providers, ansible modules, etc. for years).
-  Asked directly whether a real Proxmox host was reachable for live
-  verification before writing this probe; none was, so this is deferred
-  the same way `truenas` is, not written blind against documentation
-  alone (docs/CLAUDE.md's "Working style" on vendor API shapes). Revisit
-  once a real host is reachable — should be quick once it is, since the
-  API itself isn't in question, only the lack of something to verify it
-  against
 - `fortios`, `cisco-ios-xe` — both have a documented HTTP API (FortiGate
   REST, IOS-XE RESTCONF/NETCONF) that would fit this project's existing
   probe shape better than SSH CLI-scraping, but both are licensed
   commercial appliances with no freely obtainable test image, so neither
   the CLI nor the API shape has been confirmed live — see DECISIONS.md D23
-- `steamos`, `tails` — neither fits this probe family's use case:
-  `steamos` ships no server-shaped install medium and isn't meant to run
-  persistent `sshd`; `tails` is a live, amnesic OS deliberately designed
-  to resist unattended persistent access, which is a principled reason,
-  not a tooling gap — see DECISIONS.md D23
-- `linuxmint`, `eurolinux`, `postmarketos` — no publicly available image
-  correctly represents the product: the one Mint image found on Docker Hub
-  reports its underlying Ubuntu base instead of Mint's own identity,
-  EuroLinux publishes no pullable container under any plausible name, and
-  postmarketOS is ARM-phone-focused with no x86 image and a different use
-  case from this project's server fleets anyway — see DECISIONS.md D23
+- `tails` — a live, amnesic OS deliberately designed to resist
+  unattended persistent access. Ruled out on principle, not a tooling
+  gap — the user confirmed this one stays crossed off entirely, not
+  merely deferred — see DECISIONS.md D23
 
 ## Deliberately not planned
 

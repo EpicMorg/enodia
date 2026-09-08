@@ -1,0 +1,9 @@
+PRETTY_NAME="SteamOS GNU/Linux 2.0 (brewmaster)"
+NAME="SteamOS GNU/Linux"
+VERSION_ID="2"
+VERSION="2 (brewmaster)"
+ID=steamos
+ID_LIKE=debian
+HOME_URL="http://www.steampowered.com/"
+SUPPORT_URL="http://support.steampowered.com/"
+BUG_REPORT_URL="http://support.steampowered.com/"

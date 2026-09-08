@@ -833,7 +833,7 @@ first — not one added solely to unblock this single product.
 
 ---
 
-## D23 — SSH/OS-identification probes: eighteen made it in, eight did not, for concrete reasons
+## D23 — SSH/OS-identification probes: twenty-four made it in, three did not, for concrete reasons
 
 **Decided.** `internal/probe/osrelease.go`'s family probe (D9: checks an
 identity field, here `/etc/os-release`'s `ID`) covers debian, ubuntu,
@@ -847,23 +847,6 @@ not assumed from documentation. This entry records exactly why the other
 eleven names on the original request list are not implemented — each for
 a different, confirmed-live reason, not a blanket "too hard":
 
-- **`nixos`** — no ready-to-boot, pre-installed VM/cloud image, unlike
-  FreeBSD's own VM-IMAGES program. NixOS's own download page offers only
-  `nixos-{minimal,graphical}-*.iso` live-installer images, and the one
-  plausible shortcut — `nixos/nix` on Docker Hub — turned out to be the
-  Nix package manager on a minimal non-NixOS base with no
-  `/etc/os-release` at all (confirmed live: `cat` on it fails outright).
-  Getting it running means scripting a `nixos-install` from the live ISO —
-  categorically more engineering than every other registration in this
-  family, which are either an already-running server, an official
-  run-anywhere cloud image (FreeBSD), or (see the Revisited note below) a
-  pre-built VM a third party already maintains for CI use. No vmactions
-  equivalent exists for NixOS either (checked live: no `nixos-vm`/`*-nixos*`
-  repo in the `vmactions` GitHub org). Deferred rather than half-built;
-  `osReleaseFamilyProbe` already has everything it needs (a `path`
-  override, exactly what FreeBSD uses) the moment a bootable target
-  exists to verify against, and endoflife.date already has a real `nixos`
-  calendar confirmed live, ready to wire in unchanged.
 - **`fortios`, `cisco-ios-xe`** — both are licensed commercial network
   appliances with no freely obtainable test image (Fortinet's FortiGate
   VM and Cisco's CSR1000v/Catalyst 8000v both require a vendor account,
@@ -879,43 +862,20 @@ a different, confirmed-live reason, not a blanket "too hard":
   the "confident-looking guess about vendor API shapes" docs/CLAUDE.md's
   "Working style" section warns against, so both stay unimplemented
   rather than written blind.
-- **`steamos`** — Arch-based and does carry `/etc/os-release` with
-  `ID=steamos`, but it is built for one specific console/handheld
-  appliance (the Steam Deck), ships no server-shaped install medium at
-  all, and is not designed to run an unattended, persistent `sshd` as a
-  fleet member — a materially different use case from every other entry
-  in this family. Not pursued.
 - **`tails`** — a live, amnesic, privacy-focused OS that boots fresh from
   read-only media on every start and is deliberately designed to discard
   state and resist exactly the kind of unattended, persistent,
   credentialed remote access this probe family requires. Implementing
   this would work against what the product is for, not merely be hard to
-  test. Not pursued, on principle rather than a tooling gap.
-- **`linuxmint`** — no publicly pullable container correctly reports
-  Mint's own identity. The one image found on Docker Hub under a
-  plausible name, `linuxmintd/mint22-amd64`, is Linux Mint's own CI
-  package-build chroot; confirmed live that its `/etc/os-release` reports
-  `ID=ubuntu` (the underlying base it's built from), not `ID=linuxmint` —
-  using it would mean shipping a "linuxmint" probe that actually verifies
-  Ubuntu, exactly the D9 failure mode this whole family exists to prevent.
-- **`eurolinux`** — no pullable Docker image found under any plausible
-  name (`eurolinux/eurolinux`, `eurolinux/eurolinux9`,
-  `andrey01/eurolinux9` all confirmed to not exist on Docker Hub).
-  EuroLinux's own distribution channels are ISO/cloud-marketplace images,
-  not container-friendly ones.
-- **`postmarketos`** — no pullable Docker image found
-  (`postmarketos/postmarketos` confirmed absent from Docker Hub), and the
-  project's own primary install targets are ARM phones/tablets, not the
-  x86 server fleets this project's probes otherwise target — a real
-  mismatch with the use case, on top of the missing image.
+  test. Not pursued, on principle rather than a tooling gap — the user
+  confirmed this stays crossed off entirely, not merely deferred.
 
-**Rules out:** shipping any of the eight above today. **Does not rule
-out** revisiting any single one later — each bullet names exactly what
-would change the answer (a real device from the user, someone publishing
-a missing image, or a generalizable unattended-install mechanism landing
-in this tree for its own reasons), the same shape of "closed, not merely
-deferred" versus "open, pending one concrete thing" distinction D18/D21/
-D22 already draw.
+**Rules out:** shipping `fortios` or `cisco-ios-xe` today (a licensing/
+tooling gap, still open) and `tails` at all (a principled exclusion, not
+open). **Does not rule out** revisiting `fortios`/`cisco-ios-xe` once a
+real device is available — that's still just "closed, pending one
+concrete thing," the same shape D18/D21/D22 draw, not a permanent no the
+way `tails` is.
 
 **Revisited: `openbsd`, `netbsd`, `oracle-solaris`, and (a new request)
 `opnsense` unblocked via vmactions** — this entry originally listed the
@@ -946,9 +906,11 @@ split across several files under `/usr/local/opnsense/version/`), so it
 runs `opnsense-version` instead, OPNsense's own wrapper that already
 picks the right one and prints "OPNsense 26.7 (amd64)" in one command.
 `nixos` has no vmactions equivalent (confirmed live: no matching repo in
-the `vmactions` GitHub org), so it stays deferred above — this was a
-real, if unusually convenient, narrowing of the blocker for these four
-products, not a blanket fix for the whole list. `truenas` was also
+the `vmactions` GitHub org) — it was unblocked separately, see the
+"Revisited: five more products unblocked via real ISO rootfs captures"
+note below — so this was a real, if unusually convenient, narrowing of
+the blocker for these four products via one mechanism, not a blanket fix
+for the whole list. `truenas` was also
 considered and stays deferred: no vmactions coverage, no Docker image
 that runs the actual appliance (the ones found on Docker Hub are
 unrelated helper tools — fan controllers, ZFS-unlock scripts — not
@@ -966,3 +928,67 @@ probe has no reason to see, let alone store, while `sw_vers`'s three
 This is the fastest any item on this list moved from "blocked" to
 "shipped" — the blocker really was just "no target," nothing about the
 mechanism itself was ever in question.
+
+**Revisited: five more products unblocked via real ISO rootfs
+captures, plus legacy CentOS added on request** — `nixos`, `steamos`,
+`eurolinux`, `linuxmint`, and `postmarketos` were all listed above as
+blocked on "no obtainable image, or no image that correctly reports its
+own identity." The user downloaded each product's own official
+installer ISO directly, extracted its rootfs/squashfs, and pasted the
+real `/etc/os-release` content — a different route than every other
+registration in this family (no Docker image, no vmactions, no vendor
+cloud image, just the installer medium itself examined offline), but it
+produces the same thing D9 needs: a genuine vendor-reported identity
+field, not documentation or a guess. All five joined
+`osReleaseFamilyProbe` directly:
+
+- `nixos`: `ID=nixos`, `VERSION_ID="26.05"` — confirms the file exists
+  and is well-formed; the earlier blocker (`nixos/nix` on Docker Hub
+  being the wrong thing entirely) is now moot.
+- `steamos`: captured from SteamOS 2 (Debian-based, codename
+  "brewmaster") — `ID=steamos`, `VERSION_ID="2"`. The "wrong use case"
+  reasoning this entry originally gave for SteamOS was corrected by the
+  user: real, legitimate SteamOS build/test machines exist (the same
+  shape of "legitimate infrastructure, not a home console" the `macos`
+  target already was), so that reasoning no longer applies once such a
+  target exists. SteamOS 3.x (Arch-based, the current Steam Deck OS,
+  codename "holo") is expected to share the same `ID=steamos` field —
+  Valve's own branding is consistent across the rewrite — but this
+  hasn't been captured live, only 2.x has; `osReleaseFamilyProbe`'s
+  plain `ID=steamos` match covers both without needing to special-case
+  either.
+- `eurolinux`: `ID="eurolinux"`, `VERSION_ID="8.10"` — the blocker was
+  never the identity field, only that no Docker image existed to read it
+  from; the ISO always had it.
+- `linuxmint`: `ID=linuxmint`, `VERSION_ID="22.3"` — genuinely Mint's own
+  identity this time, unlike the Docker Hub image examined earlier
+  (`linuxmintd/mint22-amd64`, Mint's own CI build chroot, which reported
+  the underlying Ubuntu base instead).
+- `postmarketos`: `ID="postmarketos"`, `VERSION_ID="v26.06"` — the
+  leading `v` is the vendor's own format, passed through as-is;
+  `internal/version.Core` already strips a leading `v`/`V` before
+  comparison (the same handling GitHub's `v1.2.3` release tags get), so
+  no probe-side trimming was needed.
+
+**Also added on request, not part of the original blocked list:**
+`centos` (plain, legacy CentOS Linux — as opposed to `centos-stream`,
+its still-current successor). Not part of `osReleaseFamilyProbe`:
+confirmed live that CentOS 5 and 6 (`centos:5`, `centos:6` on Docker
+Hub) predate the systemd os-release convention entirely — no
+`/etc/os-release` at all — while `/etc/redhat-release` has existed
+across the whole RHEL family since long before that
+(`centosProbe`/`internal/probe/centos.go`, reading `"CentOS release
+5.11 (Final)"` / `"CentOS release 6.10 (Final)"` / `"CentOS Linux
+release 7.9.2009 (Core)"`). The pattern deliberately requires "CentOS
+release" or "CentOS Linux release" immediately after "CentOS ", which a
+real CentOS Stream 9's own `/etc/redhat-release`
+("CentOS Stream release 9") does not satisfy — confirmed live, so a
+Stream instance is never misidentified as legacy `centos` even though
+both files exist on both product lines. The point of adding a probe for
+an already-dead product: real fleets still run CentOS 5/7 regardless of
+upstream's own lifecycle, and that is exactly the situation this
+project exists to surface, not paper over by only tracking currently-
+supported products.
+
+**`tails` was separately, explicitly ruled out for good** ("cross it
+off entirely") rather than revisited — see the "Rules out" note above.
