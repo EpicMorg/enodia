@@ -201,6 +201,10 @@ docker run --rm \
   ghcr.io/epicmorg/enodia:1 check --config /config/config.yaml
 ```
 
+The same image is also published to `docker.io/epicmorg/enodia` and Quay
+— same tags, same multi-arch manifest, pick whichever registry you already
+pull from.
+
 All four packages install the binary at `/usr/bin/enodia`, man pages for
 every command under `/usr/share/man/man1/` (`man enodia`, `man
 enodia-collect`, ...), and create a dedicated, unprivileged `enodia` system
