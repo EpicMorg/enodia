@@ -14,6 +14,9 @@ linters:
     gosec:
       excludes:
         - G402 # InsecureSkipVerify — намеренная фича, закрыта opt-in флагом
+    misspell:
+      ignore-rules:
+        - routeros # MikroTik's own product name, not a typo of "routers"
   exclusions:
     generated: lax
     presets:

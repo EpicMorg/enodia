@@ -49,6 +49,7 @@ var builtin = []Probe{
 	postgresExporterProbe{},
 	postgresProbe{},
 	redisProbe{},
+	routerosProbe{},
 	sonarqubeProbe{},
 	sshProbe{},
 	teamcityProbe{},
