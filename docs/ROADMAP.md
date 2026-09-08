@@ -5,12 +5,12 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 32 products: the atlassian family (jira/confluence/
+- `internal/probe` — 33 products: the atlassian family (jira/confluence/
   bitbucket/bamboo), artifactory, bitwarden/vaultwarden, elasticsearch,
   generic, gitlab, grafana, jellyfin, jenkins, keycloak, mattermost, mysql,
-  nextcloud, nginx, owncast, perforce-swarm, portainer, postgresql, redis,
-  sonarqube, ssh, teamcity, testrail, vault, vcenter, youtrack, zabbix, zou
-  (kitsu alias)
+  nextcloud, nginx, oauth2-proxy, owncast, perforce-swarm, portainer,
+  postgresql, redis, sonarqube, ssh, teamcity, testrail, vault, vcenter,
+  youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -457,6 +457,15 @@ Not dates. Order of work, and what each step unblocks.
   nginx, just a deployment whose own config makes the version
   unavailable, the same sense postgres's/mysql's unsupported-auth-method
   cases already stretch that sentinel to cover)
+- `oauth2-proxy` probe — no JSON version endpoint exists; reads the
+  version stamped in `/oauth2/sign_in`'s default footer instead (the
+  sign-in page is inherently public). Confirmed live against a real
+  oauth2-proxy/oauth2-proxy container. No `DefaultResolver`:
+  endoflife.date has no calendar for it today — the user intends to
+  submit one upstream later, alongside teamcity and perforce-swarm, which
+  are in the same boat. The `--footer` flag can replace or hide ("-")
+  that line entirely — same shape of problem as nginx's `server_tokens
+  off` above, same `ErrNotSupported` classification
 
 ## Next
 
