@@ -30,6 +30,7 @@ var builtin = []Probe{
 	mysqlProbe{},
 	nextcloudProbe{},
 	nginxProbe{},
+	oauth2ProxyProbe{},
 	owncastProbe{},
 	perforceSwarmProbe{},
 	portainerProbe{},
