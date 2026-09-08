@@ -430,6 +430,14 @@ Not dates. Order of work, and what each step unblocks.
   `docker buildx` build (`goreleaser release --snapshot --skip=sign`)
   produced correctly tagged manifests for all three registries
 
+## Next
+
+- New probes planned for the next release, one file each in
+  `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
+  fixture, registered in `registry.go`, alphabetical): `zabbix`, `kibana`,
+  `logstash`, `nexus` (Sonatype Nexus Repository), `phpmyadmin`, `proftpd`,
+  `youtrack`, `harbor`
+
 ## Later
 
 - CVE correlation via OSV.dev — investigated twice, deferred both times;
