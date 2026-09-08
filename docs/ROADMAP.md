@@ -797,13 +797,10 @@ Not dates. Order of work, and what each step unblocks.
   `/usr/local/opnsense/version/`, so this runs `opnsense-version` instead
   — OPNsense's own wrapper, confirmed live to print "OPNsense 26.7
   (amd64)" in one command.
-- `truenas` considered and deferred: no vmactions coverage, and the only
-  Docker Hub images found under that name are unrelated helper tools (fan
-  controllers, ZFS-unlock scripts), not TrueNAS itself — see
-  DECISIONS.md D23.
 - Eighteen SSH/OS-identification products made it in total across the
-  original request; eight more names did not (plus `truenas`, considered
-  separately above), each for a specific, confirmed-live reason
+  original request; eight more names did not — `truenas` unblocked
+  separately, later, once the user had a real box to read `/etc/version`
+  from (see below) — each for a specific, confirmed-live reason
   (licensing, no obtainable image, or the target genuinely not fitting
   the use case) rather than a blanket "too hard" — see DECISIONS.md
   **D23** for the full accounting: `nixos`, `fortios`, `cisco-ios-xe`,
@@ -895,6 +892,17 @@ Not dates. Order of work, and what each step unblocks.
   ticket flow (session cookie + CSRF token) is not supported — same
   heavier shape D22 already rejected for Redmine, and Proxmox's own docs
   recommend the token for unattended automation anyway.
+- `truenas` probe (`internal/probe/truenas.go`) unblocked once the user
+  put TrueNAS on the same test box Proxmox had used: reads
+  `/etc/version` ("25.10.7"), not part of `osReleaseFamilyProbe` since
+  TrueNAS's own `/etc/os-release` reports the underlying Debian 12 base
+  instead (TrueNAS is a web appliance layered on top of it — the same
+  D9 gap `astra-linux`'s messy `VERSION_ID` had, solved the same way).
+  This is explicitly an interim probe: TrueNAS has its own documented
+  HTTP API, a better long-term fit for this project's usual probe shape,
+  planned to take over later with this staying as a fallback — the same
+  relationship `opnsense`'s SSH wrapper has with FortiGate/IOS-XE's own
+  unimplemented HTTP APIs above.
 
 ## Next
 
