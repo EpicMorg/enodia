@@ -904,6 +904,25 @@ Not dates. Order of work, and what each step unblocks.
   per-product dual-transport fallback (D2 — one product, one probe), so
   once the better-fitting shape was verified there was no reason to keep
   both.
+- `synology-dsm` probe (`internal/probe/synologydsm.go`) — a new request,
+  the user's own real NAS (home and work devices both). This is the one
+  HTTP probe in this tree needing a real login step: confirmed live that
+  `SYNO.DSM.Info` always answers `{"error":{"code":119}}` ("no session")
+  without both a session id (`_sid`, from `SYNO.API.Auth`'s `login`
+  method) and, when the target has CSRF protection enabled (both the
+  user's own devices did), a `SynoToken` too — there's no static API key
+  option (checked: DSM has none). Accepted despite D22's rejection of
+  exactly this shape for Redmine because it's genuinely lighter: a plain
+  JSON API taking `account`/`passwd` as normal query parameters and
+  handing back the session id as a normal JSON field, not an HTML page to
+  scrape a CSRF token out of, and no cookie jar needed either (`_sid`
+  travels as a query parameter on every call). Reads `version_string`
+  ("DSM 7.3.2-86009 Update 4") rather than the bare `version` field
+  (`"86009"`, missing the DSM release number). No `DefaultResolver`:
+  endoflife.date has no calendar for it (confirmed 404 under
+  `synology-dsm`/`synology`/`dsm`). A best-effort logout follows the
+  version read so repeated collection runs don't accumulate open
+  sessions on the NAS.
 
 ## Next
 
