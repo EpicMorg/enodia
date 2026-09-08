@@ -438,7 +438,8 @@ Not dates. Order of work, and what each step unblocks.
   `clickhouse`, `esxi` (VMware ESXi), `forgejo`, `graylog`, `haproxy`,
   `harbor`, `jaeger`, `kafka`, `kibana`, `logstash`, `mongodb`, `nexus`
   (Sonatype Nexus Repository), `nginx`, `opensearch`, `phpmyadmin`,
-  `proftpd`, `redmine`, `wordpress`, `youtrack`, `zabbix`
+  `proftpd`, `redmine`, `routeros` (MikroTik RouterOS — matches
+  endoflife.date's own product slug), `wordpress`, `youtrack`, `zabbix`
 
 ## Later
 
