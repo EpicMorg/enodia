@@ -22,6 +22,8 @@ var builtin = []Probe{
 	osReleaseFamilyProbe{product: "amazon-linux", summary: "Amazon Linux", resolver: ResolverRef{Type: "endoflife", ID: "amazon-linux"}, match: osReleaseIDEquals("amzn")},
 	apacheProbe{},
 	artifactoryProbe{},
+	// epicmorg/astralinux:1.7-main / :1.8-main: /etc/astra_version -> "1.7.9" / "1.8.6".
+	astraLinuxProbe{},
 	&atlassianProbe{product: "bamboo", typeID: "bamboo", resolver: "bamboo", summary: "Atlassian Bamboo (Data Center)"},
 	&atlassianProbe{product: "bitbucket", typeID: "stash", resolver: "bitbucket", summary: "Atlassian Bitbucket (Data Center)"},
 	bitwardenFamilyProbe{product: "bitwarden", summary: "Bitwarden (self-hosted)", resolver: ResolverRef{Type: "github", ID: "bitwarden/server"}},
@@ -71,6 +73,10 @@ var builtin = []Probe{
 	oauth2ProxyProbe{},
 	// Captured via vmactions/openbsd-vm (see uname.go): `uname -sr` -> "OpenBSD 7.9".
 	unameFamilyProbe{product: "openbsd", summary: "OpenBSD", resolver: ResolverRef{Type: "endoflife", ID: "openbsd"}, unameName: "OpenBSD"},
+	// Captured via vmactions/openeuler-vm (24.03-LTS-SP4, the action's
+	// default release): ID="openEuler" (capital E, confirmed live — not
+	// lowercase), VERSION_ID="24.03".
+	osReleaseFamilyProbe{product: "openeuler", summary: "openEuler", match: osReleaseIDEquals("openEuler")},
 	opensearchProbe{},
 	// opensuse/leap:latest: ID="opensuse-leap", VERSION_ID="16.0". Tumbleweed
 	// (ID="opensuse-tumbleweed") isn't covered by a real fixture here but
@@ -96,6 +102,9 @@ var builtin = []Probe{
 	postgresProbe{},
 	proftpdProbe{},
 	redisProbe{},
+	// alrdockerhub/redos:7.3.1 (real RED OS content: HOME_URL/BUG_REPORT_URL
+	// point at red-soft.ru): ID="redos", VERSION_ID="7.3.1".
+	osReleaseFamilyProbe{product: "redos", summary: "RED OS", match: osReleaseIDEquals("redos")},
 	// registry.redhat.io/ubi9 (Red Hat's own free Universal Base Image):
 	// ID=rhel, VERSION_ID="9.8".
 	osReleaseFamilyProbe{product: "rhel", summary: "Red Hat Enterprise Linux", resolver: ResolverRef{Type: "endoflife", ID: "rhel"}, match: osReleaseIDEquals("rhel")},

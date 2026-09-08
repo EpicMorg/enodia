@@ -1,0 +1,13 @@
+NAME="RED OS"
+VERSION="MUROM (7.3.1)"
+PLATFORM_ID="platform:el7"
+ID="redos"
+ID_LIKE="rhel centos fedora"
+VERSION_ID="7.3.1"
+PRETTY_NAME="RED OS MUROM (7.3.1)"
+ANSI_COLOR="0;31"
+CPE_NAME="cpe:/o:redos:redos:7"
+HOME_URL="http://red-soft.ru/ru/main_products.html#redos"
+BUG_REPORT_URL="http://redos-support.red-soft.ru"
+EDITION="Standard"
+
