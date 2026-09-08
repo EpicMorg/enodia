@@ -5,15 +5,15 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 49 products: apache (httpd alias), the atlassian
+- `internal/probe` — 50 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
-  bitwarden/vaultwarden, clickhouse, elasticsearch, forgejo, generic,
-  gitlab, grafana, graylog, haproxy, harbor, jellyfin, jenkins, keycloak,
-  kibana, logstash, mattermost, mongodb, mysql, nextcloud, nexus, nginx,
-  oauth2-proxy, opensearch, owncast, perforce-swarm, phpmyadmin,
-  portainer, postgres_exporter, postgresql, redis, routeros, sonarqube,
-  ssh, teamcity, testrail, traefik, vault, vcenter, wordpress, youtrack,
-  zabbix, zou (kitsu alias)
+  bitwarden/vaultwarden, clickhouse, elasticsearch, esxi, forgejo,
+  generic, gitlab, grafana, graylog, haproxy, harbor, jellyfin, jenkins,
+  keycloak, kibana, logstash, mattermost, mongodb, mysql, nextcloud,
+  nexus, nginx, oauth2-proxy, opensearch, owncast, perforce-swarm,
+  phpmyadmin, portainer, postgres_exporter, postgresql, redis, routeros,
+  sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, wordpress,
+  youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -616,13 +616,32 @@ Not dates. Order of work, and what each step unblocks.
   banner trick `ssh.go`/`mysql.go` use. `Auth.Required: true`, same
   shape as `keycloak`. `.golangci.yml` gained a `misspell.ignore-rules`
   entry for "routeros" — the linter reads it as a typo of "routers"
+- `esxi` probe — the vSphere API's own `RetrieveServiceContent` SOAP
+  discovery call (`vim25.go`, a new shared helper — `vcenter` speaks the
+  identical API and will eventually use it too, see below). Confirmed
+  live against a real, production ESXi 8.0.3 host, no credentials at
+  all: `about.apiType` is `"HostAgent"`, `about.version` is the real
+  marketing version (`"8.0.3"`, not vcenter's coarser `vim25` schema
+  version). D9: `apiType` is checked so a real vCenter's identical reply
+  (`apiType=VirtualCenter`) is rejected, not silently reported as ESXi —
+  the rejection path itself is a synthetic fixture, not a live vCenter
+  capture (none was available), unlike everything else about this probe
+- Found in passing, not yet fixed: `vcenter.go` has the same D9 gap
+  `elasticsearch.go` had before the `opensearch` probe — it never checks
+  that a reply is actually vCenter, not ESXi (both answer
+  `vimServiceVersions.xml` identically). The obvious fix is switching it
+  to `vim25RetrieveAbout` and checking `apiType == "VirtualCenter"`, the
+  same technique `esxi` now uses — deferred rather than done blind,
+  since only an ESXi host was available to verify live and D9 fixes in
+  this codebase have so far always been backed by a real captured reply
+  from both sides, not inferred from documentation alone
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
-  fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
-  ESXi), `jaeger`, `proftpd`
+  fixture, registered in `registry.go`, alphabetical): `jaeger`,
+  `proftpd`
 
 ## Later
 
