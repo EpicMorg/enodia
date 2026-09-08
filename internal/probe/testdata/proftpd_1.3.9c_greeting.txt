@@ -1,0 +1,1 @@
+220 ProFTPD 1.3.9c ready at 192.0.2.1

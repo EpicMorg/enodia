@@ -49,6 +49,7 @@ var builtin = []Probe{
 	portainerProbe{},
 	postgresExporterProbe{},
 	postgresProbe{},
+	proftpdProbe{},
 	redisProbe{},
 	routerosProbe{},
 	sonarqubeProbe{},
