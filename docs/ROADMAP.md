@@ -5,15 +5,15 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 50 products: apache (httpd alias), the atlassian
+- `internal/probe` — 51 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, esxi, forgejo,
   generic, gitlab, grafana, graylog, haproxy, harbor, jellyfin, jenkins,
   keycloak, kibana, logstash, mattermost, mongodb, mysql, nextcloud,
   nexus, nginx, oauth2-proxy, opensearch, owncast, perforce-swarm,
-  phpmyadmin, portainer, postgres_exporter, postgresql, redis, routeros,
-  sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, wordpress,
-  youtrack, zabbix, zou (kitsu alias)
+  phpmyadmin, portainer, postgres_exporter, postgresql, proftpd, redis,
+  routeros, sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter,
+  wordpress, youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -635,13 +635,24 @@ Not dates. Order of work, and what each step unblocks.
   since only an ESXi host was available to verify live and D9 fixes in
   this codebase have so far always been backed by a real captured reply
   from both sides, not inferred from documentation alone
+- `proftpd` probe — reads the RFC 959 FTP greeting (D10, no client
+  library, same family as `ssh`/`mysql`). Read `src/session.c`
+  (`pr_session_send_banner`) and confirmed live twice — a real
+  production host and a fresh `instantlinux/proftpd` container's
+  default config — that the true out-of-the-box default carries no
+  version at all (`"ProFTPD Server (<name>) [<address>]"`); it only
+  appears if an admin explicitly configures `ServerIdent on "...
+  %{version} ..."`, confirmed live too by adding that directive to the
+  same container and reading the real substituted banner. So the
+  "no version" case is the common one here, not the exception —
+  `ErrNotSupported`, same family as `nginx`'s `server_tokens off`, just
+  opt-in exposure instead of opt-out hiding
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
-  fixture, registered in `registry.go`, alphabetical): `jaeger`,
-  `proftpd`
+  fixture, registered in `registry.go`, alphabetical): `jaeger`
 
 ## Later
 
