@@ -661,6 +661,32 @@ Not dates. Order of work, and what each step unblocks.
   for Redmine's form login, just imposed by the deployment rather than
   the product; it surfaces as this probe's ordinary "no JAEGER_VERSION
   found" `ErrNotSupported`, nothing gateway-specific needed
+- GitHub Releases wired up as `DefaultResolver` for six probes that had
+  none at all: `bitwarden` (`bitwarden/server`), `jellyfin`
+  (`jellyfin/jellyfin`), `oauth2-proxy` (`oauth2-proxy/oauth2-proxy`),
+  `owncast` (`owncast/owncast`), `portainer` (`portainer/portainer`),
+  `vaultwarden` (`dani-garcia/vaultwarden`) — the mechanism itself
+  already existed (`internal/resolver/github.go`, used by
+  `postgres_exporter` since it was added) and just needed pointing at
+  the right repos, each confirmed live via the GitHub API to actually
+  exist and carry releases. "Latest version" only, same as
+  `postgres_exporter` — no eol/support/lts, GitHub has no opinion on a
+  project's lifecycle policy. Bitwarden and Vaultwarden keep separate
+  repos deliberately: Vaultwarden is an independent Rust
+  reimplementation, not a fork, with its own version numbering that
+  must never resolve against `bitwarden/server`'s tags.
+  `bitwardenFamilyProbe` gained a `resolver ResolverRef` field per
+  instance to let the two diverge (previously both were hardcoded to
+  none). Considered and passed on for now: `endoflife.ai`, a
+  third-party aggregator that re-publishes endoflife.date plus its own
+  additional coverage — checked live via its real (not just advertised)
+  API against every product this project is missing from endoflife.date
+  itself; it already covers `teamcity` and `bamboo`, but `teamcity`'s
+  entry there carries `eol_date: null` (version tracking with no real
+  lifecycle judgment), and it has nothing at all for `jellyfin`,
+  `owncast`, `portainer`, `vaultwarden`, `oauth2-proxy`, `testrail`,
+  `zou`, or `perforce-swarm` — no coverage advantage over GitHub
+  Releases for any product actually blocked on this today
 
 ## Next
 

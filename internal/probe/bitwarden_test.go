@@ -77,8 +77,14 @@ func TestBitwardenFamilyProbeEmptyVersion(t *testing.T) {
 // fork, with its own version numbering that would never compare
 // meaningfully against a Bitwarden lifecycle calendar.
 func TestBitwardenFamilyProbeMeta(t *testing.T) {
-	bw := bitwardenFamilyProbe{product: "bitwarden", summary: "Bitwarden (self-hosted)"}.Meta()
-	vw := bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden"}.Meta()
+	bw := bitwardenFamilyProbe{
+		product: "bitwarden", summary: "Bitwarden (self-hosted)",
+		resolver: ResolverRef{Type: "github", ID: "bitwarden/server"},
+	}.Meta()
+	vw := bitwardenFamilyProbe{
+		product: "vaultwarden", summary: "Vaultwarden",
+		resolver: ResolverRef{Type: "github", ID: "dani-garcia/vaultwarden"},
+	}.Meta()
 
 	if bw.Product != "bitwarden" || vw.Product != "vaultwarden" {
 		t.Fatalf("got products %q, %q, want distinct bitwarden/vaultwarden", bw.Product, vw.Product)
@@ -90,8 +96,15 @@ func TestBitwardenFamilyProbeMeta(t *testing.T) {
 		if len(m.Auth.Kinds) != 0 {
 			t.Fatalf("%s: got Kinds %+v, want none: no credentialed path was ever tested", m.Product, m.Auth.Kinds)
 		}
-		if m.DefaultResolver.Type != "" {
-			t.Fatalf("%s: got resolver %+v, want none (endoflife.date has neither calendar)", m.Product, m.DefaultResolver)
-		}
+	}
+	// No endoflife.date calendar for either (confirmed live) — GitHub
+	// Releases instead, each product pointed at its own real, distinct
+	// repo (Vaultwarden is an independent reimplementation, not a fork,
+	// so it must never resolve against bitwarden/server's tags).
+	if bw.DefaultResolver.Type != "github" || bw.DefaultResolver.ID != "bitwarden/server" {
+		t.Fatalf("bitwarden: got resolver %+v, want github/bitwarden/server", bw.DefaultResolver)
+	}
+	if vw.DefaultResolver.Type != "github" || vw.DefaultResolver.ID != "dani-garcia/vaultwarden" {
+		t.Fatalf("vaultwarden: got resolver %+v, want github/dani-garcia/vaultwarden", vw.DefaultResolver)
 	}
 }

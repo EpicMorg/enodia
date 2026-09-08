@@ -87,7 +87,7 @@ func TestOwncastProbeMeta(t *testing.T) {
 	if len(m.Auth.Kinds) != 0 {
 		t.Fatalf("got Kinds %+v, want none: no credentialed path was ever tested", m.Auth.Kinds)
 	}
-	if m.DefaultResolver.Type != "" {
-		t.Fatalf("got resolver %+v, want none (endoflife.date has no owncast calendar)", m.DefaultResolver)
+	if m.DefaultResolver.Type != "github" || m.DefaultResolver.ID != "owncast/owncast" {
+		t.Fatalf("got resolver %+v, want github/owncast/owncast (no endoflife.date calendar)", m.DefaultResolver)
 	}
 }

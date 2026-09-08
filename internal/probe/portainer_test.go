@@ -86,7 +86,7 @@ func TestPortainerProbeMeta(t *testing.T) {
 	if len(m.Auth.Kinds) != 0 {
 		t.Fatalf("got Kinds %+v, want none: no credentialed path was ever tested", m.Auth.Kinds)
 	}
-	if m.DefaultResolver.Type != "" {
-		t.Fatalf("got resolver %+v, want none (endoflife.date has no portainer calendar)", m.DefaultResolver)
+	if m.DefaultResolver.Type != "github" || m.DefaultResolver.ID != "portainer/portainer" {
+		t.Fatalf("got resolver %+v, want github/portainer/portainer (no endoflife.date calendar)", m.DefaultResolver)
 	}
 }
