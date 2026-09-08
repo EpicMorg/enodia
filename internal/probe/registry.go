@@ -35,6 +35,7 @@ var builtin = []Probe{
 	&atlassianProbe{product: "jira", typeID: "jira", resolver: "jira-software", summary: "Atlassian Jira (Data Center)"},
 	keycloakProbe{},
 	kibanaProbe{},
+	zouFamilyProbe{product: "kitsu", summary: "Kitsu (CG-Wire / Zou frontend)", resolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"}},
 	logstashProbe{},
 	mattermostProbe{},
 	mongodbProbe{},
@@ -64,7 +65,7 @@ var builtin = []Probe{
 	wordpressProbe{},
 	youtrackProbe{},
 	zabbixProbe{},
-	zouProbe{},
+	zouFamilyProbe{product: "zou", summary: "Zou (CG-Wire API backend)"},
 }
 
 var byProduct = func() map[string]Probe {

@@ -36,7 +36,7 @@ func TestZouProbeParsesRealFixture(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := zouProbe{}
+	p := zouFamilyProbe{product: "zou"}
 	obs, err := p.Probe(context.Background(), target(srv.URL, "zou"))
 	if err != nil {
 		t.Fatalf("Probe: %v", err)
@@ -55,7 +55,7 @@ func TestZouProbeWrongNameIsErrNotSupported(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := zouProbe{}
+	p := zouFamilyProbe{product: "zou"}
 	_, err := p.Probe(context.Background(), target(srv.URL, "zou"))
 	if !errors.Is(err, ErrNotSupported) {
 		t.Fatalf("got %v, want ErrNotSupported", err)
@@ -68,7 +68,7 @@ func TestZouProbeMalformedJSON(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := zouProbe{}
+	p := zouFamilyProbe{product: "zou"}
 	_, err := p.Probe(context.Background(), target(srv.URL, "zou"))
 	if !errors.Is(err, ErrUnparseable) {
 		t.Fatalf("got %v, want ErrUnparseable", err)
@@ -81,35 +81,46 @@ func TestZouProbeMissingVersionField(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := zouProbe{}
+	p := zouFamilyProbe{product: "zou"}
 	_, err := p.Probe(context.Background(), target(srv.URL, "zou"))
 	if !errors.Is(err, ErrUnparseable) {
 		t.Fatalf("got %v, want ErrUnparseable", err)
 	}
 }
 
-func TestZouProbeMeta(t *testing.T) {
-	m := zouProbe{}.Meta()
-	if m.Product != "zou" {
-		t.Fatalf("got product %q", m.Product)
+// zou and kitsu are two distinct products (not product+alias) precisely so
+// they can carry different resolvers: cgwire/zou has no GitHub Releases at
+// all (bare tags only, confirmed live), while cgwire/kitsu does and is
+// what a "kitsu"-named deployment actually tracks.
+func TestZouFamilyProbeMeta(t *testing.T) {
+	zou := zouFamilyProbe{product: "zou", summary: "Zou (CG-Wire API backend)"}.Meta()
+	kitsu := zouFamilyProbe{
+		product: "kitsu", summary: "Kitsu (CG-Wire / Zou frontend)",
+		resolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"},
+	}.Meta()
+
+	if zou.Product != "zou" || kitsu.Product != "kitsu" {
+		t.Fatalf("got products %q, %q, want distinct zou/kitsu", zou.Product, kitsu.Product)
 	}
-	if len(m.Aliases) != 1 || m.Aliases[0] != "kitsu" {
-		t.Fatalf("got aliases %+v, want [\"kitsu\"]", m.Aliases)
+	for _, m := range []Meta{zou, kitsu} {
+		if m.Auth.Required {
+			t.Fatalf("%s: this endpoint is intentionally public, confirmed live", m.Product)
+		}
 	}
-	if m.Auth.Required {
-		t.Fatal("this endpoint is intentionally public, confirmed live")
+	if zou.DefaultResolver.Type != "" {
+		t.Fatalf("zou: got resolver %+v, want none (cgwire/zou has no GitHub Releases at all)", zou.DefaultResolver)
 	}
-	if m.DefaultResolver.Type != "github" || m.DefaultResolver.ID != "cgwire/kitsu" {
-		t.Fatalf("got resolver %+v, want github/cgwire/kitsu (no endoflife.date calendar; cgwire/zou has no GitHub Releases at all)", m.DefaultResolver)
+	if kitsu.DefaultResolver.Type != "github" || kitsu.DefaultResolver.ID != "cgwire/kitsu" {
+		t.Fatalf("kitsu: got resolver %+v, want github/cgwire/kitsu", kitsu.DefaultResolver)
 	}
 }
 
-func TestZouAliasResolves(t *testing.T) {
-	p, err := Get("kitsu")
+func TestZouAndKitsuAreDistinctProducts(t *testing.T) {
+	kitsu, err := Get("kitsu")
 	if err != nil {
 		t.Fatalf("Get(\"kitsu\"): %v", err)
 	}
-	if p.Meta().Product != "zou" {
-		t.Fatalf("got product %q via kitsu alias, want zou", p.Meta().Product)
+	if kitsu.Meta().Product != "kitsu" {
+		t.Fatalf("got product %q via \"kitsu\", want \"kitsu\" (not an alias of zou anymore)", kitsu.Meta().Product)
 	}
 }
