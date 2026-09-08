@@ -51,19 +51,12 @@ func TestESXiProbeParsesRealFixture(t *testing.T) {
 }
 
 // D9: product: esxi pointed at a real vCenter must fail, not silently
-// report vCenter's version as ESXi's. Not captured from a live vCenter
-// (only an ESXi host was available to verify against) — apiType is the
-// one field this synthetic reply changes from the real ESXi fixture,
-// matching VMware's own documented apiType values (HostAgent vs
-// VirtualCenter).
-func TestESXiProbeRejectsVirtualCenterAPIType(t *testing.T) {
+// report vCenter's version as ESXi's. Uses the real vcenter fixture,
+// which carries apiType=VirtualCenter.
+func TestESXiProbeRejectsRealVCenter(t *testing.T) {
+	fixture := loadVCenterFixture(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
-<soapenv:Body><RetrieveServiceContentResponse xmlns="urn:vim25"><returnval><about>
-<name>VMware vCenter Server</name><fullName>VMware vCenter Server 8.0.3</fullName>
-<version>8.0.3</version><build>12345</build><apiType>VirtualCenter</apiType>
-</about></returnval></RetrieveServiceContentResponse></soapenv:Body></soapenv:Envelope>`))
+		_, _ = w.Write(fixture)
 	}))
 	defer srv.Close()
 

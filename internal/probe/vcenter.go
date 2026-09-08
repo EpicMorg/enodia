@@ -4,21 +4,24 @@ package probe
 
 import (
 	"context"
-	"encoding/xml"
 	"fmt"
 	"time"
 )
 
-// vcenterProbe reads /sdk/vimServiceVersions.xml for the version.
+// vcenterProbe reads ServiceContent.about via the vSphere API's own
+// RetrieveServiceContent discovery call — see vim25.go, shared with
+// esxiProbe.
 //
-// Confirmed live against a real production instance: this endpoint —
-// vCenter's SOAP API version-discovery document — needs no credentials.
-//
-// What it reports is the vim25 API version (e.g. "8.0.3.0"), not a
-// separately-tracked marketing build string; VMware's own documentation
-// treats the two as equivalent, and every third-party tool that
-// version-detects vCenter this way (this probe's own predecessor included)
-// relies on exactly that correspondence.
+// Confirmed live against a real production vCenter 8.0.3 instance, no
+// credentials at all: {"apiType":"VirtualCenter","version":"8.0.3",
+// "build":"25092719","fullName":"VMware vCenter Server 8.0.3
+// build-25092719",...} — apiType is the field that distinguishes it from
+// an ESXi host's identical-shaped reply (D9; see esxiProbe, which runs
+// this same check in reverse). This replaced an earlier version of this
+// probe that read /sdk/vimServiceVersions.xml instead: that endpoint
+// answers identically for ESXi and vCenter alike, so it could never tell
+// the two apart, and it reports vim25's own API schema version (e.g.
+// "8.0.3.0") rather than the product's real marketing version.
 type vcenterProbe struct{}
 
 func (vcenterProbe) Meta() Meta {
@@ -31,19 +34,6 @@ func (vcenterProbe) Meta() Meta {
 	}
 }
 
-// vimServiceVersions is vimServiceVersions.xml's shape. Verified against a
-// live server's real reply (see testdata/vcenter_8.0.3.0.xml). priorVersions
-// is deliberately not modeled: Go's XML decoder only populates the fields
-// given a tag, so the versions nested inside it are never reached by the
-// Version field below, which only ever binds to the direct child.
-type vimServiceVersions struct {
-	XMLName    xml.Name `xml:"namespaces"`
-	Namespaces []struct {
-		Name    string `xml:"name"`
-		Version string `xml:"version"`
-	} `xml:"namespace"`
-}
-
 func (vcenterProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	start := time.Now()
 	obs := Observation{
@@ -51,32 +41,22 @@ func (vcenterProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 		CollectedAt: start.UTC(), TLSVerified: Verified(t.Address, t.TLS),
 	}
 
-	resp, err := FetchHTTP(ctx, t, Request{
-		Path:   "/sdk/vimServiceVersions.xml",
-		Accept: "application/xml, text/xml",
-	})
+	about, err := vim25RetrieveAbout(ctx, t)
 	if err != nil {
 		return obs, err
 	}
-	defer resp.Body.Close()
-	obs.Endpoint = resp.Request.URL.Path
+	obs.Endpoint = "/sdk"
 	obs.DurationMS = time.Since(start).Milliseconds()
 
-	body, err := ReadBody(resp)
-	if err != nil {
-		return obs, err
+	if about.APIType != "VirtualCenter" {
+		return obs, fmt.Errorf("%w: this host reports apiType=%q, not \"VirtualCenter\" — likely an ESXi host",
+			ErrNotSupported, about.APIType)
 	}
 
-	var doc vimServiceVersions
-	if err := xml.Unmarshal(body, &doc); err != nil {
-		return obs, fmt.Errorf("%w: vimServiceVersions.xml is not valid XML: %w", ErrUnparseable, err)
+	obs.Version = about.Version
+	obs.Extra = map[string]string{}
+	if about.Build != "" {
+		obs.Extra["build"] = about.Build
 	}
-
-	for _, ns := range doc.Namespaces {
-		if ns.Name == "urn:vim25" && ns.Version != "" {
-			obs.Version = ns.Version
-			return obs, nil
-		}
-	}
-	return obs, fmt.Errorf("%w: vimServiceVersions.xml has no urn:vim25 namespace with a version", ErrUnparseable)
+	return obs, nil
 }
