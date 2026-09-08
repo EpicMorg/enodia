@@ -556,7 +556,7 @@ Not dates. Order of work, and what each step unblocks.
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
-  ESXi), `forgejo`, `graylog`, `jaeger`, `kafka`, `kibana`, `logstash`,
+  ESXi), `forgejo`, `graylog`, `jaeger`, `kibana`, `logstash`,
   `opensearch`, `phpmyadmin`, `proftpd`, `redmine`, `routeros` (MikroTik
   RouterOS — matches endoflife.date's own product slug), `wordpress`
 
@@ -565,6 +565,13 @@ Not dates. Order of work, and what each step unblocks.
 - CVE correlation via OSV.dev — investigated twice, deferred both times;
   revisit only if a workable data source appears — see DECISIONS.md D18
   for exactly what was tried and why it's closed, not just deferred
+- `kafka` probe — the wire protocol's entire anonymous surface
+  (`ApiVersionsRequest`) is a list of per-API version-number ranges, no
+  software version string anywhere — confirmed live against a real
+  broker. Blocked pending JMX support (a materially different transport:
+  RMI, its own port, off by default), a new kind of probe this project
+  doesn't have yet — see DECISIONS.md D21 for what was tried and why an
+  ApiVersions-based guess was rejected, not just deferred
 - `android/amd64`, `android/386`, `android/arm` — Go hard-requires cgo
   against an Android NDK cross-compiler for these three (confirmed live;
   only `android/arm64` supports pure internal linking), and this
