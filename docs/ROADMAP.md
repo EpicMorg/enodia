@@ -5,12 +5,13 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 35 products: the atlassian family (jira/confluence/
+- `internal/probe` — 36 products: the atlassian family (jira/confluence/
   bitbucket/bamboo), artifactory, bitwarden/vaultwarden, elasticsearch,
   generic, gitlab, grafana, harbor, jellyfin, jenkins, keycloak,
   mattermost, mysql, nextcloud, nginx, oauth2-proxy, owncast,
-  perforce-swarm, portainer, postgresql, redis, sonarqube, ssh, teamcity,
-  testrail, traefik, vault, vcenter, youtrack, zabbix, zou (kitsu alias)
+  perforce-swarm, portainer, postgres_exporter, postgresql, redis,
+  sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, youtrack,
+  zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -487,6 +488,18 @@ Not dates. Order of work, and what each step unblocks.
   offered so a configured credential keeps working either way; the
   missing-field case is `ErrNotSupported`, same family as nginx/
   oauth2-proxy/traefik above
+- `postgres_exporter` probe — the `postgres_exporter_build_info` gauge off
+  `/metrics`, the same prometheus/common "version collector" pattern every
+  Prometheus exporter in this ecosystem uses (constant `1`, version in a
+  label). Confirmed live against a real prometheuscommunity/
+  postgres-exporter container: needs no credentials by default, and
+  answers even with an unreachable target Postgres — `build_info`
+  describes the exporter binary, not the database it scrapes (unrelated
+  to the existing `postgres` probe, which talks to the database
+  directly). No endoflife.date entry (this isn't a product with a
+  lifecycle policy) — `DefaultResolver` points at GitHub Releases
+  (`prometheus-community/postgres_exporter`) instead, the first probe to
+  default to that resolver rather than endoflife.date
 
 ## Next
 

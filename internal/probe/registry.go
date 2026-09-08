@@ -35,6 +35,7 @@ var builtin = []Probe{
 	owncastProbe{},
 	perforceSwarmProbe{},
 	portainerProbe{},
+	postgresExporterProbe{},
 	postgresProbe{},
 	redisProbe{},
 	sonarqubeProbe{},
