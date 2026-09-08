@@ -1,0 +1,19 @@
+{
+    "architecture-name": "x86_64",
+    "board-name": "CHR QEMU Standard PC (i440FX + PIIX, 1996)",
+    "build-time": "2026-09-03 09:57:14",
+    "cpu": "QEMU",
+    "cpu-count": "2",
+    "cpu-frequency": "2399",
+    "cpu-load": "0",
+    "free-hdd-space": "72515584",
+    "free-memory": "41627648",
+    "minimum-version": "7.1",
+    "platform": "MikroTik",
+    "total-hdd-space": "93564928",
+    "total-memory": "268435456",
+    "uptime": "1m47s",
+    "version": "7.24.2 (stable)",
+    "write-sect-since-reboot": "1376",
+    "write-sect-total": "1376"
+}

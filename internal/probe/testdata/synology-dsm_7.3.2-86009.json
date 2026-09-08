@@ -1,0 +1,15 @@
+{
+  "data": {
+    "codepage": "rus",
+    "model": "DS1821+",
+    "ram": 64512,
+    "serial": "EXAMPLE00000000",
+    "temperature": 48,
+    "temperature_warn": false,
+    "time": "Wed Sep  9 01:49:48 2026",
+    "uptime": 605111,
+    "version": "86009",
+    "version_string": "DSM 7.3.2-86009 Update 4"
+  },
+  "success": true
+}

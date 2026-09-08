@@ -1,0 +1,32 @@
+{
+  "_class": "hudson.model.Hudson",
+  "assignedLabels": [
+    { "name": "built-in" }
+  ],
+  "mode": "NORMAL",
+  "nodeDescription": "the Jenkins controller's built-in node",
+  "nodeName": "",
+  "numExecutors": 2,
+  "description": null,
+  "jobs": [],
+  "overallLoad": {},
+  "primaryView": {
+    "_class": "hudson.model.AllView",
+    "name": "all",
+    "url": "https://jenkins.example.com/"
+  },
+  "quietDownReason": null,
+  "quietingDown": false,
+  "slaveAgentPort": 50000,
+  "unlabeledLoad": { "_class": "jenkins.model.UnlabeledLoadStatistics" },
+  "url": null,
+  "useCrumbs": true,
+  "useSecurity": true,
+  "views": [
+    {
+      "_class": "hudson.model.AllView",
+      "name": "all",
+      "url": "https://jenkins.example.com/"
+    }
+  ]
+}

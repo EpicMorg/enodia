@@ -1,0 +1,158 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Manual dev-build snapshot: the same cross-compiled binaries + checksums
+# release.yml produces, minus everything release-specific (no GitHub
+# Release, no GHCR image, no cosign signing) — just the archives, each
+# uploaded as its own separate artifact on this run (one per platform, not
+# one shared zip bundling all of them together).
+#
+# Deliberately workflow_dispatch only, never on push: this job runs inside
+# ghcr.io/epicmorg/debian:trixie-develop (see release.yml for why — Go, mingw-w64,
+# and llvm-mingw all live there, so windows-resources gets every icon,
+# arm64 included, for free), and that image is ~5GB. Pulling it on every
+# commit to develop would make ordinary iteration there unworkable. Run
+# this by hand from the Actions tab whenever a downloadable build of a
+# specific commit is actually wanted.
+name: develop build
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/epicmorg/debian:trixie-develop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Same "dubious ownership" issue release.yml already documents for
+      # this exact image/container-job combination.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # --snapshot implies --skip=announce,publish,validate (no tag, no
+      # release, no dirty-worktree check needed for a throwaway build);
+      # docker/sign are skipped explicitly since this never touches GHCR
+      # or a signing identity — no docker CLI is even installed here.
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean --skip=docker,sign
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # One artifact per file, not one shared name across a multi-file
+      # path: — actions/upload-artifact zips everything under a single
+      # name together into one bundle, which is exactly what a build meant
+      # to be grabbed per-platform shouldn't do. Filenames are
+      # .goreleaser.yaml's own archive name_template; goreleaser fails the
+      # whole job already if one is missing, so if-no-files-found: error
+      # here is just a second, more specific check.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_amd64
+          path: dist/enodia_linux_amd64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_arm64
+          path: dist/enodia_linux_arm64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_darwin_amd64
+          path: dist/enodia_darwin_amd64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_darwin_arm64
+          path: dist/enodia_darwin_arm64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_android_arm64
+          path: dist/enodia_android_arm64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_windows_amd64
+          path: dist/enodia_windows_amd64.zip
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_windows_arm64
+          path: dist/enodia_windows_arm64.zip
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_windows_386
+          path: dist/enodia_windows_386.zip
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_amd64_deb
+          path: dist/enodia_linux_amd64.deb
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_arm64_deb
+          path: dist/enodia_linux_arm64.deb
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_amd64_rpm
+          path: dist/enodia_linux_amd64.rpm
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_arm64_rpm
+          path: dist/enodia_linux_arm64.rpm
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_amd64_apk
+          path: dist/enodia_linux_amd64.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_arm64_apk
+          path: dist/enodia_linux_arm64.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_amd64_pkg_tar_zst
+          path: dist/enodia_linux_amd64.pkg.tar.zst
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: enodia_linux_arm64_pkg_tar_zst
+          path: dist/enodia_linux_arm64.pkg.tar.zst
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: checksums
+          path: dist/checksums.txt
+          if-no-files-found: error
+          retention-days: 14

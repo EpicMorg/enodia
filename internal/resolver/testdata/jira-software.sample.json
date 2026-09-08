@@ -1,0 +1,34 @@
+[
+  {
+    "cycle": "11.3",
+    "lts": true,
+    "releaseDate": "2025-12-03",
+    "eol": "2027-12-03",
+    "latest": "11.3.11",
+    "latestReleaseDate": "2026-09-02"
+  },
+  {
+    "cycle": "11.2",
+    "releaseDate": "2025-11-06",
+    "eol": "2027-11-06",
+    "latest": "11.2.1",
+    "latestReleaseDate": "2025-11-28",
+    "lts": false
+  },
+  {
+    "cycle": "11.1",
+    "releaseDate": "2025-09-24",
+    "eol": "2027-09-24",
+    "latest": "11.1.1",
+    "latestReleaseDate": "2025-10-15",
+    "lts": false
+  },
+  {
+    "cycle": "11.0",
+    "releaseDate": "2025-08-13",
+    "eol": "2027-08-13",
+    "latest": "11.0.1",
+    "latestReleaseDate": "2025-09-04",
+    "lts": false
+  }
+]

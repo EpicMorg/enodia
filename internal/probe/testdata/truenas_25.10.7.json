@@ -1,0 +1,31 @@
+{
+ "version": "25.10.7",
+ "buildtime": {
+  "$date": 1788181994000
+ },
+ "hostname": "truenas",
+ "physmem": 8332500992,
+ "model": "Intel(R) Xeon(R) Gold 6230 CPU @ 2.10GHz",
+ "cores": 8,
+ "physical_cores": 8,
+ "loadavg": [
+  0.18212890625,
+  0.38134765625,
+  0.1787109375
+ ],
+ "uptime": "0:04:18.432061",
+ "uptime_seconds": 258.432061035,
+ "system_serial": "example-0000000000000000000000000000000000000000",
+ "system_product": "VMware Virtual Platform",
+ "system_product_version": "None",
+ "license": null,
+ "boottime": {
+  "$date": 1788904662000
+ },
+ "datetime": {
+  "$date": 1788904920000
+ },
+ "timezone": "America/Los_Angeles",
+ "system_manufacturer": "VMware, Inc.",
+ "ecc_memory": false
+}
