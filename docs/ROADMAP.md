@@ -883,6 +883,19 @@ requested.
   that name); its own installer is ISO-only, the same shape of blocker
   `openbsd`/`netbsd` had before vmactions covered them — see
   DECISIONS.md D23
+- `proxmox` — no vmactions coverage either, and installing it via QEMU
+  ourselves means driving its Debian-based installer under pure TCG
+  emulation (no `/dev/kvm` on this project's build environment) just to
+  reach a single `GET /api2/json/version` call — a lot of engineering for
+  one endpoint whose real JSON shape is otherwise well-documented and
+  stable (used by terraform providers, ansible modules, etc. for years).
+  Asked directly whether a real Proxmox host was reachable for live
+  verification before writing this probe; none was, so this is deferred
+  the same way `truenas` is, not written blind against documentation
+  alone (docs/CLAUDE.md's "Working style" on vendor API shapes). Revisit
+  once a real host is reachable — should be quick once it is, since the
+  API itself isn't in question, only the lack of something to verify it
+  against
 - `fortios`, `cisco-ios-xe` — both have a documented HTTP API (FortiGate
   REST, IOS-XE RESTCONF/NETCONF) that would fit this project's existing
   probe shape better than SSH CLI-scraping, but both are licensed
