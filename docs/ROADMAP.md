@@ -847,6 +847,13 @@ Not dates. Order of work, and what each step unblocks.
   `DefaultResolver`: endoflife.date has no `gentoo` calendar (confirmed
   404), which fits — a rolling release has no discrete EOL cycles to
   track in the first place.
+- `kali-linux` probe — another follow-up pick. Joined
+  `osReleaseFamilyProbe` directly: confirmed live via the official
+  `kalilinux/kali-rolling` image `ID=kali`, `VERSION_ID="2026.3"` — a
+  dated rolling-release snapshot, same shape as Gentoo's non-version
+  `VERSION_ID` above. No `DefaultResolver`: no endoflife.date calendar
+  either (confirmed 404 under `kali`/`kali-linux`), for the same
+  rolling-release reason.
 
 ## Next
 

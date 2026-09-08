@@ -76,6 +76,7 @@ func TestOSReleaseFamilyRealFixtures(t *testing.T) {
 		"redos":         {"redos_7.3.1.txt", osReleaseFamilyProbe{product: "redos", match: osReleaseIDEquals("redos")}, "7.3.1"},
 		"openeuler":     {"openeuler_24.03.txt", osReleaseFamilyProbe{product: "openeuler", match: osReleaseIDEquals("openEuler")}, "24.03"},
 		"gentoo":        {"gentoo_2.18.txt", osReleaseFamilyProbe{product: "gentoo", match: osReleaseIDEquals("gentoo")}, "2.18"},
+		"kali-linux":    {"kali-linux_2026.3.txt", osReleaseFamilyProbe{product: "kali-linux", match: osReleaseIDEquals("kali")}, "2026.3"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) { runOSReleaseFamilyTest(t, tc) })
