@@ -5,13 +5,13 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 37 products: the atlassian family (jira/confluence/
-  bitbucket/bamboo), artifactory, bitwarden/vaultwarden, elasticsearch,
-  generic, gitlab, grafana, haproxy, harbor, jellyfin, jenkins, keycloak,
-  mattermost, mysql, nextcloud, nginx, oauth2-proxy, owncast,
-  perforce-swarm, portainer, postgres_exporter, postgresql, redis,
-  sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, youtrack,
-  zabbix, zou (kitsu alias)
+- `internal/probe` — 38 products: apache (httpd alias), the atlassian
+  family (jira/confluence/bitbucket/bamboo), artifactory,
+  bitwarden/vaultwarden, elasticsearch, generic, gitlab, grafana,
+  haproxy, harbor, jellyfin, jenkins, keycloak, mattermost, mysql,
+  nextcloud, nginx, oauth2-proxy, owncast, perforce-swarm, portainer,
+  postgres_exporter, postgresql, redis, sonarqube, ssh, teamcity,
+  testrail, traefik, vault, vcenter, youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -509,17 +509,24 @@ Not dates. Order of work, and what each step unblocks.
   surface, and only when `stats enable` is configured at all (off by
   default). `stats auth user:pass` is ordinary HTTP Basic, already
   covered
+- `apache` (alias `httpd`) probe — the `Server` response header, the same
+  shape of problem as `nginx` above. Confirmed live against real
+  `httpd:2.4` containers: default build answers `Apache/2.4.68 (Unix)`;
+  `ServerTokens Prod` (Apache's own `server_tokens off` equivalent, same
+  `ErrNotSupported` classification) strips it to a bare `Apache`.
+  `DefaultResolver` uses endoflife.date's actual slug
+  `apache-http-server` directly — both `apache` and `httpd` were
+  confirmed to just 301-redirect there
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
-  fixture, registered in `registry.go`, alphabetical): `apache` (httpd),
-  `clickhouse`, `esxi` (VMware ESXi), `forgejo`, `graylog`, `jaeger`,
-  `kafka`, `kibana`, `logstash`, `mongodb`, `nexus` (Sonatype Nexus
-  Repository), `opensearch`, `phpmyadmin`, `proftpd`, `redmine`,
-  `routeros` (MikroTik RouterOS — matches endoflife.date's own product
-  slug), `wordpress`
+  fixture, registered in `registry.go`, alphabetical): `clickhouse`,
+  `esxi` (VMware ESXi), `forgejo`, `graylog`, `jaeger`, `kafka`, `kibana`,
+  `logstash`, `mongodb`, `nexus` (Sonatype Nexus Repository),
+  `opensearch`, `phpmyadmin`, `proftpd`, `redmine`, `routeros` (MikroTik
+  RouterOS — matches endoflife.date's own product slug), `wordpress`
 
 ## Later
 
