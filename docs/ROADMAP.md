@@ -5,14 +5,14 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 48 products: apache (httpd alias), the atlassian
+- `internal/probe` — 49 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, forgejo, generic,
   gitlab, grafana, graylog, haproxy, harbor, jellyfin, jenkins, keycloak,
   kibana, logstash, mattermost, mongodb, mysql, nextcloud, nexus, nginx,
   oauth2-proxy, opensearch, owncast, perforce-swarm, phpmyadmin,
-  portainer, postgres_exporter, postgresql, redis, sonarqube, ssh,
-  teamcity, testrail, traefik, vault, vcenter, wordpress, youtrack,
+  portainer, postgres_exporter, postgresql, redis, routeros, sonarqube,
+  ssh, teamcity, testrail, traefik, vault, vcenter, wordpress, youtrack,
   zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
@@ -606,14 +606,23 @@ Not dates. Order of work, and what each step unblocks.
   `elasticsearch`'s exactly: HTTPS + Basic auth required by default
   (`OPENSEARCH_INITIAL_ADMIN_PASSWORD` must be set at all), or fully
   anonymous with the real, documented `DISABLE_SECURITY_PLUGIN=true`
+- `routeros` probe — MikroTik's REST API (`GET
+  /rest/system/resource`, RouterOS 7.1+). Confirmed live against a real
+  CHR (Cloud Hosted Router) VM booted under QEMU (no docker image exists
+  for RouterOS): unlike almost everything else in this tree, there is no
+  anonymous path at all — this endpoint always 401s without credentials,
+  the anonymous webfig login page at `/` carries no version text, and
+  even the SSH banner (`SSH-2.0-ROSSSH`) has none either, ruling out the
+  banner trick `ssh.go`/`mysql.go` use. `Auth.Required: true`, same
+  shape as `keycloak`. `.golangci.yml` gained a `misspell.ignore-rules`
+  entry for "routeros" — the linter reads it as a typo of "routers"
 
 ## Next
 
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
-  ESXi), `jaeger`, `proftpd`, `routeros` (MikroTik RouterOS — matches
-  endoflife.date's own product slug)
+  ESXi), `jaeger`, `proftpd`
 
 ## Later
 
