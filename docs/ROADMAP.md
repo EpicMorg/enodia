@@ -435,10 +435,10 @@ Not dates. Order of work, and what each step unblocks.
 - New probes planned for the next release, one file each in
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `apache` (httpd),
-  `clickhouse`, `forgejo`, `graylog`, `haproxy`, `harbor`, `kafka`, `kibana`,
-  `logstash`, `mongodb`, `nexus` (Sonatype Nexus Repository), `nginx`,
-  `opensearch`, `phpmyadmin`, `proftpd`, `redmine`, `wordpress`, `youtrack`,
-  `zabbix`
+  `clickhouse`, `esxi` (VMware ESXi), `forgejo`, `graylog`, `haproxy`,
+  `harbor`, `jaeger`, `kafka`, `kibana`, `logstash`, `mongodb`, `nexus`
+  (Sonatype Nexus Repository), `nginx`, `opensearch`, `phpmyadmin`,
+  `proftpd`, `redmine`, `wordpress`, `youtrack`, `zabbix`
 
 ## Later
 
