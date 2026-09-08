@@ -161,6 +161,10 @@ var builtin = []Probe{
 	// vendor's own consistent branding) but hasn't been captured live —
 	// only the 2.x fixture below is confirmed.
 	osReleaseFamilyProbe{product: "steamos", summary: "SteamOS", resolver: ResolverRef{Type: "endoflife", ID: "steamos"}, match: osReleaseIDEquals("steamos")},
+	// SYNO.API.Auth login, then GET SYNO.DSM.Info with the resulting
+	// session id (and SynoToken, when CSRF protection is enabled).
+	// Verified live against a real DSM 7.3.2 NAS.
+	synologyDSMProbe{},
 	teamcityProbe{},
 	testrailProbe{},
 	traefikProbe{},

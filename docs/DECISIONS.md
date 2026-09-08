@@ -831,6 +831,18 @@ been pushed by hardening guides), or a real, generalizable case for
 form-login-with-CSRF support landing in this tree for its own reasons
 first — not one added solely to unblock this single product.
 
+**Revisited, and this rule held:** `synology-dsm` (`internal/probe/
+synologydsm.go`) needed a login step too — `SYNO.API.Auth`'s `login`
+method, session id, and (with CSRF protection on) a `SynoToken` — but it
+was accepted rather than deferred like Redmine, because it turned out to
+be a materially lighter case, not an exception to this rule: a plain
+JSON API taking `account`/`passwd` as ordinary query parameters and
+handing back the session id as an ordinary JSON field, confirmed live.
+No HTML page to scrape a CSRF token out of, no cookie jar — `_sid`
+travels as a query parameter on the next call. Redmine's blocker is
+specifically the HTML-form-plus-cookie shape, which this still doesn't
+provide a generalizable answer for; Redmine stays deferred.
+
 ---
 
 ## D23 — SSH/OS-identification probes: twenty-five made it in, three did not, for concrete reasons
