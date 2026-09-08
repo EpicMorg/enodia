@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html><head><title>Statistics Report for HAProxy</title>
+<link rel="icon" href="data:,">
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<style type="text/css"><!--
+body { font-family: arial, helvetica, sans-serif; font-size: 12px; font-weight: normal; color: black; background: white;}
+th,td { font-size: 10px;}
+h1 { font-size: x-large; margin-bottom: 0.5em;}
+h2 { font-family: helvetica, arial; font-size: x-large; font-weight: bold; font-style: italic; color: #6020a0; margin-top: 0em; margin-bottom: 0em;}
+h3 { font-family: helvetica, arial; font-size: 16px; font-weight: bold; color: #b00040; background: #e8e8d0; margin-top: 0em; margin-bottom: 0em;}
+li { margin-top: 0.25em; margin-right: 2em;}
+.hr {margin-top: 0.25em; border-color: black; border-bottom-style: solid;}
+.titre	{background: #20D0D0;color: #000000; font-weight: bold; text-align: center;}
+.total	{background: #20D0D0;color: #ffff80;}
+.frontend	{background: #e8e8d0;}
+.socket	{background: #d0d0d0;}
+.backend	{background: #e8e8d0;}
+.active_down		{background: #ff9090;}
+.active_going_up		{background: #ffd020;}
+.active_going_down	{background: #ffffa0;}
+.active_up		{background: #c0ffc0;}
+.active_nolb		{background: #20a0ff;}
+.active_draining		{background: #20a0FF;}
+.active_no_check		{background: #e0e0e0;}
+.backup_down		{background: #ff9090;}
+.backup_going_up		{background: #ff80ff;}
+.backup_going_down	{background: #c060ff;}
+.backup_up		{background: #b0d0ff;}
+.backup_nolb		{background: #90b0e0;}
+.backup_draining		{background: #cc9900;}
+.backup_no_check		{background: #e0e0e0;}
+.maintain	{background: #c07820;}
+.rls      {letter-spacing: 0.2em; margin-right: 1px;}
+
+a.px:link {color: #ffff40; text-decoration: none;}a.px:visited {color: #ffff40; text-decoration: none;}a.px:hover {color: #ffffff; text-decoration: none;}a.lfsb:link {color: #000000; text-decoration: none;}a.lfsb:visited {color: #000000; text-decoration: none;}a.lfsb:hover {color: #505050; text-decoration: none;}
+table.tbl { border-collapse: collapse; border-style: none;}
+table.tbl td { text-align: right; border-width: 1px 1px 1px 1px; border-style: solid solid solid solid; padding: 2px 3px; border-color: gray; white-space: nowrap;}
+table.tbl td.ac { text-align: center;}
+table.tbl th { border-width: 1px; border-style: solid solid solid solid; border-color: gray;}
+table.tbl th.pxname { background: #b00040; color: #ffff40; font-weight: bold; border-style: solid solid none solid; padding: 2px 3px; white-space: nowrap;}
+table.tbl th.empty { border-style: none; empty-cells: hide; background: white;}
+table.tbl th.desc { background: white; border-style: solid solid none solid; text-align: left; padding: 2px 3px;}
+
+table.lgd { border-collapse: collapse; border-width: 1px; border-style: none none none solid; border-color: black;}
+table.lgd td { border-width: 1px; border-style: solid solid solid solid; border-color: gray; padding: 2px;}
+table.lgd td.noborder { border-style: none; padding: 2px; white-space: nowrap;}
+table.det { border-collapse: collapse; border-style: none; }
+table.det th { text-align: left; border-width: 0px; padding: 0px 1px 0px 0px; font-style:normal;font-size:11px;font-weight:bold;font-family: sans-serif;}
+table.det td { text-align: right; border-width: 0px; padding: 0px 0px 0px 4px; white-space: nowrap; font-style:normal;font-size:11px;font-weight:normal;}
+u {text-decoration:none; border-bottom: 1px dotted black;}
+div.tips {
+ display:block;
+ visibility:hidden;
+ z-index:2147483647;
+ position:absolute;
+ padding:2px 4px 3px;
+ background:#f0f060; color:#000000;
+ border:1px solid #7040c0;
+ white-space:nowrap;
+ font-style:normal;font-size:11px;font-weight:normal;
+ -moz-border-radius:3px;-webkit-border-radius:3px;border-radius:3px;
+ -moz-box-shadow:gray 2px 2px 3px;-webkit-box-shadow:gray 2px 2px 3px;box-shadow:gray 2px 2px 3px;
+}
+u:hover div.tips {visibility:visible;}
+@media (prefers-color-scheme: dark) {
+ body { font-family: arial, helvetica, sans-serif; font-size: 12px; font-weight: normal; color: #e8e6e3; background: #131516;}
+ h1 { color: #a265e0!important; }
+ h2 { color: #a265e0; }
+ h3 { color: #ff5190; background-color: #3e3e1f; }
+ a { color: #3391ff; }
+ input { background-color: #2f3437; }
+ .hr { border-color: #8c8273; }
+ .titre { background-color: #1aa6a6; color: #e8e6e3; }
+ .frontend {background: #2f3437;}
+ .socket	{background: #2a2d2f;}
+ .backend {background: #2f3437;}
+ .active_down {background: #760000;}
+ .active_going_up {background: #b99200;}
+ .active_going_down {background: #6c6c00;}
+ .active_up {background: #165900;}
+ .active_nolb {background: #006ab9;}
+ .active_draining {background: #006ab9;}
+ .active_no_check {background: #2a2d2f;}
+ .backup_down {background: #760000;}
+ .backup_going_up {background: #7f007f;}
+ .backup_going_down {background: #580092;}
+ .backup_up {background: #2e3234;}
+ .backup_nolb {background: #1e3c6a;}
+ .backup_draining {background: #a37a00;}
+ .backup_no_check {background: #2a2d2f;}
+ .maintain {background: #9a601a;}
+ a.px:link {color: #d8d83b; text-decoration: none;}
+ a.px:visited {color: #d8d83b; text-decoration: none;}
+ a.px:hover {color: #ffffff; text-decoration: none;}
+ a.lfsb:link {color: #e8e6e3; text-decoration: none;}
+ a.lfsb:visited {color: #e8e6e3; text-decoration: none;}
+ a.lfsb:hover {color: #b5afa6; text-decoration: none;}
+ table.tbl th.empty { background-color: #181a1b; }
+ table.tbl th.desc { background: #181a1b; }
+ table.tbl th.pxname { background-color: #8d0033; color: #ffff46; }
+ table.tbl th { border-color: #808080; }
+ table.tbl td { border-color: #808080; }
+ u {text-decoration:none; border-bottom: 1px dotted #e8e6e3;}
+ div.tips {
+  background:#8e8e0d;
+  color:#e8e6e3;
+  border-color: #4e2c86;
+  -moz-box-shadow: #60686c 2px 2px 3px;
+  -webkit-box-shadow: #60686c 2px 2px 3px;
+  box-shadow: #60686c 2px 2px 3px;
+ }
+}
+-->
+</style></head>
+<body><h1><a href="http://www.haproxy.org/" style="text-decoration: none;">HAProxy version 3.0.27-a2b09cd, released 2026/08/27</a></h1>
+<h2>Statistics Report for pid 8</h2>
+<hr width="100%" class="hr">
+<h3>&gt; General process information</h3>
+<table border=0><tr><td align="left" nowrap width="1%">
+<p><b>pid = </b> 8 (process #1, nbproc = 1, nbthread = 20)<br>
+<b>uptime = </b> 0d 0h00m08s; warnings = 0<br>
+<b>system limits:</b> memmax = unlimited; ulimit-n = 524288<br>
+<b>maxsock = </b> 524288; <b>maxconn = </b> 262103; <b>reached = </b> 0; <b>maxpipes = </b> 0<br>
+current conns = 1; current pipes = 0/0; conn rate = 1/sec; bit rate = 0.000 kbps<br>
+Running tasks: 0/51 (0 niced); idle = 99 %<br>
+</td><td align="center" nowrap>
+<table class="lgd"><tr>
+<td class="active_up">&nbsp;</td><td class="noborder">active UP </td><td class="backup_up">&nbsp;</td><td class="noborder">backup UP </td></tr><tr>
+<td class="active_going_down"></td><td class="noborder">active UP, going down </td><td class="backup_going_down"></td><td class="noborder">backup UP, going down </td></tr><tr>
+<td class="active_going_up"></td><td class="noborder">active DOWN, going up </td><td class="backup_going_up"></td><td class="noborder">backup DOWN, going up </td></tr><tr>
+<td class="active_down"></td><td class="noborder">active or backup DOWN &nbsp;</td><td class="active_no_check"></td><td class="noborder">not checked </td></tr><tr>
+<td class="maintain"></td><td class="noborder" colspan="3">active or backup DOWN for maintenance (MAINT) &nbsp;</td></tr><tr>
+<td class="active_draining"></td><td class="noborder" colspan="3">active or backup SOFT STOPPED for maintenance &nbsp;</td></tr></table>
+Note: "NOLB"/"DRAIN" = UP with load-balancing disabled.</td><td align="left" valign="top" nowrap width="1%"><b>Display option:</b><ul style="margin-top: 0.25em;"><li><form method="GET">Scope : <input value="" name="scope" size="8" maxlength="20" tabindex="1"/></form>
+<li><a href="/stats;up">Hide 'DOWN' servers</a><br>
+<li><a href="/stats;norefresh">Disable refresh</a><br>
+<li><a href="/stats">Refresh now</a><br>
+<li><a href="/stats;csv;norefresh">CSV export</a><br>
+<li><a href="/stats;json;norefresh">JSON export</a> (<a href="/stats;json-schema">schema</a>)<br>
+</ul></td><td align="left" valign="top" nowrap width="1%"><b>External resources:</b><ul style="margin-top: 0.25em;">
+<li><a href="http://www.haproxy.org/">Primary site</a><br>
+<li><a href="http://www.haproxy.org/#down">Updates (v3.0)</a><br>
+<li><a href="http://www.haproxy.org/#docs">Online manual</a><br>
+</ul></td></tr></table>
+<table class="tbl" width="100%">
+<tr class="titre"><th class="pxname" width="10%"><a name="stats"></a><a class=px href="#stats">stats</a></th><th class="empty" width="90%"></th></tr>
+</table>
+<table class="tbl" width="100%">
+<tr class="titre"><th rowspan=2></th><th colspan=3>Queue</th><th colspan=3>Session rate</th><th colspan=6>Sessions</th><th colspan=2>Bytes</th><th colspan=2>Denied</th><th colspan=3>Errors</th><th colspan=2>Warnings</th><th colspan=9>Server</th></tr>
+<tr class="titre"><th>Cur</th><th>Max</th><th>Limit</th><th>Cur</th><th>Max</th><th>Limit</th><th>Cur</th><th>Max</th><th>Limit</th><th>Total</th><th>LbTot</th><th>Last</th><th>In</th><th>Out</th><th>Req</th><th>Resp</th><th>Req</th><th>Conn</th><th>Resp</th><th>Retr</th><th>Redis</th><th>Status</th><th>LastChk</th><th>Wght</th><th>Act</th><th>Bck</th><th>Chk</th><th>Dwn</th><th>Dwntme</th><th>Thrtle</th>
+</tr><tr class="frontend"><td class=ac><a name="stats/Frontend"></a><a class=lfsb href="#stats/Frontend">Frontend</a></td><td colspan=3></td><td><u>1<div class=tips><table class=det><tr><th>Current connection rate:</th><td>1/s</td></tr><tr><th>Current session rate:</th><td>1/s</td></tr><tr><th>Current request rate:</th><td>1/s</td></tr></table></div></u></td><td><u>1<div class=tips><table class=det><tr><th>Max connection rate:</th><td>1/s</td></tr><tr><th>Max session rate:</th><td>1/s</td></tr><tr><th>Max request rate:</th><td>1/s</td></tr></table></div></u></td><td>-</td><td>1</td><td>2</td><td>26<span class="rls">2</span>103</td><td><u>1<div class=tips><table class=det><tr><th>Cum. connections:</th><td>1</td></tr><tr><th>Cum. sessions:</th><td>1</td></tr><tr><th>- HTTP/1 sessions:</th><td>1</td></tr><tr><th>- HTTP/2 sessions:</th><td>0</td></tr><tr><th>- HTTP/3 sessions:</th><td>0</td></tr><tr><th>- other sessions:</th><td>0</td></tr><tr><th>Cum. HTTP requests:</th><td>1</td></tr><tr><th>- HTTP/1 requests:</th><td>1</td></tr><tr><th>- HTTP/2 requests:</th><td>0</td></tr><tr><th>- HTTP/3 requests:</th><td>0</td></tr><tr><th>- other requests:</th><td>0</td></tr><tr><th>- HTTP 1xx responses:</th><td>0</td></tr><tr><th>- HTTP 2xx responses:</th><td>0</td></tr><tr><th>&nbsp;&nbsp;Compressed 2xx:</th><td>0</td><td>(0%)</td></tr><tr><th>- HTTP 3xx responses:</th><td>0</td></tr><tr><th>- HTTP 4xx responses:</th><td>0</td></tr><tr><th>- HTTP 5xx responses:</th><td>0</td></tr><tr><th>- other responses:</th><td>0</td></tr><tr><th>Intercepted requests:</th><td>1</td></tr><tr><th>Cache lookups:</th><td>0</td></tr><tr><th>Cache hits:</th><td>0</td><td>(0%)</td></tr><tr><th>Failed hdr rewrites:</th><td>0</td></tr><tr><th>Internal errors:</th><td>0</td></tr></table></div></u></td><td></td><td></td><td>0</td><td>0<div class=tips><table class=det><tr><th>Response bytes in:</th><td>0</td></tr><tr><th>Compression in:</th><td>0</td></tr><tr><th>Compression out:</th><td>0</td><td>(0%)</td></tr><tr><th>Compression bypass:</th><td>0</td></tr><tr><th>Total bytes saved:</th><td>0</td><td>(0%)</td></tr></table></div></td><td>0</td><td>0</td><td>0</td><td></td><td></td><td></td><td></td><td class=ac>OPEN</td><td class=ac colspan=8></td></tr></table><p>
+</body></html>

@@ -1,0 +1,31 @@
+{
+  "systemInfo": {
+    "version": "26.7.3",
+    "serverTime": "Thu Jan 01 00:00:00 GMT 2026",
+    "uptime": "0 days, 0 hours, 0 minutes, 0 seconds",
+    "uptimeMillis": 0,
+    "javaVersion": "21.0.12.1",
+    "javaVendor": "Red Hat, Inc.",
+    "javaVm": "OpenJDK 64-Bit Server VM",
+    "javaVmVersion": "21.0.12.1+1-LTS",
+    "javaRuntime": "OpenJDK Runtime Environment",
+    "osName": "Linux",
+    "osArchitecture": "amd64",
+    "osVersion": "0.0.0-generic",
+    "fileEncoding": "UTF-8",
+    "userName": "keycloak",
+    "userTimezone": "GMT",
+    "userLocale": "en_US"
+  },
+  "cpuInfo": { "processorCount": 4 },
+  "memoryInfo": {
+    "total": 0,
+    "totalFormated": "0 MB",
+    "used": 0,
+    "usedFormated": "0 MB",
+    "free": 0,
+    "freePercentage": 0,
+    "freeFormated": "0 MB"
+  },
+  "profileInfo": { "name": "default", "disabledFeatures": [], "previewFeatures": [], "experimentalFeatures": [] }
+}

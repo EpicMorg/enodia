@@ -1,0 +1,15 @@
+{
+  "version": "7.161.20",
+  "revision": "86120900",
+  "servicesVersions": {
+    "package_handler_version": "5.675.40"
+  },
+  "addons": [],
+  "license": "Artifactory OSS",
+  "entitlements": {
+    "EVENT_BASED_PULL_REPLICATION": false,
+    "SMART_REMOTE_TARGET_FOR_EDGE": false,
+    "REPO_REPLICATION": false,
+    "MULTIPUSH_REPLICATION": false
+  }
+}

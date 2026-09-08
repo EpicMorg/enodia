@@ -1,0 +1,14 @@
+{
+  "initialized": true,
+  "sealed": true,
+  "standby": true,
+  "performance_standby": false,
+  "replication_performance_mode": "unknown",
+  "replication_dr_mode": "unknown",
+  "server_time_utc": 1700000000,
+  "version": "2.1.0",
+  "enterprise": false,
+  "echo_duration_ms": 0,
+  "clock_skew_ms": 0,
+  "replication_primary_canary_age_ms": 0
+}

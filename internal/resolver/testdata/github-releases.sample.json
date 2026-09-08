@@ -1,0 +1,30 @@
+[
+  {
+    "tag_name": "v2.9.0",
+    "name": "2.9.0",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-06-01T10:00:00Z"
+  },
+  {
+    "tag_name": "v2.9.0-rc1",
+    "name": "2.9.0-rc1",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-05-20T10:00:00Z"
+  },
+  {
+    "tag_name": "v2.8.5",
+    "name": "2.8.5",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-03-01T10:00:00Z"
+  },
+  {
+    "tag_name": "v2.10.0-draft",
+    "name": "unreleased",
+    "draft": true,
+    "prerelease": false,
+    "published_at": null
+  }
+]
