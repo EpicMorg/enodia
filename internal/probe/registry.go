@@ -13,6 +13,7 @@ import (
 // as a table of contents, and a pull request adding a product should be
 // visible here. Ordering is alphabetical by product.
 var builtin = []Probe{
+	apacheProbe{},
 	artifactoryProbe{},
 	&atlassianProbe{product: "bamboo", typeID: "bamboo", resolver: "bamboo", summary: "Atlassian Bamboo (Data Center)"},
 	&atlassianProbe{product: "bitbucket", typeID: "stash", resolver: "bitbucket", summary: "Atlassian Bitbucket (Data Center)"},
