@@ -1008,15 +1008,21 @@ alternative auth shape, a username/password ticket flow (`POST
 /access/ticket` for a session cookie plus a CSRF token), is deliberately
 not supported: the same heavier session-login shape D22 already rejected
 for Redmine, and Proxmox's own documentation recommends the token for
-unattended automation anyway. `truenas` (`internal/probe/truenas.go`) —
-the user then repurposed the same box for TrueNAS and read
-`/etc/version` off it directly: a plain `"25.10.7"`, confirmed live,
-with no os-release involved (TrueNAS's own `/etc/os-release` reports the
-Debian 12 base underneath it, not TrueNAS itself — the same D9 gap
-`astra-linux`'s messy `VERSION_ID` had, solved the same way: a
-dedicated file, not the family probe). This is deliberately an interim
-probe: TrueNAS has its own documented HTTP API, a better long-term fit
-for this project's usual shape, intended to eventually take over with
-this SSH-based one staying as a fallback — not a redesign forced by
-new information, just the natural order things arrived in (a live SSH
-target first, API verification later).
+unattended automation anyway.
+
+`truenas` (`internal/probe/truenas.go`) went through two versions the
+same day. First an SSH-based one reading `/etc/version` directly (a
+plain `"25.10.7"`, confirmed live, with no os-release involved —
+TrueNAS's own `/etc/os-release` reports the Debian 12 base underneath
+it, not TrueNAS itself, the same D9 gap `astra-linux`'s messy
+`VERSION_ID` had). Then, once the user repurposed the same test box for
+a live TrueNAS install with a real API key, `GET /api/v2.0/system/info`
+was confirmed live too: 401 without auth, 200 with `Authorization:
+Bearer <api-key>` — TrueNAS's API key needs no new `AuthKind` either,
+since `AuthBearer` already does exactly that. The HTTP version replaced
+the SSH one outright rather than the two coexisting: this project has no
+per-product dual-transport fallback mechanism (D2 — one product, one
+probe, one file), so once the better-fitting shape was verified there
+was no reason to keep maintaining both. Not a redesign forced by new
+information, just the natural order two live targets arrived in on the
+same day.

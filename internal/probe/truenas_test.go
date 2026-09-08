@@ -5,79 +5,89 @@ package probe
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
-// truenas_25.10.7.txt is a real /etc/version capture: "25.10.7", from the
-// user's own TrueNAS install.
-func loadTrueNASFixture(t *testing.T) string {
+// truenas_25.10.7.json is a real /api/v2.0/system/info reply captured from
+// a live TrueNAS 25.10.7 host, authenticated with an API key
+// (system_serial scrubbed; every other field is real).
+func loadTrueNASFixture(t *testing.T) []byte {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("testdata", "truenas_25.10.7.txt"))
+	raw, err := os.ReadFile(filepath.Join("testdata", "truenas_25.10.7.json"))
 	if err != nil {
 		t.Fatalf("fixture: %v", err)
 	}
-	return string(raw)
+	return raw
 }
 
 func TestTrueNASProbeParsesRealFixture(t *testing.T) {
-	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
-		"cat /etc/version": loadTrueNASFixture(t),
-	})
+	fixture := loadTrueNASFixture(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2.0/system/info" {
+			t.Errorf("got path %q, want /api/v2.0/system/info", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer test-api-key" {
+			t.Errorf("got Authorization %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(fixture)
+	}))
+	defer srv.Close()
 
 	p := truenasProbe{}
-	target := Target{
-		ID: "x", Product: "truenas", Address: addr,
-		Creds:   Credentials{Username: "probeuser", Password: "probepass"},
-		TLS:     TLSSettings{PinSHA256: []string{fp}},
-		Timeout: 2 * time.Second,
-	}
+	tgt := target(srv.URL, "truenas")
+	tgt.Creds = Credentials{Kind: AuthBearer, Value: "test-api-key"}
+	tgt.AllowInsecureTransport = true
 
-	obs, err := p.Probe(context.Background(), target)
+	obs, err := p.Probe(context.Background(), tgt)
 	if err != nil {
 		t.Fatalf("Probe: %v", err)
 	}
 	if obs.Version != "25.10.7" {
 		t.Fatalf("got version %q", obs.Version)
 	}
-	if obs.Extra["hostKeyVerified"] != "true" {
-		t.Fatalf("got Extra %+v, want hostKeyVerified=true", obs.Extra)
+}
+
+// A fresh TrueNAS host answers exactly this way: 401 for any request
+// carrying no valid API key — confirmed live against a real 25.10.7 host.
+func TestTrueNASProbeUnauthorizedIsErrAuth(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	p := truenasProbe{}
+	_, err := p.Probe(context.Background(), target(srv.URL, "truenas"))
+	if !errors.Is(err, ErrAuth) {
+		t.Fatalf("got %v, want ErrAuth", err)
 	}
 }
 
-func TestTrueNASProbeMissingFileIsErrNotSupported(t *testing.T) {
-	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, nil) // no "cat /etc/version" entry -> exit 1
+func TestTrueNASProbeMalformedJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("not json"))
+	}))
+	defer srv.Close()
 
 	p := truenasProbe{}
-	target := Target{
-		ID: "x", Product: "truenas", Address: addr,
-		Creds:   Credentials{Username: "probeuser", Password: "probepass"},
-		TLS:     TLSSettings{PinSHA256: []string{fp}},
-		Timeout: 2 * time.Second,
-	}
-
-	_, err := p.Probe(context.Background(), target)
-	if !errors.Is(err, ErrNotSupported) {
-		t.Fatalf("got %v, want ErrNotSupported", err)
+	_, err := p.Probe(context.Background(), target(srv.URL, "truenas"))
+	if !errors.Is(err, ErrUnparseable) {
+		t.Fatalf("got %v, want ErrUnparseable", err)
 	}
 }
 
-func TestTrueNASProbeGarbageContentIsErrUnparseable(t *testing.T) {
-	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
-		"cat /etc/version": "not-a-version\n",
-	})
+func TestTrueNASProbeMissingVersionField(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"hostname":"truenas"}`))
+	}))
+	defer srv.Close()
 
 	p := truenasProbe{}
-	target := Target{
-		ID: "x", Product: "truenas", Address: addr,
-		Creds:   Credentials{Username: "probeuser", Password: "probepass"},
-		TLS:     TLSSettings{PinSHA256: []string{fp}},
-		Timeout: 2 * time.Second,
-	}
-
-	_, err := p.Probe(context.Background(), target)
+	_, err := p.Probe(context.Background(), target(srv.URL, "truenas"))
 	if !errors.Is(err, ErrUnparseable) {
 		t.Fatalf("got %v, want ErrUnparseable", err)
 	}
@@ -89,7 +99,10 @@ func TestTrueNASProbeMeta(t *testing.T) {
 		t.Fatalf("got product %q", m.Product)
 	}
 	if !m.Auth.Required {
-		t.Fatal("ssh-based probes cannot work without credentials")
+		t.Fatal("truenas requires authentication")
+	}
+	if !m.Auth.Accepts(AuthBearer) {
+		t.Fatal("expected bearer to be accepted")
 	}
 	if m.DefaultResolver.Type != "endoflife" || m.DefaultResolver.ID != "truenas" {
 		t.Fatalf("got resolver %+v", m.DefaultResolver)

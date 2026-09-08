@@ -164,9 +164,10 @@ var builtin = []Probe{
 	teamcityProbe{},
 	testrailProbe{},
 	traefikProbe{},
-	// Interim SSH-based probe (real API planned later): /etc/version ->
-	// "25.10.7", confirmed live — TrueNAS's own /etc/os-release just says
-	// Debian (the base layer), so this isn't part of osReleaseFamilyProbe.
+	// GET /api/v2.0/system/info, authenticated with an API key as a plain
+	// bearer token. Verified live against a real TrueNAS 25.10.7 host —
+	// superseded an earlier SSH-based (/etc/version) version once this
+	// became available (D2: one product, one probe, not both at once).
 	truenasProbe{},
 	// ubuntu:24.04: ID=ubuntu, VERSION_ID="24.04".
 	osReleaseFamilyProbe{product: "ubuntu", summary: "Ubuntu", resolver: ResolverRef{Type: "endoflife", ID: "ubuntu"}, match: osReleaseIDEquals("ubuntu")},

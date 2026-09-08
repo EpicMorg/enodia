@@ -892,17 +892,18 @@ Not dates. Order of work, and what each step unblocks.
   ticket flow (session cookie + CSRF token) is not supported — same
   heavier shape D22 already rejected for Redmine, and Proxmox's own docs
   recommend the token for unattended automation anyway.
-- `truenas` probe (`internal/probe/truenas.go`) unblocked once the user
-  put TrueNAS on the same test box Proxmox had used: reads
-  `/etc/version` ("25.10.7"), not part of `osReleaseFamilyProbe` since
-  TrueNAS's own `/etc/os-release` reports the underlying Debian 12 base
-  instead (TrueNAS is a web appliance layered on top of it — the same
-  D9 gap `astra-linux`'s messy `VERSION_ID` had, solved the same way).
-  This is explicitly an interim probe: TrueNAS has its own documented
-  HTTP API, a better long-term fit for this project's usual probe shape,
-  planned to take over later with this staying as a fallback — the same
-  relationship `opnsense`'s SSH wrapper has with FortiGate/IOS-XE's own
-  unimplemented HTTP APIs above.
+- `truenas` probe (`internal/probe/truenas.go`) went through two versions
+  the same day. First SSH-based (`/etc/version` → `"25.10.7"`, not part
+  of `osReleaseFamilyProbe` since TrueNAS's own `/etc/os-release` reports
+  the underlying Debian 12 base instead — the same D9 gap `astra-linux`'s
+  messy `VERSION_ID` had). Then the user put a real API key on the same
+  test box, and `GET /api/v2.0/system/info` was confirmed live: 401
+  without auth, 200 with `Authorization: Bearer <api-key>` — no new
+  `AuthKind` needed, `AuthBearer` already does exactly that. The HTTP
+  version replaced the SSH one outright: this project has no
+  per-product dual-transport fallback (D2 — one product, one probe), so
+  once the better-fitting shape was verified there was no reason to keep
+  both.
 
 ## Next
 
