@@ -99,17 +99,19 @@ func resolveCredential(name string, store map[string]CredentialSpec) (probe.Cred
 		return probe.Credentials{}, fmt.Errorf("credential %q: %w", name, err)
 	}
 	return probe.Credentials{
-		Kind:     kind,
-		Value:    spec.Value,
-		Header:   spec.Header,
-		Username: spec.Username,
-		Password: spec.Password,
+		Kind:           kind,
+		Value:          spec.Value,
+		Header:         spec.Header,
+		Username:       spec.Username,
+		Password:       spec.Password,
+		PrivateKeyFile: spec.PrivateKeyFile,
+		Passphrase:     spec.Passphrase,
 	}, nil
 }
 
 func parseAuthKind(s string) (probe.AuthKind, error) {
 	switch probe.AuthKind(s) {
-	case probe.AuthNone, probe.AuthBearer, probe.AuthTokenHeader, probe.AuthBasic, probe.AuthPassword:
+	case probe.AuthNone, probe.AuthBearer, probe.AuthTokenHeader, probe.AuthBasic, probe.AuthPassword, probe.AuthSSHKey:
 		return probe.AuthKind(s), nil
 	case "":
 		return probe.AuthNone, nil
