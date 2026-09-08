@@ -39,6 +39,7 @@ var builtin = []Probe{
 	oauth2ProxyProbe{},
 	owncastProbe{},
 	perforceSwarmProbe{},
+	phpmyadminProbe{},
 	portainerProbe{},
 	postgresExporterProbe{},
 	postgresProbe{},
