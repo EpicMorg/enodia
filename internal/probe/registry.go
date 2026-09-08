@@ -79,6 +79,9 @@ var builtin = []Probe{
 	osReleaseFamilyProbe{product: "opensuse", summary: "openSUSE", resolver: ResolverRef{Type: "endoflife", ID: "opensuse"}, match: func(f map[string]string) bool {
 		return strings.HasPrefix(f["ID"], "opensuse")
 	}},
+	// Captured via vmactions/opnsense-vm (see opnsense.go): `opnsense-version`
+	// -> "OPNsense 26.7 (amd64)".
+	opnsenseProbe{},
 	// oraclelinux:9: ID="ol", VERSION_ID="9.8".
 	osReleaseFamilyProbe{product: "oracle-linux", summary: "Oracle Linux", resolver: ResolverRef{Type: "endoflife", ID: "oracle-linux"}, match: osReleaseIDEquals("ol")},
 	// Captured via vmactions/solaris-vm (see solaris.go): /etc/release's

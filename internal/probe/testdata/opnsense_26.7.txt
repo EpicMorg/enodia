@@ -1,0 +1,1 @@
+OPNsense 26.7 (amd64)
