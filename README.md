@@ -56,11 +56,21 @@ targets:
     address: https://gitlab.example.com
     credentials: gitlab-token
 
+  - id: web01
+    product: debian
+    address: web01.example.com
+    credentials: web01-ssh
+
 credentials:
   gitlab-token:
     kind: token-header
     header: PRIVATE-TOKEN
     value: "${GITLAB_TOKEN}"
+
+  web01-ssh:
+    kind: ssh-key
+    username: enodia
+    private_key_file: /etc/enodia/keys/web01
 ```
 
 ```console
@@ -68,6 +78,7 @@ $ enodia check
 ID           PRODUCT  PATCH   LIFECYCLE  BRANCH     SEVERITY  REASON
 jira-main    jira     behind  active     newer_lts  warn      -
 gitlab-main  gitlab   behind  eol        newer      fail      -
+web01        debian   current active     latest     ok        -
 ```
 
 Save this as `enodia.yaml` next to the binary — see "File locations" below
@@ -132,6 +143,15 @@ the calendar.
 **Probes are compiled in.** One product, one file, one entry in an explicit
 registry. Adding support means a new release, not a plugin ABI. For anything
 in-house, `product: generic` takes a parser spec straight from your config.
+
+**Transport isn't assumed to be HTTP.** Most probes speak HTTP, but Redis,
+PostgreSQL, MySQL and MongoDB speak their own wire protocols directly, and a
+growing set — every Linux distro, the BSDs, macOS, OPNsense — is reached over
+SSH instead: enodia runs one identifying command (`cat /etc/os-release`,
+`sw_vers`, ...) and reads the answer, the same way an HTTP probe reads a JSON
+body. `kind: ssh-key` and `kind: password` credentials cover both auth shapes;
+host key verification reuses the same `pin_sha256`/`insecure` fields TLS
+targets already have.
 
 ## Views
 
