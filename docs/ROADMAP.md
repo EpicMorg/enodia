@@ -5,11 +5,11 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 40 products: apache (httpd alias), the atlassian
+- `internal/probe` — 41 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, generic, gitlab,
   grafana, haproxy, harbor, jellyfin, jenkins, keycloak, mattermost,
-  mongodb, mysql, nextcloud, nginx, oauth2-proxy, owncast,
+  mongodb, mysql, nextcloud, nexus, nginx, oauth2-proxy, owncast,
   perforce-swarm, portainer, postgres_exporter, postgresql, redis,
   sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter, youtrack,
   zabbix, zou (kitsu alias)
@@ -540,6 +540,16 @@ Not dates. Order of work, and what each step unblocks.
   and a root user configured: both returned the exact same full
   buildInfo document with zero credentials sent — `buildInfo` is one of
   the small set of commands MongoDB always answers before authentication
+- `nexus` (Sonatype Nexus Repository) probe — the `Server` response
+  header, same shape as `nginx`/`apache` above, but read off the
+  purpose-built anonymous status endpoint (`/service/rest/v1/status`, a
+  fast empty-bodied health check) rather than `/`. Confirmed live
+  against a real sonatype/nexus3 container: `Nexus/3.96.0-09
+  (COMMUNITY)` on that endpoint, the portal page, and a 401 challenge
+  from a different, actually-protected endpoint alike. Unlike nginx/
+  Apache, no config toggle to strip this to a bare `Nexus` is documented
+  or was found, but the parser degrades to `ErrNotSupported` rather than
+  assuming it can never happen
 
 ## Next
 
@@ -547,9 +557,8 @@ Not dates. Order of work, and what each step unblocks.
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `esxi` (VMware
   ESXi), `forgejo`, `graylog`, `jaeger`, `kafka`, `kibana`, `logstash`,
-  `nexus` (Sonatype Nexus Repository), `opensearch`, `phpmyadmin`,
-  `proftpd`, `redmine`, `routeros` (MikroTik RouterOS — matches
-  endoflife.date's own product slug), `wordpress`
+  `opensearch`, `phpmyadmin`, `proftpd`, `redmine`, `routeros` (MikroTik
+  RouterOS — matches endoflife.date's own product slug), `wordpress`
 
 ## Later
 

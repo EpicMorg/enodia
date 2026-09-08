@@ -34,6 +34,7 @@ var builtin = []Probe{
 	mongodbProbe{},
 	mysqlProbe{},
 	nextcloudProbe{},
+	nexusProbe{},
 	nginxProbe{},
 	oauth2ProxyProbe{},
 	owncastProbe{},
