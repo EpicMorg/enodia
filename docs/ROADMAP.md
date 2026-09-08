@@ -5,12 +5,12 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 34 products: the atlassian family (jira/confluence/
+- `internal/probe` — 35 products: the atlassian family (jira/confluence/
   bitbucket/bamboo), artifactory, bitwarden/vaultwarden, elasticsearch,
-  generic, gitlab, grafana, jellyfin, jenkins, keycloak, mattermost, mysql,
-  nextcloud, nginx, oauth2-proxy, owncast, perforce-swarm, portainer,
-  postgresql, redis, sonarqube, ssh, teamcity, testrail, traefik, vault,
-  vcenter, youtrack, zabbix, zou (kitsu alias)
+  generic, gitlab, grafana, harbor, jellyfin, jenkins, keycloak,
+  mattermost, mysql, nextcloud, nginx, oauth2-proxy, owncast,
+  perforce-swarm, portainer, postgresql, redis, sonarqube, ssh, teamcity,
+  testrail, traefik, vault, vcenter, youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -474,6 +474,19 @@ Not dates. Order of work, and what each step unblocks.
   special-casing needed. `AuthBasic` accepted for the documented "secure"
   deployment shape (API router wired behind Traefik's own
   BasicAuth/DigestAuth middleware)
+- `harbor` probe — `GET /api/v2.0/systeminfo`. Confirmed live against a
+  real goharbor/harbor v2.12.2 stack (installed via the official
+  docker-compose installer, not a single container): `harbor_version`
+  comes back with no credentials, and bad/fabricated Basic credentials
+  are silently treated as anonymous rather than 401. Worth a specific
+  callout: reading Harbor's own source turned up a same-day upstream
+  commit on `main` (unreleased at the time of writing) that gates
+  `harbor_version` behind `sc.IsAuthenticated()` — every currently
+  released version still returns it anonymously, but this will stop
+  working once that change ships in a release. `AuthBasic` is already
+  offered so a configured credential keeps working either way; the
+  missing-field case is `ErrNotSupported`, same family as nginx/
+  oauth2-proxy/traefik above
 
 ## Next
 
@@ -481,10 +494,10 @@ Not dates. Order of work, and what each step unblocks.
   `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
   fixture, registered in `registry.go`, alphabetical): `apache` (httpd),
   `clickhouse`, `esxi` (VMware ESXi), `forgejo`, `graylog`, `haproxy`,
-  `harbor`, `jaeger`, `kafka`, `kibana`, `logstash`, `mongodb`, `nexus`
-  (Sonatype Nexus Repository), `opensearch`, `phpmyadmin`, `proftpd`,
-  `redmine`, `routeros` (MikroTik RouterOS — matches endoflife.date's own
-  product slug), `wordpress`
+  `jaeger`, `kafka`, `kibana`, `logstash`, `mongodb`, `nexus` (Sonatype
+  Nexus Repository), `opensearch`, `phpmyadmin`, `proftpd`, `redmine`,
+  `routeros` (MikroTik RouterOS — matches endoflife.date's own product
+  slug), `wordpress`
 
 ## Later
 
