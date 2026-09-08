@@ -29,6 +29,7 @@ var builtin = []Probe{
 	graylogProbe{},
 	haproxyProbe{},
 	harborProbe{},
+	jaegerProbe{},
 	jellyfinProbe{},
 	jenkinsProbe{},
 	&atlassianProbe{product: "jira", typeID: "jira", resolver: "jira-software", summary: "Atlassian Jira (Data Center)"},

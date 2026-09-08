@@ -5,15 +5,15 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 51 products: apache (httpd alias), the atlassian
+- `internal/probe` — 52 products: apache (httpd alias), the atlassian
   family (jira/confluence/bitbucket/bamboo), artifactory,
   bitwarden/vaultwarden, clickhouse, elasticsearch, esxi, forgejo,
-  generic, gitlab, grafana, graylog, haproxy, harbor, jellyfin, jenkins,
-  keycloak, kibana, logstash, mattermost, mongodb, mysql, nextcloud,
-  nexus, nginx, oauth2-proxy, opensearch, owncast, perforce-swarm,
-  phpmyadmin, portainer, postgres_exporter, postgresql, proftpd, redis,
-  routeros, sonarqube, ssh, teamcity, testrail, traefik, vault, vcenter,
-  wordpress, youtrack, zabbix, zou (kitsu alias)
+  generic, gitlab, grafana, graylog, haproxy, harbor, jaeger, jellyfin,
+  jenkins, keycloak, kibana, logstash, mattermost, mongodb, mysql,
+  nextcloud, nexus, nginx, oauth2-proxy, opensearch, owncast,
+  perforce-swarm, phpmyadmin, portainer, postgres_exporter, postgresql,
+  proftpd, redis, routeros, sonarqube, ssh, teamcity, testrail, traefik,
+  vault, vcenter, wordpress, youtrack, zabbix, zou (kitsu alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -645,12 +645,28 @@ Not dates. Order of work, and what each step unblocks.
   "no version" case is the common one here, not the exception —
   `ErrNotSupported`, same family as `nginx`'s `server_tokens off`, just
   opt-in exposure instead of opt-out hiding
+- `jaeger` probe — the query-service (the UI, port 16686) embeds its
+  version into `index.html` at build time via search/replace:
+  `const JAEGER_VERSION = {"gitCommit":...,"gitVersion":"v1.76.0",...}`,
+  a real JSON object literal so it's `json.Unmarshal`ed rather than
+  field-by-field regexed. Confirmed live against a real
+  jaegertracing/all-in-one container, including that it's a single-page
+  app — every path, even a nonexistent one, serves the identical
+  `index.html`. Jaeger has no authentication of its own at all;
+  deployments needing access control put something in front of it —
+  the user's own instance sits behind oauth2-proxy for exactly this
+  reason. A target behind such a gateway answers with the gateway's own
+  login page instead of Jaeger's HTML, which this probe (like every
+  probe in this tree) cannot complete — the same shape of gap D22 found
+  for Redmine's form login, just imposed by the deployment rather than
+  the product; it surfaces as this probe's ordinary "no JAEGER_VERSION
+  found" `ErrNotSupported`, nothing gateway-specific needed
 
 ## Next
 
-- New probes planned for the next release, one file each in
-  `internal/probe/` per `docs/CLAUDE.md`'s "Adding a probe" (own testdata
-  fixture, registered in `registry.go`, alphabetical): `jaeger`
+Empty: every product that was tracked here across this project's probe
+build-out has landed in Done above. Add new entries as new probes get
+requested.
 
 ## Later
 
