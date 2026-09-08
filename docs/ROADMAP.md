@@ -768,13 +768,22 @@ Not dates. Order of work, and what each step unblocks.
   confirmed `ID=freebsd`, `VERSION_ID="15.1"` really is what a live
   instance reports, not documentation. `osReleaseFamilyProbe` gained a
   `path` field for exactly this case.
-- Thirteen distros made it into this family; twelve more names from the
-  same request did not, each for a specific, confirmed-live reason
-  (licensing, no obtainable image, or the target genuinely not fitting the
-  use case) rather than a blanket "too hard" — see DECISIONS.md **D23**
-  for the full accounting: `openbsd`, `netbsd`, `nixos`, `oracle-solaris`,
-  `fortios`, `cisco-ios-xe`, `macos`, `steamos`, `tails`, `linuxmint`,
-  `eurolinux`, `postmarketos`.
+- `macos` probe — its own file (`internal/probe/macos.go`), not part of
+  `osReleaseFamilyProbe`: identifies macOS via `sw_vers` over SSH rather
+  than an os-release file, deliberately not `uname -a`, which folds the
+  machine's own hostname into its output for no reason this probe needs.
+  Verified live against a real Mac (macOS 15.4, BuildVersion 24E248) —
+  this one was blocked in the same DECISIONS.md D23 write-up below on
+  needing a real Apple device (Apple's EULA rules out virtualizing macOS
+  on anything else), and unblocked the same day once one was reachable
+  over SSH.
+- Thirteen distros made it into the os-release family; eleven more names
+  from the same request did not, each for a specific, confirmed-live
+  reason (licensing, no obtainable image, or the target genuinely not
+  fitting the use case) rather than a blanket "too hard" — see
+  DECISIONS.md **D23** for the full accounting: `openbsd`, `netbsd`,
+  `nixos`, `oracle-solaris`, `fortios`, `cisco-ios-xe`, `steamos`, `tails`,
+  `linuxmint`, `eurolinux`, `postmarketos`.
 
 ## Next
 
@@ -822,9 +831,6 @@ requested.
   probe shape better than SSH CLI-scraping, but both are licensed
   commercial appliances with no freely obtainable test image, so neither
   the CLI nor the API shape has been confirmed live — see DECISIONS.md D23
-- `macos` — the real mechanism (`sw_vers` over SSH) isn't in question, but
-  Apple's EULA restricts macOS virtualization to genuine Apple hardware,
-  which this project's environment doesn't have — see DECISIONS.md D23
 - `steamos`, `tails` — neither fits this probe family's use case:
   `steamos` ships no server-shaped install medium and isn't meant to run
   persistent `sshd`; `tails` is a live, amnesic OS deliberately designed

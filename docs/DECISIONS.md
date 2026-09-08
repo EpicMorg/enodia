@@ -833,17 +833,19 @@ first — not one added solely to unblock this single product.
 
 ---
 
-## D23 — SSH/OS-identification probes: thirteen distros made it in, twelve did not, for concrete reasons
+## D23 — SSH/OS-identification probes: fourteen made it in, eleven did not, for concrete reasons
 
 **Decided.** `internal/probe/osrelease.go`'s family probe (D9: checks an
 identity field, here `/etc/os-release`'s `ID`) covers debian, ubuntu,
 fedora, rhel, rocky-linux, almalinux, oracle-linux, amazon-linux,
 opensuse, alpine-linux, centos-stream, slackware, and freebsd (at
-`/var/run/os-release` — see osrelease.go's doc comment). Every one of
-these was checked against a real, live system, not assumed from
-documentation. This entry records exactly why the other twelve names on
-the original request list are not implemented — each for a different,
-confirmed-live reason, not a blanket "too hard":
+`/var/run/os-release` — see osrelease.go's doc comment). `macosProbe`
+(`internal/probe/macos.go`, `sw_vers` instead of an os-release file) is
+its own file, not part of that family, since sw_vers's output shape is
+different. Every one of these was checked against a real, live system,
+not assumed from documentation. This entry records exactly why the other
+eleven names on the original request list are not implemented — each for
+a different, confirmed-live reason, not a blanket "too hard":
 
 - **`openbsd`, `netbsd`, `nixos`** — none of these publish a ready-to-boot,
   pre-installed VM/cloud image the way FreeBSD's own VM-IMAGES program
@@ -888,15 +890,6 @@ confirmed-live reason, not a blanket "too hard":
   the "confident-looking guess about vendor API shapes" docs/CLAUDE.md's
   "Working style" section warns against, so both stay unimplemented
   rather than written blind.
-- **`macos`** — no live check performed; not a vendor-API-shape question
-  but a licensing/legal one. Apple's macOS Software License Agreement
-  restricts running macOS in a virtual machine to genuine Apple hardware,
-  and no such hardware exists in this project's build/test environment.
-  `sw_vers -productVersion`/`-productName` over SSH is the well-documented
-  real mechanism (not in question), but this project's own rule of
-  verifying against a real system before shipping a probe cannot be
-  satisfied here without a real Mac, which would need to come from the
-  user.
 - **`steamos`** — Arch-based and does carry `/etc/os-release` with
   `ID=steamos`, but it is built for one specific console/handheld
   appliance (the Steam Deck), ships no server-shaped install medium at
@@ -927,10 +920,22 @@ confirmed-live reason, not a blanket "too hard":
   x86 server fleets this project's probes otherwise target — a real
   mismatch with the use case, on top of the missing image.
 
-**Rules out:** shipping any of the twelve above today. **Does not rule
+**Rules out:** shipping any of the eleven above today. **Does not rule
 out** revisiting any single one later — each bullet names exactly what
 would change the answer (a real device from the user, someone publishing
 a missing image, or a generalizable unattended-install mechanism landing
 in this tree for its own reasons), the same shape of "closed, not merely
 deferred" versus "open, pending one concrete thing" distinction D18/D21/
 D22 already draw.
+
+**Revisited: `macos` unblocked immediately** — this entry originally
+listed it as blocked on exactly one thing, a real Mac to verify against,
+and that arrived within the same day. `macosProbe` is implemented and
+confirmed live against a real machine (macOS 15.4, BuildVersion 24E248,
+reached over SSH). It deliberately runs `sw_vers`, not `uname -a`: Darwin
+folds the machine's own hostname into `uname -a`'s output, which this
+probe has no reason to see, let alone store, while `sw_vers`'s three
+`ProductName`/`ProductVersion`/`BuildVersion` lines carry none of that.
+This is the fastest any item on this list moved from "blocked" to
+"shipped" — the blocker really was just "no target," nothing about the
+mechanism itself was ever in question.
