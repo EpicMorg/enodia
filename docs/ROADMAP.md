@@ -5,11 +5,12 @@ Not dates. Order of work, and what each step unblocks.
 ## Done
 
 - `internal/probe` — interface, HTTP helper, TLS settings, typed errors
-- `internal/probe` — 29 products: the atlassian family (jira/confluence/
+- `internal/probe` — 30 products: the atlassian family (jira/confluence/
   bitbucket/bamboo), artifactory, bitwarden/vaultwarden, elasticsearch,
   generic, gitlab, grafana, jellyfin, jenkins, keycloak, mattermost, mysql,
   nextcloud, owncast, perforce-swarm, portainer, postgresql, redis,
-  sonarqube, ssh, teamcity, testrail, vault, vcenter, zou (kitsu alias)
+  sonarqube, ssh, teamcity, testrail, vault, vcenter, zabbix, zou (kitsu
+  alias)
 - `internal/version` — normalisation, comparison, cycle matching
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
@@ -429,6 +430,19 @@ Not dates. Order of work, and what each step unblocks.
   `quay.io`. Verified live without pushing: a real local multi-arch
   `docker buildx` build (`goreleaser release --snapshot --skip=sign`)
   produced correctly tagged manifests for all three registries
+- Fixed: `bamboo` was registered with `resolver: ""` (no lifecycle data
+  source) in `registry.go`, apparently because it had no endoflife.date
+  entry when that line was written. It does now — confirmed live,
+  `https://endoflife.date/api/bamboo.json` resolves real cycle/eol data —
+  so it now gets the same `DefaultResolver` wiring jira/confluence/
+  bitbucket already have
+- `zabbix` probe — `apiinfo.version`, the one JSON-RPC method Zabbix's API
+  documents as needing no authentication. Confirmed live against a
+  real, internet-facing Zabbix frontend: POST only (a bare GET answers
+  412, not a version), plain `Content-Type: application/json` accepted
+  (not just the API reference's own `application/json-rpc`). `FetchHTTP`
+  gained a `Request.Body []byte` field for this — the first probe needing
+  a request body, everything before it being GET-with-headers
 
 ## Next
 
@@ -439,7 +453,7 @@ Not dates. Order of work, and what each step unblocks.
   `harbor`, `jaeger`, `kafka`, `kibana`, `logstash`, `mongodb`, `nexus`
   (Sonatype Nexus Repository), `nginx`, `opensearch`, `phpmyadmin`,
   `proftpd`, `redmine`, `routeros` (MikroTik RouterOS — matches
-  endoflife.date's own product slug), `wordpress`, `youtrack`, `zabbix`
+  endoflife.date's own product slug), `wordpress`, `youtrack`
 
 ## Later
 
