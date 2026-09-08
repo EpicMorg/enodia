@@ -745,3 +745,44 @@ misidentifying the process context it's running in, not something a
 downstream binary's build or `install.sh` can route around. Expected to
 not reproduce at all on a non-rooted device, which never enters one of
 these alternate contexts in the first place.
+
+---
+
+## D21 — No Kafka probe: the wire protocol has no anonymous version field at all
+
+**Decided (for now).** Not implemented. `kafka` stays off the roadmap's
+"Next" list, blocked pending a workable data source — the same shape of
+decision as D18, not a "get to it eventually."
+
+Confirmed live against a real `apache/kafka:latest` broker (logged version
+4.3.1): `ApiVersionsRequest` (API key 18, the one pre-authentication
+request every Kafka client sends as part of connecting) replies with
+nothing but `error_code` plus an array of `(api_key, min_version,
+max_version)` triples — 91 entries on this broker, none of them a software
+version string. This is the wire protocol's *entire* anonymous surface;
+there is no `hello`/`buildInfo`-equivalent command (contrast D10's mongodb
+probe, which has exactly that). Raw hex of the reply confirmed no ASCII
+version string is hiding anywhere in it either.
+
+**Rules out:** a MongoDB/Zabbix-style "run one command, read one field"
+probe — that field does not exist on the wire at all, so there is nothing
+to hand-decode.
+
+**Also rules out (for now):** inferring the release from the
+`ApiVersionsResponse`'s per-API max-version numbers. Real tools do this,
+but only as a best-effort range ("2.8-3.2ish"), not an exact version: a
+lookup table mapping every combination of max-versions to a specific Kafka
+release would need updating on every Kafka release just to keep working,
+cannot distinguish patch releases at all (a bugfix release typically bumps
+no API's max version), and is exactly the kind of confident-looking,
+silently-stale guess docs/CLAUDE.md's "Working style" section asks not to
+ship. `internal/evaluate`'s patch axis (D6) would have nothing trustworthy
+to compare against.
+
+**What would unblock this:** JMX (`kafka.server:type=app-info` exposes the
+real version string as an MBean attribute) is the standard way tools like
+Kafka Exporter get this — but it is a materially different protocol (RMI,
+not a raw request/reply over the broker's own port), off by default, and
+its own port/auth model. That is a new kind of probe transport, not a
+one-file addition alongside mysql.go/redis.go/mongodb.go — deferred rather
+than folded in as a variant of this decision.
