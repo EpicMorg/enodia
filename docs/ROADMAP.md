@@ -408,6 +408,16 @@ Not dates. Order of work, and what each step unblocks.
   `$TERMUX_VERSION` rather than the `$PREFIX` already used for the
   install-directory fallback. `install.sh` picks the right archive
   automatically; no change needed to how anyone invokes it
+- The container image now also pushes to `docker.io/epicmorg/enodia` and
+  Quay, not GHCR alone — same tags, same multi-arch manifest, three
+  `docker/login-action` steps in `release.yml` ahead of the one
+  `goreleaser-action` run. Unlike GHCR (D17: piggybacks on `GITHUB_TOKEN`,
+  nothing to mint or leak), these use real org-level secrets this repo
+  only consumes. See DECISIONS.md D17's "Revisited" for the credential
+  names and why `QUAY_SERVER_URL` is templated in, not hardcoded as
+  `quay.io`. Verified live without pushing: a real local multi-arch
+  `docker buildx` build (`goreleaser release --snapshot --skip=sign`)
+  produced correctly tagged manifests for all three registries
 
 ## Later
 

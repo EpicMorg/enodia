@@ -403,6 +403,22 @@ creation were not — reproducing those locally needs real credentials
 against the project's live infrastructure, which is not something to fake
 one's way into just to finish testing a workflow file.
 
+**Revisited: the same image also pushes to Docker Hub and Quay,** not
+GHCR alone. Unlike GHCR, neither piggybacks on `GITHUB_TOKEN` — both need
+real, separately-minted credentials, which live as org-level (not
+repo-level) GitHub secrets (`DOCKER_SERVER_LOGIN`/`DOCKER_SERVER_KEY`,
+`QUAY_SERVER_LOGIN`/`QUAY_SERVER_KEY`/`QUAY_SERVER_URL`) this repo
+consumes but doesn't mint or rotate. `QUAY_SERVER_URL` is templated into
+`dockers_v2.images` via `{{ .Env.QUAY_SERVER_URL }}` (passed through from
+the secret in `release.yml`'s `goreleaser-action` step) rather than a
+literal `quay.io`, since that org-level value, not this repo, is the
+source of truth for which Quay host is actually in use. Verified live
+(without pushing): a real local multi-arch `docker buildx` build via
+`goreleaser release --snapshot --skip=sign` (snapshot mode already implies
+`--skip=publish`) produced correctly tagged `amd64`/`arm64` manifests for
+all three registries, confirming the template resolves before ever
+touching real registry credentials.
+
 ---
 
 ## D18 — CVE correlation via OSV.dev is deferred

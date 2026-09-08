@@ -191,6 +191,12 @@ signs:
 dockers_v2:
   - images:
       - ghcr.io/epicmorg/enodia
+      - docker.io/epicmorg/enodia
+      # QUAY_SERVER_URL is an org-level secret (release.yml passes it
+      # through to this process's env), not hardcoded here — this repo
+      # isn't the source of truth for which Quay host that org actually
+      # uses.
+      - "{{ .Env.QUAY_SERVER_URL }}/epicmorg/enodia"
     # .Version is MAJOR.MINOR.PATCH+BUILD (release.yml's tag scheme) — "+"
     # is not a legal character in a Docker/OCI tag at all (confirmed live:
     # `docker tag foo:1.2.3+4` is flatly refused, "invalid reference

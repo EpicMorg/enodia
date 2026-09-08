@@ -106,9 +106,30 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Docker Hub and Quay, alongside GHCR — same image, three registries.
+      # Unlike GHCR (piggybacks on GITHUB_TOKEN, D17: no key to manage or
+      # leak), these are third-party services with their own long-lived
+      # credentials: org-level secrets, not something this repo mints or
+      # rotates itself.
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_SERVER_LOGIN }}
+          password: ${{ secrets.DOCKER_SERVER_KEY }}
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ secrets.QUAY_SERVER_URL }}
+          username: ${{ secrets.QUAY_SERVER_LOGIN }}
+          password: ${{ secrets.QUAY_SERVER_KEY }}
+
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Read by .goreleaser.yaml's dockers_v2.images ({{ .Env.QUAY_SERVER_URL }})
+          # so the quay image name doesn't hardcode a hostname this repo
+          # doesn't own the source of truth for.
+          QUAY_SERVER_URL: ${{ secrets.QUAY_SERVER_URL }}
