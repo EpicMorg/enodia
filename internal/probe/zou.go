@@ -26,8 +26,20 @@ func (zouProbe) Meta() Meta {
 		Aliases:       []string{"kitsu"},
 		DefaultScheme: "https",
 		Auth:          AuthSpec{Required: false},
-		// No DefaultResolver: endoflife.date has no calendar under zou,
-		// kitsu or cg-wire (all confirmed 404).
+		// No endoflife.date calendar under zou, kitsu or cg-wire (all
+		// confirmed 404) — GitHub Releases instead, deliberately pointed
+		// at cgwire/kitsu rather than cgwire/zou: Kitsu (the UI) is what
+		// this deployment strategically tracks — a production Zou without
+		// Kitsu in front of it is not a real deployment shape — and
+		// cgwire/zou publishes bare tags only (confirmed live: its
+		// Releases API returns an empty list), which this resolver
+		// mechanism can't read at all today. The two repos' version
+		// numbers do diverge (Zou's backend releases run ahead of
+		// Kitsu's), so this is "latest known Kitsu release" context, not
+		// a precise match for the backend version /api/status reports —
+		// accepted as good enough for now. A separate zou-tags-based
+		// resolver remains possible later if that gap turns out to matter.
+		DefaultResolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"},
 	}
 }
 

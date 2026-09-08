@@ -99,8 +99,8 @@ func TestZouProbeMeta(t *testing.T) {
 	if m.Auth.Required {
 		t.Fatal("this endpoint is intentionally public, confirmed live")
 	}
-	if m.DefaultResolver.Type != "" {
-		t.Fatalf("got resolver %+v, want none (endoflife.date has no zou/kitsu calendar)", m.DefaultResolver)
+	if m.DefaultResolver.Type != "github" || m.DefaultResolver.ID != "cgwire/kitsu" {
+		t.Fatalf("got resolver %+v, want github/cgwire/kitsu (no endoflife.date calendar; cgwire/zou has no GitHub Releases at all)", m.DefaultResolver)
 	}
 }
 
