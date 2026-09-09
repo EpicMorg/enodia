@@ -34,9 +34,10 @@ You describe your services once. Enodia handles the rest.
 > **[docs.enodia.sh](https://docs.enodia.sh)** · full docs, config reference,
 > and per-product probe notes.
 
-> **Status: 1.0.** The full pipeline (collect → inventory → evaluate →
+> **Status: 1.2.** The full pipeline (collect → inventory → evaluate →
 > render), 89 probes, `settings.yaml`, and the release/packaging pipeline are
-> all implemented and used against real production infrastructure. See the
+> all implemented and used against real production infrastructure. See
+> [`CHANGELOG.md`](CHANGELOG.md) for release history, or the
 > [latest release](https://github.com/EpicMorg/enodia/releases/latest) for
 > downloads.
 
