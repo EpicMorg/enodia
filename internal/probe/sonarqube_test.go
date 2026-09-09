@@ -155,7 +155,7 @@ func TestSonarQubeProbePicksServerResolverForCalendarVersion(t *testing.T) {
 		t.Fatalf("Probe: %v", err)
 	}
 	want := ResolverRef{Type: "endoflife", ID: "sonarqube-server"}
-	if obs.Resolver != want {
+	if obs.Resolver == nil || *obs.Resolver != want {
 		t.Fatalf("got resolver %+v, want %+v", obs.Resolver, want)
 	}
 }
@@ -173,7 +173,7 @@ func TestSonarQubeProbePicksCommunityResolverForRealFixture(t *testing.T) {
 		t.Fatalf("Probe: %v", err)
 	}
 	want := ResolverRef{Type: "endoflife", ID: "sonarqube-community"}
-	if obs.Resolver != want {
+	if obs.Resolver == nil || *obs.Resolver != want {
 		t.Fatalf("got resolver %+v, want %+v (pre-split version, defaults to community lineage)", obs.Resolver, want)
 	}
 }

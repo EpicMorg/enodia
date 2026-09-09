@@ -966,6 +966,20 @@ Not dates. Order of work, and what each step unblocks.
   strictly more precise. Every other `osReleaseFamilyProbe` product was
   audited the same way — none of the rest have this gap. See
   `docs/DECISIONS.md` D27.
+- `p4d` (Perforce Helix Core Server) and `p4p` (Perforce Proxy) —
+  reached over Perforce's own undocumented RPC protocol, fully
+  reverse-engineered live (`tcpdump` plus the real `p4` binary against
+  a real production proxy) and confirmed working end-to-end with a
+  hand-built client... except real direct p4d servers silently drop
+  that exact same, byte-verified-correct handshake, for a reason not
+  visible from the client side (TLS and rate-limiting both ruled out
+  live). Both probes shell out to the operator's own `p4` binary
+  instead (`p4 -Ztag -p <address> info`) — the first probe in this
+  tree to run an external process rather than speak a wire protocol
+  directly, via a new `options.binary` config field (`Target.Options`,
+  previously unused). No `DefaultResolver` for either: Perforce is
+  proprietary, no public lifecycle calendar exists. See
+  `docs/DECISIONS.md` D28.
 
 ## Next
 
