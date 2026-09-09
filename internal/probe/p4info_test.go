@@ -66,6 +66,20 @@ func TestRunP4InfoParsesTaggedOutput(t *testing.T) {
 	}
 }
 
+// A real p4.exe on Windows writes \r\n; splitting on \n alone leaves a
+// trailing \r on every line, which must not end up inside a field's value.
+func TestRunP4InfoStripsWindowsLineEndings(t *testing.T) {
+	bin := fakeP4Binary(t, "printf '... serverVersion P4D/LINUX26X86_64/2024.2/2726408 (2025/02/27)\\r\\n... ServerID p4-example-commit\\r\\n'\n")
+
+	fields, err := runP4Info(context.Background(), p4TestTarget(bin))
+	if err != nil {
+		t.Fatalf("runP4Info: %v", err)
+	}
+	if fields["ServerID"] != "p4-example-commit" {
+		t.Fatalf("got ServerID %q, want no trailing \\r", fields["ServerID"])
+	}
+}
+
 func TestRunP4InfoBinaryNotFound(t *testing.T) {
 	target := p4TestTarget("definitely-not-a-real-p4-binary-xyz")
 	_, err := runP4Info(context.Background(), target)
