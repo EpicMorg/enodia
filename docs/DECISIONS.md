@@ -1314,3 +1314,81 @@ this project's own already-committed real fixtures for the rest
 at full precision, matching or exceeding `VERSION`/`PRETTY_NAME` — this
 gap is specific to Debian and Ubuntu's own conventions, not a pattern
 across the whole family.
+
+---
+
+## D28 — p4d/p4p shell out to the operator's own `p4` CLI, breaking D10's rule
+
+**Decided.** A direct request: add probes for Perforce Helix Core (`p4d`,
+the server) and Perforce Proxy (`p4p`), both reached over Perforce's own
+RPC wire protocol on a bare `host:port` — no HTTP, same category as
+`redis`/`mysql`/`postgresql`/`mongodb` (D10).
+
+**The protocol was fully reverse-engineered and confirmed working, but
+only against a proxy.** Captured a real `p4 info` exchange live (a real
+production Perforce Proxy, `tcpdump` plus the official `p4` binary — no
+documentation exists for this protocol; Perforce never publishes it) and
+decoded the exact framing: each RPC message is a sequence of `\x00` +
+`KEY` + `\x00` + 4-byte-LE length + `VALUE` entries terminated by a
+`func` field naming the RPC call, with a short opaque separator between
+messages whose exact bytes turned out not to matter to the server. A
+hand-built Go-equivalent client (tested first in Python, byte-for-byte
+against the live capture) reproduced the entire `protocol` →
+`user-discover` → `user-info` → `crypto` → `flush2` handshake and got
+back the same `client-Message` stream `p4 info` itself prints,
+including the line that matters: `fmt0="Server version: %id%
+(%idDate%)"` with `id="P4D/LINUX26X86_64/2024.2/2726408"`. Confirmed
+live too: a proxy's reply carries an *additional* `fmt0="Proxy version:
+%id% (%idDate%)"` message with the proxy's own version, while a direct
+server's reply has no such field at all — a clean, reliable D9 signal
+for telling the two products apart from the same reply shape.
+
+**That exact, byte-verified-correct handshake is silently dropped by
+real direct p4d servers.** Confirmed against two different production
+commit servers with very different usage histories (ruling out a
+rate limit on one of them specifically): the connection completes, the
+handshake bytes are sent, and the server just never replies — no
+error, no RST, nothing to react to. Ruled out, in order: field content
+(tried the operator's own real values verbatim, generic substitutes,
+every `port` field variant including the resolved IP — no change),
+batching (sending flights combined vs. separately — no change), and
+mandatory TLS (a bare TLS ClientHello against the same port gets an
+immediate `Connection reset`, not a timeout — a mandatory-TLS server
+does not behave like that). The real `p4` binary connects to the exact
+same addresses over plain TCP with no issue at all. Something between
+this network and those specific ports treats a hand-rolled client
+differently from the real one, for a reason this project has no way to
+see from the client side (most likely a network-layer filter or IPS in
+front of the direct commit-server ports specifically, absent in front
+of the proxy path — worth the operator checking their own firewall/IPS
+rules, but not something to keep guessing at blindly here).
+
+**Rather than ship a probe that only works for half of a Perforce
+fleet's topology, or maintain two different implementations for two
+closely related products, both `p4d` and `p4p` shell out to the
+operator's own `p4` binary** (`p4 -Ztag -p <address> info`, parsed as
+`... key value` lines) via `internal/probe/p4info.go`. This is the
+first probe in this tree that runs an external process instead of
+speaking a wire protocol directly — a deliberate, narrow exception to
+D10 and to the "single static binary, zero runtime dependencies" design
+throughout the rest of this project, not a new general pattern. The
+binary path is `options.binary` in config (`Target.Options`, an
+existing, previously-unused extensibility field — no new config schema
+needed), defaulting to `p4` resolved via `$PATH`. A missing binary is
+`ErrNotSupported` with a message naming the fix; a non-zero exit or
+timeout is `ErrUnreachable`. Confirmed live end-to-end against real
+`p4d`/`p4p` targets on both sides of this exact split, including both
+cross-rejections (`p4d` pointed at a proxy, `p4p` pointed at a direct
+server) — see each probe's own file for the exact fields read.
+
+No `DefaultResolver` for either: Perforce is proprietary, with no
+`endoflife.date` page under any slug tried (confirmed 404) and no
+public GitHub releases — inventory-only, the same as
+`gentoo`/`kali-linux`/`openeuler`/`redos`.
+
+**Also fixed while building this:** `probe.Observation.Resolver` (D25)
+was a plain `ResolverRef`, not a pointer — Go's `encoding/json`
+`omitempty` has no notion of "empty" for a struct value, so every
+single observation was serialising a spurious `"resolver":{}`, not just
+the one sonarqube instance that actually sets it. Changed to
+`*ResolverRef`, the same reason `TLSVerified` is already `*bool`.

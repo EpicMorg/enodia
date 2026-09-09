@@ -1,0 +1,33 @@
+... userName root
+... password enabled
+... clientName *unknown*
+... clientCwd /tmp
+... clientHost probe-host
+... clientCase sensitive
+... peerAddress 10.0.0.9:39110
+... clientAddress 10.0.0.49
+... unicode enabled
+... monitor enabled
+... security enabled
+... ldapAuth enabled
+... serverDate 2026/09/10 01:54:41 +0300 MSK
+... tzoffset 10800
+... serverVersion P4D/LINUX26X86_64/2024.2/2726408 (2025/02/27)
+... ServerID p4-example-commit
+... serverServices commit-server
+... serverLicense Licensed
+... caseHandling insensitive
+... allowStreamSpecInteg 1
+... maxParallel 12
+... parentViewDefault inheritAll
+... unloadSupport enabled
+... extensionsSupport enabled
+... memoryManager mimalloc 212
+... transportInfo retransmits 0	probes 0	backoff 0
+options timestamps sack wscale
+sscale 7	rscale 2
+rto 212000	ato 40000	snd_mss 1448	rcv_mss 536
+unacked 0	sacked 0	lost 0	retrans 0	fackets 0
+last_data_sent 12	last_data_recv 0	last_ack_recv 0
+pmtu 1500	rcv_ssthresh 211544	rtt 8036	rttvar 3359
+snd_ssthresh 2147483647	snd_cwnd 10	advmss 1448	reordering 3
