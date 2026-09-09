@@ -68,7 +68,12 @@ func runP4Info(ctx context.Context, t Target) (map[string]string, error) {
 	}
 
 	fields := make(map[string]string)
+	// TrimRight, not TrimSpace: a real p4.exe on Windows writes \r\n, and
+	// only the trailing \r left over from splitting on \n alone needs to
+	// go — a value's own trailing spaces (there aren't any here, but
+	// nothing should assume otherwise) are not this loop's business.
 	for _, line := range strings.Split(stdout.String(), "\n") {
+		line = strings.TrimRight(line, "\r")
 		m := p4TaggedFieldPattern.FindStringSubmatch(line)
 		if m == nil {
 			continue
