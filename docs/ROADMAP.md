@@ -958,6 +958,14 @@ Not dates. Order of work, and what each step unblocks.
   in one SSH round trip and only trusting `debian_version` after
   checking `ID=debian` and that its content is a plain dotted number.
   See `docs/DECISIONS.md` D26.
+- `ubuntu` had the same gap: `VERSION_ID` never changes after a release
+  ships (confirmed live, 14.04 through 24.10), so a fully patched 22.04
+  host reported bare `22.04`, not `22.04.5`. `ubuntu` moved off
+  `osReleaseFamilyProbe` into its own `ubuntuProbe`, preferring the
+  point release from os-release's own `VERSION` field when it's
+  strictly more precise. Every other `osReleaseFamilyProbe` product was
+  audited the same way — none of the rest have this gap. See
+  `docs/DECISIONS.md` D27.
 
 ## Next
 

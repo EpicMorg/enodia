@@ -176,7 +176,9 @@ var builtin = []Probe{
 	// became available (D2: one product, one probe, not both at once).
 	truenasProbe{},
 	// ubuntu:24.04: ID=ubuntu, VERSION_ID="24.04".
-	osReleaseFamilyProbe{product: "ubuntu", summary: "Ubuntu", resolver: ResolverRef{Type: "endoflife", ID: "ubuntu"}, match: osReleaseIDEquals("ubuntu")},
+	// ubuntuProbe, not osReleaseFamilyProbe: VERSION_ID never carries the
+	// point release ("22.04", not "22.04.5") — see ubuntu.go for why.
+	ubuntuProbe{},
 	vaultProbe{},
 	bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden", resolver: ResolverRef{Type: "github", ID: "dani-garcia/vaultwarden"}},
 	vcenterProbe{},

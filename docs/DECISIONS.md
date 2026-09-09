@@ -1272,3 +1272,45 @@ already gives the identical value and covers every Debian release
 uniformly, with no dependency on a field this project can't confirm is
 stable or documented upstream (it isn't part of the systemd os-release
 spec).
+
+---
+
+## D27 — Ubuntu has the same VERSION_ID gap Debian had; audited the rest of the family too
+
+**Decided.** Reported directly right after D26 shipped: a real Ubuntu
+22.04 host was showing `22.04`, not the actual `22.04.5`. Confirmed
+live: Ubuntu's `VERSION_ID` deliberately never changes after a release
+ships (`22.04` stays `22.04` for that release's entire support life,
+confirmed across 14.04 through 24.10), even though Canonical keeps
+shipping point releases with new install media. The point release
+exists only in the `VERSION` field (and `PRETTY_NAME`) —
+`VERSION="22.04.5 LTS (Jammy Jellyfish)"` next to `VERSION_ID="22.04"`
+— and only for LTS releases that shipped more than one point release; a
+non-LTS release's `VERSION` carries no extra segment at all (confirmed
+live: `24.10`'s `VERSION="24.10 (Oracular Oriole)"`, same precision as
+`VERSION_ID`). Two real historical `VERSION` shapes were confirmed
+too: `"22.04.5 LTS (Jammy Jellyfish)"` and the older
+`"14.04.6 LTS, Trusty Tahr"` (comma, not parens) — both handled by the
+same leading-number extraction.
+
+`ubuntu` moves off `osReleaseFamilyProbe` into its own `ubuntuProbe`,
+same reasoning as D26's `debianProbe` but simpler: no second file
+needed, since the more precise number is already in the *same*
+`/etc/os-release` this probe already reads — just a different field.
+It's only trusted when it shares `VERSION_ID`'s exact major.minor
+prefix, so a malformed or unexpected `VERSION` string can't silently
+substitute an unrelated number.
+
+Given this was the second product in the same family found with this
+exact gap, every other `osReleaseFamilyProbe` registration was audited
+the same way — live containers where available (`almalinux:8`/`:9`,
+`amazonlinux:2023`, `centos:stream9`, `fedora:41`,
+`gentoo/stage3`, `kalilinux/kali-rolling`, `opensuse/leap:15.6`,
+`opensuse/tumbleweed`, `oraclelinux:9`, `photon:5.0`, `rockylinux:9`,
+`vbatts/slackware:14.2`, `registry.access.redhat.com/ubi9/ubi`), and
+this project's own already-committed real fixtures for the rest
+(`nixos`, `steamos`, `eurolinux`, `linuxmint`, `postmarketos`,
+`redos`, `openeuler`). Every one of them already reports `VERSION_ID`
+at full precision, matching or exceeding `VERSION`/`PRETTY_NAME` — this
+gap is specific to Debian and Ubuntu's own conventions, not a pattern
+across the whole family.
