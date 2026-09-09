@@ -948,6 +948,16 @@ Not dates. Order of work, and what each step unblocks.
   picks `sonarqube-server` vs `sonarqube-community` from the version
   string's leading year alone, no operator-declared variant needed. See
   `docs/DECISIONS.md` D25.
+- `debian` was reporting bare `13`, not `13.6` — a real production host's
+  point release. Debian's own `/etc/os-release` `VERSION_ID` never
+  carries one (confirmed live, even on a fully patched install); the
+  point release lives only in `/etc/debian_version`, which a real Ubuntu
+  24.04 image was also confirmed live to ship (inherited, meaningless
+  content: `"trixie/sid"`) — so `debian` moved off the shared
+  `osReleaseFamilyProbe` into its own `debianProbe`, reading both files
+  in one SSH round trip and only trusting `debian_version` after
+  checking `ID=debian` and that its content is a plain dotted number.
+  See `docs/DECISIONS.md` D26.
 
 ## Next
 

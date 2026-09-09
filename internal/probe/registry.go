@@ -39,8 +39,10 @@ var builtin = []Probe{
 	}},
 	clickhouseProbe{},
 	&atlassianProbe{product: "confluence", typeID: "confluence", resolver: "confluence", summary: "Atlassian Confluence (Data Center)"},
-	// debian:bookworm-slim: ID=debian, VERSION_ID="12".
-	osReleaseFamilyProbe{product: "debian", summary: "Debian", resolver: ResolverRef{Type: "endoflife", ID: "debian"}, match: osReleaseIDEquals("debian")},
+	// debianProbe, not osReleaseFamilyProbe: /etc/os-release's VERSION_ID
+	// never carries Debian's point release ("13", not "13.6") — see
+	// debian.go for why this needs its own file.
+	debianProbe{},
 	elasticsearchProbe{},
 	esxiProbe{},
 	// Real ISO rootfs capture (not a Docker image — none exists): ID="eurolinux", VERSION_ID="8.10".
