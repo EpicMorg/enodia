@@ -1238,3 +1238,79 @@ This is the first product needing this — not a general "every probe
 should eventually set this" pattern. D9's approach remains the default
 for telling variants apart; this exists for the narrower case where the
 signal is only available *after* probing, not before.
+
+---
+
+## D26 — Debian needed its own probe, not osReleaseFamilyProbe
+
+**Decided.** Reported directly: a real Debian 13.6 host was showing up
+as version `13`, no point release. Confirmed live: Debian's own
+`/etc/os-release` `VERSION_ID` never carries one — a fully patched
+Debian 13 install reports bare `VERSION_ID="13"`, identical to a
+day-one install, because Debian doesn't treat a point release as a
+distinct `VERSION_ID` the way RHEL-family distros do. The actual point
+release (`"13.6"`, `"12.15"`) lives only in `/etc/debian_version`.
+
+That file isn't safe to read on its own, though: confirmed live that a
+real Ubuntu 24.04 image also ships `/etc/debian_version`, inherited
+from its build lineage, reading `"trixie/sid"` — meaningless for
+Ubuntu's own version and exactly the kind of trap D9 warns about. So
+this couldn't be a small tweak to `osReleaseFamilyProbe` (shared by
+most of this family) — it needed its own file, `debian.go`, that reads
+both files in one SSH round trip (`cat /etc/os-release; echo
+'<marker>'; cat /etc/debian_version`), checks `ID=debian` first, and
+only trusts `debian_version`'s content when it's a plain dotted number
+— confirmed live that Debian testing (`debian:testing`) has no
+`VERSION_ID` in os-release at all and its own `debian_version` reads
+`"forky/sid"`, the same non-numeric shape Ubuntu's inherited copy has,
+correctly rejected by the same pattern.
+
+A real `debian:trixie` image was also found, live, to carry a
+`DEBIAN_VERSION_FULL="13.6"` field directly in `/etc/os-release` —
+absent from bookworm's. Deliberately not used: `/etc/debian_version`
+already gives the identical value and covers every Debian release
+uniformly, with no dependency on a field this project can't confirm is
+stable or documented upstream (it isn't part of the systemd os-release
+spec).
+
+---
+
+## D27 — Ubuntu has the same VERSION_ID gap Debian had; audited the rest of the family too
+
+**Decided.** Reported directly right after D26 shipped: a real Ubuntu
+22.04 host was showing `22.04`, not the actual `22.04.5`. Confirmed
+live: Ubuntu's `VERSION_ID` deliberately never changes after a release
+ships (`22.04` stays `22.04` for that release's entire support life,
+confirmed across 14.04 through 24.10), even though Canonical keeps
+shipping point releases with new install media. The point release
+exists only in the `VERSION` field (and `PRETTY_NAME`) —
+`VERSION="22.04.5 LTS (Jammy Jellyfish)"` next to `VERSION_ID="22.04"`
+— and only for LTS releases that shipped more than one point release; a
+non-LTS release's `VERSION` carries no extra segment at all (confirmed
+live: `24.10`'s `VERSION="24.10 (Oracular Oriole)"`, same precision as
+`VERSION_ID`). Two real historical `VERSION` shapes were confirmed
+too: `"22.04.5 LTS (Jammy Jellyfish)"` and the older
+`"14.04.6 LTS, Trusty Tahr"` (comma, not parens) — both handled by the
+same leading-number extraction.
+
+`ubuntu` moves off `osReleaseFamilyProbe` into its own `ubuntuProbe`,
+same reasoning as D26's `debianProbe` but simpler: no second file
+needed, since the more precise number is already in the *same*
+`/etc/os-release` this probe already reads — just a different field.
+It's only trusted when it shares `VERSION_ID`'s exact major.minor
+prefix, so a malformed or unexpected `VERSION` string can't silently
+substitute an unrelated number.
+
+Given this was the second product in the same family found with this
+exact gap, every other `osReleaseFamilyProbe` registration was audited
+the same way — live containers where available (`almalinux:8`/`:9`,
+`amazonlinux:2023`, `centos:stream9`, `fedora:41`,
+`gentoo/stage3`, `kalilinux/kali-rolling`, `opensuse/leap:15.6`,
+`opensuse/tumbleweed`, `oraclelinux:9`, `photon:5.0`, `rockylinux:9`,
+`vbatts/slackware:14.2`, `registry.access.redhat.com/ubi9/ubi`), and
+this project's own already-committed real fixtures for the rest
+(`nixos`, `steamos`, `eurolinux`, `linuxmint`, `postmarketos`,
+`redos`, `openeuler`). Every one of them already reports `VERSION_ID`
+at full precision, matching or exceeding `VERSION`/`PRETTY_NAME` — this
+gap is specific to Debian and Ubuntu's own conventions, not a pattern
+across the whole family.

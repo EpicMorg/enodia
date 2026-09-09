@@ -39,8 +39,10 @@ var builtin = []Probe{
 	}},
 	clickhouseProbe{},
 	&atlassianProbe{product: "confluence", typeID: "confluence", resolver: "confluence", summary: "Atlassian Confluence (Data Center)"},
-	// debian:bookworm-slim: ID=debian, VERSION_ID="12".
-	osReleaseFamilyProbe{product: "debian", summary: "Debian", resolver: ResolverRef{Type: "endoflife", ID: "debian"}, match: osReleaseIDEquals("debian")},
+	// debianProbe, not osReleaseFamilyProbe: /etc/os-release's VERSION_ID
+	// never carries Debian's point release ("13", not "13.6") — see
+	// debian.go for why this needs its own file.
+	debianProbe{},
 	elasticsearchProbe{},
 	esxiProbe{},
 	// Real ISO rootfs capture (not a Docker image — none exists): ID="eurolinux", VERSION_ID="8.10".
@@ -174,7 +176,9 @@ var builtin = []Probe{
 	// became available (D2: one product, one probe, not both at once).
 	truenasProbe{},
 	// ubuntu:24.04: ID=ubuntu, VERSION_ID="24.04".
-	osReleaseFamilyProbe{product: "ubuntu", summary: "Ubuntu", resolver: ResolverRef{Type: "endoflife", ID: "ubuntu"}, match: osReleaseIDEquals("ubuntu")},
+	// ubuntuProbe, not osReleaseFamilyProbe: VERSION_ID never carries the
+	// point release ("22.04", not "22.04.5") — see ubuntu.go for why.
+	ubuntuProbe{},
 	vaultProbe{},
 	bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden", resolver: ResolverRef{Type: "github", ID: "dani-garcia/vaultwarden"}},
 	vcenterProbe{},
