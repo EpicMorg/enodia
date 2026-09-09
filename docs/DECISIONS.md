@@ -481,20 +481,25 @@ configured at all without complaint, but there is nothing left to name
 there). `permissions.packages: write` dropped from `release.yml` too —
 nothing left in that job pushes anywhere but the GitHub Release itself.
 
-`build/docker/Dockerfile` — the file meant to be relocated into
-`epicmorg/docker` by the user themselves — was corrected first: it
+`build/docker/Dockerfile` was corrected before being handed off: it
 installs the raw binary from the release archive (`enodia_linux_
 ${TARGETARCH}.tar.gz`, extracted with `tar`) rather than the `.deb`
 via apt, and runs as root rather than a dedicated user, matching the
 same two corrections made to the (now-deleted) root `Dockerfile` above.
 Verified live: `docker build -f build/docker/Dockerfile build/docker`
-against the real, already-published `1.0.0+0` release produces a
+against the real, already-published `1.0.0+0` release produced a
 working image, running as root (`id` → `uid=0`), with a real config
-round-tripping through it correctly. README's install section no longer
-claims `ghcr.io/epicmorg/enodia` is kept up to date by this repo's own
-pipeline — it points at `build/docker/Dockerfile` instead, since the
-final `epicmorg/docker` location isn't this repo's to document until
-the user has actually relocated it there.
+round-tripping through it correctly.
+
+That file (along with its `docker-compose.yml`/`Makefile`) has since
+been removed from this repo entirely and relocated by the user into
+[`EpicMorg/docker`'s `linux/ecosystem/apps/enodia`](https://github.com/EpicMorg/docker/tree/master/linux/ecosystem/apps/enodia)
+— confirmed public. The published image address doesn't change
+(`epicmorg/enodia`, tags `latest`/`1`/the exact version, across GHCR,
+Docker Hub, and Quay, same as before this decision) — only which repo's
+pipeline builds and pushes it does. README's install section keeps its
+`docker run` example, now noting the Dockerfile lives in that monorepo
+rather than claiming this repo's own release pipeline keeps it current.
 
 **Also found and fixed in the same session, unrelated to the image
 change itself:** `secrets.env`'s values were shell-quoted

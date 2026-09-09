@@ -5,8 +5,8 @@
 # See DECISIONS.md D17 for why cosign keyless (no key to manage or leak).
 # No dockers_v2/docker_signs here: container publishing moved to the
 # user's own epicmorg/docker repo, decoupled from this repo's release run
-# — see D17's "Revisited" entry. build/docker/Dockerfile is what's meant
-# to be relocated there.
+# — see D17's "Revisited" entry. The Dockerfile itself now lives there
+# too (linux/ecosystem/apps/enodia), not in this repo.
 version: 2
 
 project_name: enodia
