@@ -222,8 +222,9 @@ docker run --rm \
 ```
 
 The same image is also published to `docker.io/epicmorg/enodia` and Quay
-— same tags, same multi-arch manifest, pick whichever registry you already
-pull from.
+— same tags, pick whichever registry you already pull from. The image is
+linux/amd64 only (see `docs/DECISIONS.md` D17) — the raw archives and
+`.deb`/`.rpm`/`.apk`/`.pkg.tar.zst` packages above still cover arm64.
 
 All four packages install the binary at `/usr/bin/enodia`, man pages for
 every command under `/usr/share/man/man1/` (`man enodia`, `man
