@@ -49,6 +49,13 @@ func runP4Info(ctx context.Context, t Target) (map[string]string, error) {
 			ErrNotSupported, bin, err)
 	}
 
+	timeout := t.Timeout
+	if timeout <= 0 {
+		timeout = defaultTCPReadTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	addr := defaultPort(t.Address, "1666")
 	cmd := exec.CommandContext(ctx, path, "-Ztag", "-p", addr, "info")
 	var stdout, stderr bytes.Buffer

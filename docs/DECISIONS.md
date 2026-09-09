@@ -1392,3 +1392,21 @@ was a plain `ResolverRef`, not a pointer — Go's `encoding/json`
 single observation was serialising a spurious `"resolver":{}`, not just
 the one sonarqube instance that actually sets it. Changed to
 `*ResolverRef`, the same reason `TLSVerified` is already `*bool`.
+
+**Fixed the same day, reported directly:** the first version of
+`runP4Info` passed `Probe`'s own `ctx` straight to `exec.CommandContext`
+with no timeout applied at all — every other probe in this tree
+explicitly clamps to `t.Timeout` (falling back to
+`defaultTCPReadTimeout`) before touching the network
+(`sshexec.go`/`tcp.go`/`http.go`), and this one didn't. A `p4` process
+stuck dialing an unreachable direct server (exactly the network
+behavior this same decision documents above — no response, no RST) hung
+indefinitely, stalling a whole collection run. Now wrapped in
+`context.WithTimeout` the same way. Caught by a real report of `enodia`
+hanging in production, not by the test suite — the fix is verified
+live via a regression test, but note that a *shell-script* stand-in
+for the binary would have hidden the bug again: killing a shell child
+process (`sh -c "sleep 5"`) doesn't also kill an orphaned grandchild,
+so the test's fake binary uses `exec sleep 5` to actually become the
+process being killed, matching what the real (non-shell-wrapped) `p4`
+binary is.

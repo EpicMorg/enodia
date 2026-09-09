@@ -80,6 +80,35 @@ func TestRunP4InfoStripsWindowsLineEndings(t *testing.T) {
 	}
 }
 
+// A p4 process stuck dialing an unreachable direct server (no response,
+// no RST — exactly what this project hit live, see D28) must not hang
+// this probe forever: t.Timeout has to actually reach the subprocess,
+// the same way every other probe in this tree already enforces it
+// (sshexec.go, tcp.go, http.go).
+func TestRunP4InfoRespectsTimeout(t *testing.T) {
+	// exec, not a plain "sleep 5": the real p4 binary is a single native
+	// process, not a shell wrapping a child process. A plain "sleep 5"
+	// would run as a *child* of the fake script's own shell, and
+	// killing the shell on timeout doesn't also kill an orphaned
+	// grandchild — that's a real Go exec.CommandContext gotcha, but not
+	// one the real (non-shell-wrapped) p4 binary is exposed to, so
+	// asserting against it here would test the wrong thing.
+	bin := fakeP4Binary(t, "exec sleep 5\n")
+	target := p4TestTarget(bin)
+	target.Timeout = 100 * time.Millisecond
+
+	start := time.Now()
+	_, err := runP4Info(context.Background(), target)
+	elapsed := time.Since(start)
+
+	if !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("got %v, want ErrUnreachable", err)
+	}
+	if elapsed > 2*time.Second {
+		t.Fatalf("runP4Info took %s, want it killed near the 100ms timeout, not the fake binary's 5s sleep", elapsed)
+	}
+}
+
 func TestRunP4InfoBinaryNotFound(t *testing.T) {
 	target := p4TestTarget("definitely-not-a-real-p4-binary-xyz")
 	_, err := runP4Info(context.Background(), target)
