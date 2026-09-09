@@ -122,6 +122,8 @@ var builtin = []Probe{
 	// "Oracle Solaris 11.4 X86" line.
 	oracleSolarisProbe{},
 	owncastProbe{},
+	p4dProbe{},
+	p4pProbe{},
 	perforceSwarmProbe{},
 	pgadminProbe{},
 	// Official top-level photon:5.0 (Docker's Official Images program,

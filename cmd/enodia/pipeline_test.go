@@ -177,7 +177,7 @@ func TestAssessObservationResolverOverridesProductDefault(t *testing.T) {
 		Observations: []probe.Observation{
 			{
 				ID: "x", Product: "jira", Version: "26.9.0.129388", Normalized: "26.9.0.129388",
-				Resolver: probe.ResolverRef{Type: "endoflife", ID: "sonarqube-community"},
+				Resolver: &probe.ResolverRef{Type: "endoflife", ID: "sonarqube-community"},
 			},
 		},
 	}
