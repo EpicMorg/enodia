@@ -420,41 +420,36 @@ all three registries, confirming the template resolves before ever
 touching real registry credentials.
 
 **Revisited: the release image (`ghcr.io/epicmorg/enodia`) moved off
-`scratch` onto the user's own house image, and dropped arm64.** Decided
-by direct instruction, not a technical failure of the scratch approach —
-D15's non-daemon, minimal-attack-surface reasoning still holds in
-general, this is a deliberate one-off preference for this project's own
-published image. `Dockerfile` now builds `FROM
-ghcr.io/epicmorg/debian:trixie-light` and installs the `.deb`
-`nfpms` already builds in the same `goreleaser release` run — not a raw
-`COPY` of the binary — reusing the exact install path
-`build/docker/Dockerfile` (a separate, pre-existing image the user
-builds by hand from an already-published release) already used. That
-choice is deliberate, not incidental: `build/nfpm/preinstall.sh` fixes
-the `enodia` system user at uid/gid 1337 specifically *so that*
-bind-mounted `/etc/enodia`/`/opt/enodia`/`/var/enodia` line up
-identically across every image this project ships, by that file's own
-comment's own account, cross-referencing `build/docker/Dockerfile`
-specifically — copying a bare binary in and reimplementing user/
-permission setup by hand would drift from that guarantee the moment the
-two Dockerfiles' setup logic diverged even slightly.
+`scratch` onto the user's own house image, dropped arm64, and runs as
+root.** Decided by direct instruction, not a technical failure of the
+scratch approach — D15's non-daemon, minimal-attack-surface reasoning
+still holds in general, this is a deliberate one-off preference for this
+project's own published image. `Dockerfile` now builds `FROM
+ghcr.io/epicmorg/debian:trixie-light`.
 
-Getting the freshly-built `.deb` into the docker build context needed
-`dockers_v2.extra_files` (confirmed against goreleaser's own JSON
-schema, `$defs.DockerV2.extra_files` — only `builds`' own per-platform
-binaries are staged into the context automatically via the
-`$TARGETPLATFORM/<binary>` convention `dockers_v2` already relied on;
-nfpm's `.deb` output is not a `builds` artifact and needed pointing at
-explicitly): `dist/enodia_linux_amd64.deb`, confirmed by both a manual
-`docker run` install of a real local snapshot build's `.deb` (checked
-the `enodia` user, its uid/gid, and `/etc/enodia`/`/opt/enodia`/
-`/var/enodia` ownership and permissions all came out identical to a
-bare-metal `.deb` install) and a full local `goreleaser release
---snapshot --skip=sign,publish` run that built the actual image through
-the real pipeline path, not just the manual equivalent. Also confirmed
-live: `ghcr.io/epicmorg/debian:trixie-light` already ships
-`ca-certificates`, `apt-get`, and `useradd`/`groupadd`, so nothing extra
-needed installing beyond the `.deb` itself.
+An intermediate version of this installed `nfpms`' own `.deb` output via
+apt instead of copying the binary directly, reasoning that
+`build/nfpm/preinstall.sh`'s fixed enodia uid/gid 1337 (there so
+bind-mounted `/etc/enodia`/`/opt/enodia`/`/var/enodia` line up across
+every image this project ships) meant reusing `build/docker/Dockerfile`'s
+own `.deb`-based install path would keep that guarantee, where a raw
+binary copy would need to reimplement it by hand. That version worked —
+verified live, including `dockers_v2.extra_files` (confirmed against
+goreleaser's own JSON schema needed to get the freshly-built local
+`.deb` into the docker build context at all, since only `builds`' own
+per-platform binaries are staged there automatically) getting
+`dist/enodia_linux_amd64.deb` in correctly — but was reverted the same
+day by direct instruction: the user wants the raw binary (`COPY
+$TARGETPLATFORM/enodia /usr/bin/enodia`, the same mechanism the original
+scratch-based file already used) and the container running as root, not
+a dedicated non-root user. The 1337-consistency reasoning above is real,
+but it's `build/docker/Dockerfile`'s own concern (it does install the
+`.deb`), not this file's — the two are separate images serving different
+purposes, and this one no longer needs to match the other's uid scheme.
+Confirmed live again post-revert: a full local `goreleaser release
+--snapshot --skip=sign,publish` run builds the image correctly, it runs
+as root (`id` → `uid=0(root)`), and a real config round-trips through
+it (`config validate` → `OK`) the same as before.
 
 arm64 was dropped rather than also wired up for the house image
 (`dockers_v2.platforms` is now `linux/amd64` only) — by request, to keep
@@ -463,8 +458,21 @@ step was removed too, since cross-arch buildx emulation has nothing left
 to do once the runner's own architecture (amd64) is the only platform
 being built. `build/docker/Dockerfile` (the hand-built, fetch-from-a-
 published-release image) is unaffected by any of this — it already used
-the house image and already only ever needed the arch the person running
-`docker build` happened to be on.
+the house image, its own uid 1337, and already only ever needed the arch
+the person running `docker build` happened to be on.
+
+**Considered and left open: moving container publishing out of this
+repo entirely**, into the user's own `epicmorg/docker` repo (their
+existing home for house-image Dockerfiles), decoupled from this repo's
+own `goreleaser release` run. Not decided either way yet — flagged
+tradeoffs: the image would build on its own schedule rather than in the
+same run as the binary/checksums (D17's original point of cosign keyless
+signing being tied to the *same* release run's OIDC identity would need
+rethinking for whichever repo actually builds and signs it), and enodia
+is a public AGPL project (D16) that currently promises an official
+container image in its own README — if `epicmorg/docker` is private,
+that promise would need to change for users outside epicmorg. Revisit
+when/if this is actually decided, not preemptively.
 
 **Also found and fixed in the same session, unrelated to the image
 change itself:** `secrets.env`'s values were shell-quoted
