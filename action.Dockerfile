@@ -9,7 +9,7 @@
 # checkout has no pre-built per-platform binaries lying around the way
 # goreleaser's build context does, so there is nothing to reuse here.
 
-FROM golang:1.26-bookworm AS build
+FROM golang:1.27-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
