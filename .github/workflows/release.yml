@@ -6,8 +6,8 @@
 #
 # No container build/push here: that moved to the user's own
 # epicmorg/docker repo, decoupled from this repo's release run — see D17's
-# "Revisited" entry. build/docker/Dockerfile is what's meant to be
-# relocated there.
+# "Revisited" entry. The Dockerfile itself lives there too now
+# (linux/ecosystem/apps/enodia), not in this repo.
 #
 # Release tags are MAJOR.MINOR.PATCH+BUILD, no "v" prefix (e.g. 1.2.3+4).
 # The "+BUILD" form, not a fourth dot, is required: goreleaser hard-fails

@@ -208,19 +208,28 @@ HTML report (see "Reporting").
 
 Each [release](https://github.com/EpicMorg/enodia/releases/latest) carries a
 `.deb`, `.rpm`, `.apk` and Arch's `.pkg.tar.zst` (linux/amd64+arm64)
-alongside the raw archives:
+alongside the raw archives, plus an official container image:
 
 ```console
 sudo dpkg -i enodia_linux_amd64.deb                # Debian/Ubuntu
 sudo rpm -i enodia_linux_amd64.rpm                 # Fedora/RHEL
 apk add --allow-untrusted enodia_linux_amd64.apk   # Alpine
 sudo pacman -U enodia_linux_amd64.pkg.tar.zst      # Arch
+
+docker run --rm \
+  -v /etc/enodia:/config:ro \
+  ghcr.io/epicmorg/enodia:1 check --config /config/config.yaml
 ```
 
-A Docker image is built separately, outside this repo's own release
-pipeline (see `docs/DECISIONS.md` D17 and `build/docker/Dockerfile`) —
-check there for the current image location rather than assuming
-`ghcr.io/epicmorg/enodia` is still kept up to date automatically.
+The same image is also published to `docker.io/epicmorg/enodia` and Quay
+— same tags (`latest`, `1`, and the exact version, e.g. `1.0.0-0`), pick
+whichever registry you already pull from. Its Dockerfile lives outside
+this repo, in the
+[EpicMorg/docker](https://github.com/EpicMorg/docker/tree/master/linux/ecosystem/apps/enodia)
+monorepo alongside the house images and several other products this
+project's own probes cover — still the official image, just built and
+published on that repo's own schedule rather than in this repo's release
+pipeline (see `docs/DECISIONS.md` D17).
 
 All four packages install the binary at `/usr/bin/enodia`, man pages for
 every command under `/usr/share/man/man1/` (`man enodia`, `man
