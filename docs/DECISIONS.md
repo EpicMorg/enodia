@@ -1238,3 +1238,37 @@ This is the first product needing this — not a general "every probe
 should eventually set this" pattern. D9's approach remains the default
 for telling variants apart; this exists for the narrower case where the
 signal is only available *after* probing, not before.
+
+---
+
+## D26 — Debian needed its own probe, not osReleaseFamilyProbe
+
+**Decided.** Reported directly: a real Debian 13.6 host was showing up
+as version `13`, no point release. Confirmed live: Debian's own
+`/etc/os-release` `VERSION_ID` never carries one — a fully patched
+Debian 13 install reports bare `VERSION_ID="13"`, identical to a
+day-one install, because Debian doesn't treat a point release as a
+distinct `VERSION_ID` the way RHEL-family distros do. The actual point
+release (`"13.6"`, `"12.15"`) lives only in `/etc/debian_version`.
+
+That file isn't safe to read on its own, though: confirmed live that a
+real Ubuntu 24.04 image also ships `/etc/debian_version`, inherited
+from its build lineage, reading `"trixie/sid"` — meaningless for
+Ubuntu's own version and exactly the kind of trap D9 warns about. So
+this couldn't be a small tweak to `osReleaseFamilyProbe` (shared by
+most of this family) — it needed its own file, `debian.go`, that reads
+both files in one SSH round trip (`cat /etc/os-release; echo
+'<marker>'; cat /etc/debian_version`), checks `ID=debian` first, and
+only trusts `debian_version`'s content when it's a plain dotted number
+— confirmed live that Debian testing (`debian:testing`) has no
+`VERSION_ID` in os-release at all and its own `debian_version` reads
+`"forky/sid"`, the same non-numeric shape Ubuntu's inherited copy has,
+correctly rejected by the same pattern.
+
+A real `debian:trixie` image was also found, live, to carry a
+`DEBIAN_VERSION_FULL="13.6"` field directly in `/etc/os-release` —
+absent from bookworm's. Deliberately not used: `/etc/debian_version`
+already gives the identical value and covers every Debian release
+uniformly, with no dependency on a field this project can't confirm is
+stable or documented upstream (it isn't part of the systemd os-release
+spec).
