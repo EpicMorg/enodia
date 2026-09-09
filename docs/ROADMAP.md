@@ -923,6 +923,19 @@ Not dates. Order of work, and what each step unblocks.
   `synology-dsm`/`synology`/`dsm`). A best-effort logout follows the
   version read so repeated collection runs don't accumulate open
   sessions on the NAS.
+- Found while debugging a real production run: resolver errors
+  (`kitsu`, `vaultwarden`) showed only `resolver_error` in the table
+  with the real cause invisible; `cmd/enodia/pipeline.go`'s `assess` now
+  warns with the actual error on stderr instead. `resolver.New` also
+  never had a way to pass a GitHub token, so every GitHub lookup was
+  capped at 60/hour unauthenticated, per source IP — it now takes a
+  `githubToken` and the CLI passes `GITHUB_TOKEN` from the environment.
+  `pgadmin` got a real `DefaultResolver`: `pgadmin-org/pgadmin4` has no
+  GitHub Releases at all (confirmed: empty array), only tags shaped
+  `REL-9_17` — a new `resolver.githubTagsSource` (`Type: "github-tags"`)
+  converts that to `9.17` and picks the highest-parsing tag from the
+  page rather than trusting list order, since the tags endpoint
+  documents no ordering guarantee. See `docs/DECISIONS.md` D24.
 
 ## Next
 
