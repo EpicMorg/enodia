@@ -111,7 +111,8 @@ func (sonarqubeProbe) Probe(ctx context.Context, t Target) (Observation, error) 
 	}
 
 	obs.Version = info.Version
-	obs.Resolver = sonarqubeResolverFor(info.Version)
+	resolver := sonarqubeResolverFor(info.Version)
+	obs.Resolver = &resolver
 	obs.Extra = map[string]string{}
 	if info.ID != "" {
 		obs.Extra["id"] = info.ID

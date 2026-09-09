@@ -120,8 +120,8 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 		if p, err := probe.Get(o.Product); err == nil {
 			ref = p.Meta().DefaultResolver
 		}
-		if o.Resolver.Type != "" {
-			ref = o.Resolver
+		if o.Resolver != nil {
+			ref = *o.Resolver
 		}
 
 		var cycles []resolver.Cycle

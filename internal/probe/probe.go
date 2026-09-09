@@ -183,13 +183,19 @@ type Observation struct {
 	Extra    map[string]string `json:"extra,omitempty"`    // buildNumber, typeId, ...
 
 	// Resolver overrides Meta().DefaultResolver for this one observation.
-	// Zero value (Type == "") means "use the product's static default" —
-	// almost every probe leaves this unset. It exists for a product whose
-	// lifecycle calendar can only be told apart after seeing the vendor's
-	// own version reply — unlike D9's identity checks, which run before any
-	// version is known — e.g. sonarqubeProbe picking sonarqube-server vs
-	// sonarqube-community by the shape of the version string itself.
-	Resolver ResolverRef `json:"resolver,omitempty"`
+	// Nil means "use the product's static default" — almost every probe
+	// leaves this unset. It exists for a product whose lifecycle calendar
+	// can only be told apart after seeing the vendor's own version reply —
+	// unlike D9's identity checks, which run before any version is known —
+	// e.g. sonarqubeProbe picking sonarqube-server vs sonarqube-community
+	// by the shape of the version string itself.
+	//
+	// A pointer, not a plain ResolverRef, the same reason TLSVerified is
+	// *bool: Go's encoding/json omitempty has no concept of "empty" for a
+	// struct value, so a value-typed field would serialise as "resolver":{}
+	// on every single observation instead of being omitted for the
+	// overwhelming majority that never set it.
+	Resolver *ResolverRef `json:"resolver,omitempty"`
 
 	// TLSVerified is nil for non-TLS transports. False means the certificate
 	// was not verified — surfaced in reports as a fleet-wide TLS audit.
