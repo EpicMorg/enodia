@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # docs/ROADMAP.md, "Then — packaging": binaries, checksums, signatures.
-# See DECISIONS.md D17 for why cosign keyless (no key to manage or leak)
-# and dockers_v2 (goreleaser's current multi-arch mechanism — the name is
-# provisional upstream, it will become plain "dockers" in goreleaser v3).
+# See DECISIONS.md D17 for why cosign keyless (no key to manage or leak).
+# No dockers_v2/docker_signs here: container publishing moved to the
+# user's own epicmorg/docker repo, decoupled from this repo's release run
+# — see D17's "Revisited" entry. The Dockerfile itself now lives there
+# too (linux/ecosystem/apps/enodia), not in this repo.
 version: 2
 
 project_name: enodia
@@ -186,47 +188,6 @@ signs:
       - sign-blob
       - "--bundle=${signature}"
       - "${artifact}"
-      - --yes
-
-dockers_v2:
-  - images:
-      - ghcr.io/epicmorg/enodia
-      - docker.io/epicmorg/enodia
-      # QUAY_SERVER_URL is an org-level secret (release.yml passes it
-      # through to this process's env), not hardcoded here — this repo
-      # isn't the source of truth for which Quay host that org actually
-      # uses.
-      - "{{ .Env.QUAY_SERVER_URL }}/epicmorg/enodia"
-    # .Version is MAJOR.MINOR.PATCH+BUILD (release.yml's tag scheme) — "+"
-    # is not a legal character in a Docker/OCI tag at all (confirmed live:
-    # `docker tag foo:1.2.3+4` is flatly refused, "invalid reference
-    # format"), so it must be replaced, not merely hoped to work, before
-    # it ever reaches a tags: entry here.
-    tags:
-      - '{{ replace .Version "+" "-" }}'
-      - "{{ if not .Prerelease }}{{ .Major }}{{ end }}"
-      - "{{ if not .Prerelease }}latest{{ end }}"
-    platforms:
-      - linux/amd64
-      - linux/arm64
-    annotations:
-      "org.opencontainers.image.description": "Service inventory and lifecycle (EOL) monitoring"
-      "org.opencontainers.image.created": "{{ .Date }}"
-      "org.opencontainers.image.name": "{{ .ProjectName }}"
-      "org.opencontainers.image.revision": "{{ .FullCommit }}"
-      "org.opencontainers.image.version": "{{ .Version }}"
-      "org.opencontainers.image.source": "{{ .GitURL }}"
-      "org.opencontainers.image.licenses": "AGPL-3.0-or-later"
-
-# Signs the pushed image the same way as the checksums above: the CI job's
-# OIDC identity, verifiable against the container's own digest.
-docker_signs:
-  - cmd: cosign
-    artifacts: manifests
-    output: true
-    args:
-      - sign
-      - "${artifact}@${digest}"
       - --yes
 
 changelog:

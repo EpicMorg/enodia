@@ -299,7 +299,7 @@ for a tool meant to be installed *inside* corporate networks.
 
 ---
 
-## D17 — Cosign keyless signing, dockers_v2, install script on raw GitHub
+## D17 — Cosign keyless signing, install script on raw GitHub (container publishing later moved out entirely — see "Revisited" below)
 
 **Decided.** `.goreleaser.yaml` (v2 schema, verified against
 `goreleaser.com/static/schema.json` and goreleaser's own production config
@@ -418,6 +418,105 @@ source of truth for which Quay host is actually in use. Verified live
 `--skip=publish`) produced correctly tagged `amd64`/`arm64` manifests for
 all three registries, confirming the template resolves before ever
 touching real registry credentials.
+
+**Revisited: the release image (`ghcr.io/epicmorg/enodia`) moved off
+`scratch` onto the user's own house image, dropped arm64, and runs as
+root.** Decided by direct instruction, not a technical failure of the
+scratch approach — D15's non-daemon, minimal-attack-surface reasoning
+still holds in general, this is a deliberate one-off preference for this
+project's own published image. `Dockerfile` now builds `FROM
+ghcr.io/epicmorg/debian:trixie-light`.
+
+An intermediate version of this installed `nfpms`' own `.deb` output via
+apt instead of copying the binary directly, reasoning that
+`build/nfpm/preinstall.sh`'s fixed enodia uid/gid 1337 (there so
+bind-mounted `/etc/enodia`/`/opt/enodia`/`/var/enodia` line up across
+every image this project ships) meant reusing `build/docker/Dockerfile`'s
+own `.deb`-based install path would keep that guarantee, where a raw
+binary copy would need to reimplement it by hand. That version worked —
+verified live, including `dockers_v2.extra_files` (confirmed against
+goreleaser's own JSON schema needed to get the freshly-built local
+`.deb` into the docker build context at all, since only `builds`' own
+per-platform binaries are staged there automatically) getting
+`dist/enodia_linux_amd64.deb` in correctly — but was reverted the same
+day by direct instruction: the user wants the raw binary (`COPY
+$TARGETPLATFORM/enodia /usr/bin/enodia`, the same mechanism the original
+scratch-based file already used) and the container running as root, not
+a dedicated non-root user. The 1337-consistency reasoning above is real,
+but it's `build/docker/Dockerfile`'s own concern (it does install the
+`.deb`), not this file's — the two are separate images serving different
+purposes, and this one no longer needs to match the other's uid scheme.
+Confirmed live again post-revert: a full local `goreleaser release
+--snapshot --skip=sign,publish` run builds the image correctly, it runs
+as root (`id` → `uid=0(root)`), and a real config round-trips through
+it (`config validate` → `OK`) the same as before.
+
+arm64 was dropped rather than also wired up for the house image
+(`dockers_v2.platforms` is now `linux/amd64` only) — by request, to keep
+this one-off change small; `release.yml`'s `docker/setup-qemu-action`
+step was removed too, since cross-arch buildx emulation has nothing left
+to do once the runner's own architecture (amd64) is the only platform
+being built. `build/docker/Dockerfile` (the hand-built, fetch-from-a-
+published-release image) is unaffected by any of this — it already used
+the house image, its own uid 1337, and already only ever needed the arch
+the person running `docker build` happened to be on.
+
+**Decided the same day: container publishing moved out of this repo
+entirely,** into the user's `epicmorg/docker` repo — confirmed to
+already be public (been running for years, at `linux/ecosystem/apps/`
+in that repo's own layout, alongside Dockerfiles for several other
+products this project's own probes cover — gitlab, mattermost, teamcity,
+testrail, nginx, and more), which resolves the one open concern from
+the paragraph this replaces: no promise to external, non-epicmorg users
+gets broken, since the image stays public, just built by a different
+repo's pipeline on its own schedule instead of this one's `goreleaser
+release` run. `dockers_v2`/`docker_signs` were removed from
+`.goreleaser.yaml` entirely — no container pipe exists in this repo's
+release process anymore at all — along with every docker-specific step
+in `release.yml` (docker CLI install, buildx/qemu setup, the three
+registry logins, the docker socket mount) and the now-meaningless
+`--skip=docker` flag in `develop.yml`/`pr.yml`'s own snapshot builds
+(confirmed live: goreleaser accepts skipping a pipe that isn't
+configured at all without complaint, but there is nothing left to name
+there). `permissions.packages: write` dropped from `release.yml` too —
+nothing left in that job pushes anywhere but the GitHub Release itself.
+
+`build/docker/Dockerfile` was corrected before being handed off: it
+installs the raw binary from the release archive (`enodia_linux_
+${TARGETARCH}.tar.gz`, extracted with `tar`) rather than the `.deb`
+via apt, and runs as root rather than a dedicated user, matching the
+same two corrections made to the (now-deleted) root `Dockerfile` above.
+Verified live: `docker build -f build/docker/Dockerfile build/docker`
+against the real, already-published `1.0.0+0` release produced a
+working image, running as root (`id` → `uid=0`), with a real config
+round-tripping through it correctly.
+
+That file (along with its `docker-compose.yml`/`Makefile`) has since
+been removed from this repo entirely and relocated by the user into
+[`EpicMorg/docker`'s `linux/ecosystem/apps/enodia`](https://github.com/EpicMorg/docker/tree/master/linux/ecosystem/apps/enodia)
+— confirmed public. The published image address doesn't change
+(`epicmorg/enodia`, tags `latest`/`1`/the exact version, across GHCR,
+Docker Hub, and Quay, same as before this decision) — only which repo's
+pipeline builds and pushes it does. README's install section keeps its
+`docker run` example, now noting the Dockerfile lives in that monorepo
+rather than claiming this repo's own release pipeline keeps it current.
+
+**Also found and fixed in the same session, unrelated to the image
+change itself:** `secrets.env`'s values were shell-quoted
+(`KEY="value"`), which `bash source` strips but Docker's `--env-file`
+(and Compose's `env_file:`) does not — confirmed live that loading it via
+`--env-file` left the literal quote characters *inside* each environment
+variable's value, which then corrupted the YAML `enodia.yaml` produces
+after `${VAR}` interpolation substitutes them in
+(`internal/config.Interpolate` runs before `yaml.Decode`, so a
+quote-poisoned substitution becomes a genuine parse error, not merely a
+wrong value) — reproduced the user's exact reported error
+(`yaml: line 4: did not find expected key`) this way, then confirmed the
+fix (`KEY=value`, no quotes) resolves it. This was mistaken at first for
+a stale, un-bind-mounted Docker volume (`build/docker/docker-compose.yml`
+does have that separate, real gap too — no `volumes:` mapping for
+`/etc/enodia` at all, so it runs on an anonymous volume unless one is
+added — but that wasn't what actually produced this particular error).
 
 ---
 
@@ -1038,3 +1137,104 @@ probe, one file), so once the better-fitting shape was verified there
 was no reason to keep maintaining both. Not a redesign forced by new
 information, just the natural order two live targets arrived in on the
 same day.
+
+---
+
+## D24 — GitHub resolver errors were silently swallowed; pgAdmin needed a tags-based resolver, not Releases
+
+**Decided.** Found while debugging a real production run: `kitsu` and
+`vaultwarden` both showed `resolver_error` in the table with no way to
+tell why, and a separate `vcenter` target showed `unreachable` for what
+turned out to be a TLS cert issue, not a network one. The vcenter case
+was a config fix (`tls: insecure: true` was missing for that
+self-signed-cert target — not a code bug), but the resolver case
+exposed two real gaps, fixed the same day:
+
+**`in.ResolveErr` reached `evaluate.Evaluate` and became
+`ReasonResolverError`, but the actual error — rate limit, DNS, a
+reshaped API — was never surfaced anywhere.** `cmd/enodia/pipeline.go`'s
+`assess` now calls `res.Warn` with the real error whenever `Resolve`
+fails, the same channel already used for corrupt-cache notices, so
+`resolver_error` in the table now comes with a `warning: resolving
+lifecycle for kitsu (github:cgwire/kitsu): ...` line on stderr instead
+of forcing a source dive to find out why.
+
+**`githubSource.Token` existed but nothing ever set it** —
+`resolver.New` built it with no token at all, so every GitHub lifecycle
+lookup (Releases and, as of this decision, tags too) was unauthenticated
+and capped at 60 requests/hour *per source IP*, shared with anything
+else on that egress, not just this process. `resolver.New` now takes a
+`githubToken string` parameter and wires it into both GitHub sources;
+`cmd/enodia/pipeline.go`'s `newLiveResolver` passes
+`os.Getenv("GITHUB_TOKEN")` — the same env var name `gh`, goreleaser and
+GitHub Actions itself already use, not a new enodia-specific credential
+concept, and empty is a valid value (falls back to the unauthenticated
+cap, same as today).
+
+**pgAdmin got a real resolver.** `pgadmin-org/pgadmin4` has no GitHub
+Releases at all — confirmed live, the releases endpoint returns `[]` —
+only tags, shaped `REL-9_17` rather than a dotted version.
+`internal/version`'s numeric-spine extraction on that raw string reads
+just `9`, silently dropping the revision — this is exactly why
+`pgadminProbe`'s `Meta()` deliberately left `DefaultResolver` unset
+before this decision. A new `resolver.githubTagsSource` (`Type:
+"github-tags"`) fetches `/repos/{owner}/{repo}/tags` instead, converts
+`REL-9_17` → `9.17` (strip the non-digit prefix, `_` → `.`), and picks
+the *highest-parsing* tag from the fetched page rather than trusting
+list position — confirmed live that the tags endpoint documents no
+ordering guarantee the way Releases' reverse-chronological order lets
+`githubSource` just take the first eligible entry. `pgadminProbe` now
+sets `DefaultResolver: ResolverRef{Type: "github-tags", ID:
+"pgadmin-org/pgadmin4"}`. The tags endpoint carries no dates and no
+draft/prerelease flags, so every `Cycle` it returns has
+`ReleaseDate`/`EOL`/`Support`/`LTS` all nil — same "unknown, not false"
+reasoning `githubSource` already applies.
+
+---
+
+## D25 — A probe can override its own lifecycle resolver per observation
+
+**Decided.** Reported directly: a real SonarQube instance's version was
+being collected fine, but the report showed a dash for it anyway.
+Cause: SonarSource split "SonarQube" into two separate products at the
+end of 2024 — "SonarQube Server" (the direct continuation of every
+former Community/Developer/Enterprise/Data Center edition, still
+calendar-versioned `2025.1`, `2026.4`, ...) and "SonarQube Community
+Build" (a new, separate, always-free build with its own faster cadence,
+versioned `24.12`, `25.12`, `26.9`, ... — the same calendar scheme with
+a two-digit year instead of four). Confirmed live: `endoflife.date`
+tracks these as two distinct pages (`sonarqube-server`,
+`sonarqube-community`) with genuinely different cycle data — the
+version this user's own Server instance reported matched nothing on
+the `sonarqube-community` page `sonarqubeProbe` was hardcoded to, hence
+`ReasonCycleUnmatched` → the dash.
+
+Every other multi-variant product in this tree so far (`bitwarden`/
+`vaultwarden`, `centos`/`centos-stream`) solves this the D9 way: two
+separate `product:` values in config, each with its own fixed
+`DefaultResolver`, because telling them apart genuinely needs either an
+operator declaration or a different file to read. SonarQube doesn't fit
+that: both variants answer the identical `/api/system/status` endpoint
+as the identical product, and which lifecycle calendar applies is
+reliably readable from the version string `sonarqubeProbe` already
+fetches (four-digit leading year → Server, two-digit from `24` onward →
+Community Build, anything smaller → a pre-split bare major, identical
+on both pages) — asking the operator to declare it as a second product
+would just be config busywork over a fact the probe already has in
+hand.
+
+So `probe.Observation` gained a `Resolver ResolverRef` field: zero value
+(the overwhelming majority of probes) means "use `Meta().DefaultResolver`
+as before"; a probe that sets it non-zero overrides that default for
+this one observation only. `cmd/enodia/pipeline.go`'s `assess` checks
+`o.Resolver.Type` after reading the product's static default and prefers
+it when set. `sonarqubeProbe.Probe` now calls `sonarqubeResolverFor(info.
+Version)` and sets `obs.Resolver` from it every time; `Meta().
+DefaultResolver` still points at `sonarqube-server` as a static fallback
+purely for `enodia products`' own listing, which runs with no
+observation to inspect.
+
+This is the first product needing this — not a general "every probe
+should eventually set this" pattern. D9's approach remains the default
+for telling variants apart; this exists for the narrower case where the
+signal is only available *after* probing, not before.

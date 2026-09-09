@@ -136,14 +136,18 @@ type Resolver struct {
 	Warn func(msg string)
 }
 
-// New builds a Resolver wired to the real endoflife.date and GitHub Releases
-// sources. cache may be nil to disable caching.
-func New(cache *Cache) *Resolver {
+// New builds a Resolver wired to the real endoflife.date and GitHub (Releases
+// and tags) sources. cache may be nil to disable caching. githubToken, if
+// non-empty, authenticates every GitHub call: unauthenticated requests are
+// capped at 60/hour per source IP — shared with anything else on that same
+// egress, not just this process — while a token raises that to 5000/hour.
+func New(cache *Cache, githubToken string) *Resolver {
 	return &Resolver{
 		Cache: cache,
 		Sources: map[string]Source{
-			"endoflife": &endoflifeSource{Client: http.DefaultClient},
-			"github":    &githubSource{Client: http.DefaultClient},
+			"endoflife":   &endoflifeSource{Client: http.DefaultClient},
+			"github":      &githubSource{Client: http.DefaultClient, Token: githubToken},
+			"github-tags": &githubTagsSource{Client: http.DefaultClient, Token: githubToken},
 		},
 	}
 }

@@ -111,7 +111,69 @@ func TestSonarQubeProbeMeta(t *testing.T) {
 	if len(m.Auth.Kinds) != 0 {
 		t.Fatalf("got Kinds %+v, want none: no credentialed path was ever tested", m.Auth.Kinds)
 	}
-	if m.DefaultResolver.Type != "endoflife" || m.DefaultResolver.ID != "sonarqube-community" {
-		t.Fatalf("got resolver %+v, want endoflife/sonarqube-community", m.DefaultResolver)
+	if m.DefaultResolver.Type != "endoflife" || m.DefaultResolver.ID != "sonarqube-server" {
+		t.Fatalf("got resolver %+v, want endoflife/sonarqube-server", m.DefaultResolver)
+	}
+}
+
+func TestSonarQubeResolverFor(t *testing.T) {
+	cases := []struct {
+		version string
+		want    ResolverRef
+	}{
+		// Post-split SonarQube Server: four-digit calendar year.
+		{"2025.4.8", ResolverRef{Type: "endoflife", ID: "sonarqube-server"}},
+		{"2026.4.1", ResolverRef{Type: "endoflife", ID: "sonarqube-server"}},
+		// Post-split Community Build: two-digit calendar year.
+		{"24.12.0.100206", ResolverRef{Type: "endoflife", ID: "sonarqube-community"}},
+		{"26.9.0.129388", ResolverRef{Type: "endoflife", ID: "sonarqube-community"}},
+		// Pre-split bare major versions: identical on both pages.
+		{"9.9.8.100196", ResolverRef{Type: "endoflife", ID: "sonarqube-community"}},
+		{"10.7.0.96327", ResolverRef{Type: "endoflife", ID: "sonarqube-community"}},
+	}
+	for _, tc := range cases {
+		if got := sonarqubeResolverFor(tc.version); got != tc.want {
+			t.Errorf("sonarqubeResolverFor(%q) = %+v, want %+v", tc.version, got, tc.want)
+		}
+	}
+}
+
+// This reply's shape (id/version/status) is real and already captured in
+// the Community Build fixture above; only the version string is inlined
+// here (2025.4.8 is a real listed cycle on endoflife.date's own
+// sonarqube-server page) — no live Server install was available to
+// capture a full response from directly.
+func TestSonarQubeProbePicksServerResolverForCalendarVersion(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"id":"x","version":"2025.4.8","status":"UP"}`))
+	}))
+	defer srv.Close()
+
+	p := sonarqubeProbe{}
+	obs, err := p.Probe(context.Background(), target(srv.URL, "sonarqube"))
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	want := ResolverRef{Type: "endoflife", ID: "sonarqube-server"}
+	if obs.Resolver != want {
+		t.Fatalf("got resolver %+v, want %+v", obs.Resolver, want)
+	}
+}
+
+func TestSonarQubeProbePicksCommunityResolverForRealFixture(t *testing.T) {
+	fixture := loadSonarQubeFixture(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(fixture)
+	}))
+	defer srv.Close()
+
+	p := sonarqubeProbe{}
+	obs, err := p.Probe(context.Background(), target(srv.URL, "sonarqube"))
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	want := ResolverRef{Type: "endoflife", ID: "sonarqube-community"}
+	if obs.Resolver != want {
+		t.Fatalf("got resolver %+v, want %+v (pre-split version, defaults to community lineage)", obs.Resolver, want)
 	}
 }

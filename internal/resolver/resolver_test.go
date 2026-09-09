@@ -145,11 +145,26 @@ func TestResolveWarnsOnCorruptCacheButStillResolves(t *testing.T) {
 }
 
 func TestNewWiresEndoflifeAndGithubSources(t *testing.T) {
-	r := New(nil)
+	r := New(nil, "")
 	if _, ok := r.Sources["endoflife"]; !ok {
 		t.Fatal("expected an \"endoflife\" source")
 	}
 	if _, ok := r.Sources["github"]; !ok {
 		t.Fatal("expected a \"github\" source")
+	}
+	if _, ok := r.Sources["github-tags"]; !ok {
+		t.Fatal("expected a \"github-tags\" source")
+	}
+}
+
+func TestNewPassesGithubTokenToBothGithubSources(t *testing.T) {
+	r := New(nil, "s3cret")
+	gh, ok := r.Sources["github"].(*githubSource)
+	if !ok || gh.Token != "s3cret" {
+		t.Fatalf("got %+v, want github source with Token %q", r.Sources["github"], "s3cret")
+	}
+	tags, ok := r.Sources["github-tags"].(*githubTagsSource)
+	if !ok || tags.Token != "s3cret" {
+		t.Fatalf("got %+v, want github-tags source with Token %q", r.Sources["github-tags"], "s3cret")
 	}
 }

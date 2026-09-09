@@ -1,0 +1,42 @@
+[
+  {
+    "name": "REL-9_17",
+    "zipball_url": "https://api.github.com/repos/owner/repo/zipball/refs/tags/REL-9_17",
+    "tarball_url": "https://api.github.com/repos/owner/repo/tarball/refs/tags/REL-9_17",
+    "commit": {
+      "sha": "067f7af2274cf034623426d2b74a7695018a5f1f",
+      "url": "https://api.github.com/repos/owner/repo/commits/067f7af2274cf034623426d2b74a7695018a5f1f"
+    },
+    "node_id": "MDM6UmVmODI1NTI2NDA6cmVmcy90YWdzL1JFTC05XzE3"
+  },
+  {
+    "name": "REL-9_5",
+    "zipball_url": "https://api.github.com/repos/owner/repo/zipball/refs/tags/REL-9_5",
+    "tarball_url": "https://api.github.com/repos/owner/repo/tarball/refs/tags/REL-9_5",
+    "commit": {
+      "sha": "9464e448874a48c39c318108bd28fc8efbad3a0b",
+      "url": "https://api.github.com/repos/owner/repo/commits/9464e448874a48c39c318108bd28fc8efbad3a0b"
+    },
+    "node_id": "MDM6UmVmODI1NTI2NDA6cmVmcy90YWdzL1JFTC05XzU="
+  },
+  {
+    "name": "REL-9_16",
+    "zipball_url": "https://api.github.com/repos/owner/repo/zipball/refs/tags/REL-9_16",
+    "tarball_url": "https://api.github.com/repos/owner/repo/tarball/refs/tags/REL-9_16",
+    "commit": {
+      "sha": "888a053231923e6704b56165cf248db056252144",
+      "url": "https://api.github.com/repos/owner/repo/commits/888a053231923e6704b56165cf248db056252144"
+    },
+    "node_id": "MDM6UmVmODI1NTI2NDA6cmVmcy90YWdzL1JFTC05XzE2"
+  },
+  {
+    "name": "docs-snapshot",
+    "zipball_url": "https://api.github.com/repos/owner/repo/zipball/refs/tags/docs-snapshot",
+    "tarball_url": "https://api.github.com/repos/owner/repo/tarball/refs/tags/docs-snapshot",
+    "commit": {
+      "sha": "abc0530000000000000000000000000000000000",
+      "url": "https://api.github.com/repos/owner/repo/commits/abc0530000000000000000000000000000000000"
+    },
+    "node_id": "MDM6UmVmODI1NTI2NDA6cmVmcy90YWdzL2RvY3Mtc25hcHNob3Q="
+  }
+]

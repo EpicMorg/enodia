@@ -31,13 +31,15 @@ func (pgadminProbe) Meta() Meta {
 		Summary:       "pgAdmin",
 		DefaultScheme: "https",
 		Auth:          AuthSpec{Required: false},
-		// No DefaultResolver: endoflife.date has no pgadmin calendar
-		// (confirmed 404). pgadmin-org/pgadmin4's own GitHub tags use the
-		// shape "REL-9_17", not a dotted version — internal/version's
-		// numeric-spine extraction would read that as bare "9", losing
-		// the revision entirely, so wiring the GitHub Releases resolver
-		// here today would compare against a silently wrong reference
-		// rather than no reference at all.
+		// endoflife.date has no pgadmin calendar (confirmed 404), and
+		// pgadmin-org/pgadmin4 has no GitHub Releases at all (confirmed:
+		// the releases endpoint returns an empty array) — only tags, shaped
+		// "REL-9_17" rather than a dotted version. resolver.githubTagsSource
+		// (Type: "github-tags") exists specifically for this: it converts
+		// that shape to "9.17" and picks the highest-parsing tag from the
+		// fetched page rather than trusting list order, since the tags
+		// endpoint documents none.
+		DefaultResolver: ResolverRef{Type: "github-tags", ID: "pgadmin-org/pgadmin4"},
 	}
 }
 
