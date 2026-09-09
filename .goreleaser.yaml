@@ -206,15 +206,8 @@ dockers_v2:
       - '{{ replace .Version "+" "-" }}'
       - "{{ if not .Prerelease }}{{ .Major }}{{ end }}"
       - "{{ if not .Prerelease }}latest{{ end }}"
-    # The Dockerfile installs dist/enodia_linux_amd64.deb (nfpm's own
-    # output, built earlier in this same pipeline run — nfpm runs before
-    # docker in goreleaser's stage order) via apt; extra_files is what
-    # actually gets it into the build context, since only builds' own
-    # per-platform binaries are staged there automatically, not nfpm
-    # packages. amd64 only, see docs/DECISIONS.md D17's "Revisited" entry
-    # for why arm64 was dropped rather than also wired up.
-    extra_files:
-      - dist/enodia_linux_amd64.deb
+    # amd64 only, see docs/DECISIONS.md D17's "Revisited" entry for why
+    # arm64 was dropped rather than also wired up for this image.
     platforms:
       - linux/amd64
     annotations:
