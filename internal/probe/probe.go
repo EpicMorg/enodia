@@ -182,6 +182,15 @@ type Observation struct {
 	Endpoint string            `json:"endpoint,omitempty"` // what was actually queried
 	Extra    map[string]string `json:"extra,omitempty"`    // buildNumber, typeId, ...
 
+	// Resolver overrides Meta().DefaultResolver for this one observation.
+	// Zero value (Type == "") means "use the product's static default" —
+	// almost every probe leaves this unset. It exists for a product whose
+	// lifecycle calendar can only be told apart after seeing the vendor's
+	// own version reply — unlike D9's identity checks, which run before any
+	// version is known — e.g. sonarqubeProbe picking sonarqube-server vs
+	// sonarqube-community by the shape of the version string itself.
+	Resolver ResolverRef `json:"resolver,omitempty"`
+
 	// TLSVerified is nil for non-TLS transports. False means the certificate
 	// was not verified — surfaced in reports as a fleet-wide TLS audit.
 	TLSVerified *bool `json:"tlsVerified,omitempty"`
