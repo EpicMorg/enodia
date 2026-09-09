@@ -1189,3 +1189,52 @@ sets `DefaultResolver: ResolverRef{Type: "github-tags", ID:
 draft/prerelease flags, so every `Cycle` it returns has
 `ReleaseDate`/`EOL`/`Support`/`LTS` all nil — same "unknown, not false"
 reasoning `githubSource` already applies.
+
+---
+
+## D25 — A probe can override its own lifecycle resolver per observation
+
+**Decided.** Reported directly: a real SonarQube instance's version was
+being collected fine, but the report showed a dash for it anyway.
+Cause: SonarSource split "SonarQube" into two separate products at the
+end of 2024 — "SonarQube Server" (the direct continuation of every
+former Community/Developer/Enterprise/Data Center edition, still
+calendar-versioned `2025.1`, `2026.4`, ...) and "SonarQube Community
+Build" (a new, separate, always-free build with its own faster cadence,
+versioned `24.12`, `25.12`, `26.9`, ... — the same calendar scheme with
+a two-digit year instead of four). Confirmed live: `endoflife.date`
+tracks these as two distinct pages (`sonarqube-server`,
+`sonarqube-community`) with genuinely different cycle data — the
+version this user's own Server instance reported matched nothing on
+the `sonarqube-community` page `sonarqubeProbe` was hardcoded to, hence
+`ReasonCycleUnmatched` → the dash.
+
+Every other multi-variant product in this tree so far (`bitwarden`/
+`vaultwarden`, `centos`/`centos-stream`) solves this the D9 way: two
+separate `product:` values in config, each with its own fixed
+`DefaultResolver`, because telling them apart genuinely needs either an
+operator declaration or a different file to read. SonarQube doesn't fit
+that: both variants answer the identical `/api/system/status` endpoint
+as the identical product, and which lifecycle calendar applies is
+reliably readable from the version string `sonarqubeProbe` already
+fetches (four-digit leading year → Server, two-digit from `24` onward →
+Community Build, anything smaller → a pre-split bare major, identical
+on both pages) — asking the operator to declare it as a second product
+would just be config busywork over a fact the probe already has in
+hand.
+
+So `probe.Observation` gained a `Resolver ResolverRef` field: zero value
+(the overwhelming majority of probes) means "use `Meta().DefaultResolver`
+as before"; a probe that sets it non-zero overrides that default for
+this one observation only. `cmd/enodia/pipeline.go`'s `assess` checks
+`o.Resolver.Type` after reading the product's static default and prefers
+it when set. `sonarqubeProbe.Probe` now calls `sonarqubeResolverFor(info.
+Version)` and sets `obs.Resolver` from it every time; `Meta().
+DefaultResolver` still points at `sonarqube-server` as a static fallback
+purely for `enodia products`' own listing, which runs with no
+observation to inspect.
+
+This is the first product needing this — not a general "every probe
+should eventually set this" pattern. D9's approach remains the default
+for telling variants apart; this exists for the narrower case where the
+signal is only available *after* probing, not before.

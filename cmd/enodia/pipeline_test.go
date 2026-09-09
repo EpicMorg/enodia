@@ -27,6 +27,15 @@ func (s fakeSource) Fetch(context.Context, probe.ResolverRef) ([]resolver.Cycle,
 	return s.cycles, s.err
 }
 
+// fakeMultiSource, unlike fakeSource, answers differently per ref.ID — for
+// tests that need to prove which of several possible calendars actually
+// got queried, not just that some fixed answer came back regardless.
+type fakeMultiSource map[string]fakeSource
+
+func (s fakeMultiSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]resolver.Cycle, error) {
+	return s[ref.ID].Fetch(ctx, ref)
+}
+
 func TestCollectObservationsBuildsFromConfig(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(jiraManifest))
@@ -152,6 +161,40 @@ func TestAssessUsesResolverForProductWithOne(t *testing.T) {
 	}
 	if got[0].Reason != evaluate.ReasonNone || got[0].Patch != evaluate.PatchBehind {
 		t.Fatalf("got %+v, want a real cycle match against the fake source", got[0])
+	}
+}
+
+// A product like sonarqube can only tell which of two lifecycle calendars
+// applies after seeing its own version reply; Observation.Resolver is how
+// it overrides its product's static Meta().DefaultResolver for that one
+// instance. This uses "jira" as the Product (any registered probe works,
+// since assess only reads Meta().DefaultResolver as the pre-override
+// fallback) with two distinct fake sources to prove the override, not the
+// static default, decides which one gets queried.
+func TestAssessObservationResolverOverridesProductDefault(t *testing.T) {
+	inv := &inventory.File{
+		Header: inventory.Header{CollectedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		Observations: []probe.Observation{
+			{
+				ID: "x", Product: "jira", Version: "26.9.0.129388", Normalized: "26.9.0.129388",
+				Resolver: probe.ResolverRef{Type: "endoflife", ID: "sonarqube-community"},
+			},
+		},
+	}
+	cmd, _, _ := testCmd(t)
+	res := &resolver.Resolver{
+		Sources: map[string]resolver.Source{
+			// jira's own static default would resolve here if the override
+			// were ignored, and 26.9 would show as PatchUnknown against it.
+			"endoflife": fakeMultiSource{
+				"jira":                {cycles: []resolver.Cycle{{Cycle: "10.3", Latest: "10.3.2"}}},
+				"sonarqube-community": {cycles: []resolver.Cycle{{Cycle: "26.9", Latest: "26.9.0.129388"}}},
+			},
+		},
+	}
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, res)
+	if len(got) != 1 || got[0].Reason != evaluate.ReasonNone || got[0].Patch != evaluate.PatchCurrent {
+		t.Fatalf("got %+v, want a clean match against sonarqube-community, not jira's own default", got)
 	}
 }
 

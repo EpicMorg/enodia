@@ -936,6 +936,18 @@ Not dates. Order of work, and what each step unblocks.
   converts that to `9.17` and picks the highest-parsing tag from the
   page rather than trusting list order, since the tags endpoint
   documents no ordering guarantee. See `docs/DECISIONS.md` D24.
+- `sonarqube` was resolving against the wrong lifecycle calendar for a
+  real production instance ("SonarQube Server") despite collecting its
+  version fine: SonarSource split "SonarQube" into "SonarQube Server"
+  (calendar-versioned `2025.x`/`2026.x`) and "SonarQube Community
+  Build" (`24.x`/`25.x`/`26.x`, two-digit year) at the end of 2024,
+  confirmed as two distinct `endoflife.date` pages with genuinely
+  different cycle data. `probe.Observation` gained a `Resolver
+  ResolverRef` field a probe can set to override its product's static
+  `Meta().DefaultResolver` for one observation — `sonarqubeProbe` now
+  picks `sonarqube-server` vs `sonarqube-community` from the version
+  string's leading year alone, no operator-declared variant needed. See
+  `docs/DECISIONS.md` D25.
 
 ## Next
 
