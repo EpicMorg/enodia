@@ -299,7 +299,7 @@ for a tool meant to be installed *inside* corporate networks.
 
 ---
 
-## D17 — Cosign keyless signing, dockers_v2, install script on raw GitHub
+## D17 — Cosign keyless signing, install script on raw GitHub (container publishing later moved out entirely — see "Revisited" below)
 
 **Decided.** `.goreleaser.yaml` (v2 schema, verified against
 `goreleaser.com/static/schema.json` and goreleaser's own production config
@@ -461,18 +461,40 @@ published-release image) is unaffected by any of this — it already used
 the house image, its own uid 1337, and already only ever needed the arch
 the person running `docker build` happened to be on.
 
-**Considered and left open: moving container publishing out of this
-repo entirely**, into the user's own `epicmorg/docker` repo (their
-existing home for house-image Dockerfiles), decoupled from this repo's
-own `goreleaser release` run. Not decided either way yet — flagged
-tradeoffs: the image would build on its own schedule rather than in the
-same run as the binary/checksums (D17's original point of cosign keyless
-signing being tied to the *same* release run's OIDC identity would need
-rethinking for whichever repo actually builds and signs it), and enodia
-is a public AGPL project (D16) that currently promises an official
-container image in its own README — if `epicmorg/docker` is private,
-that promise would need to change for users outside epicmorg. Revisit
-when/if this is actually decided, not preemptively.
+**Decided the same day: container publishing moved out of this repo
+entirely,** into the user's `epicmorg/docker` repo — confirmed to
+already be public (been running for years, at `linux/ecosystem/apps/`
+in that repo's own layout, alongside Dockerfiles for several other
+products this project's own probes cover — gitlab, mattermost, teamcity,
+testrail, nginx, and more), which resolves the one open concern from
+the paragraph this replaces: no promise to external, non-epicmorg users
+gets broken, since the image stays public, just built by a different
+repo's pipeline on its own schedule instead of this one's `goreleaser
+release` run. `dockers_v2`/`docker_signs` were removed from
+`.goreleaser.yaml` entirely — no container pipe exists in this repo's
+release process anymore at all — along with every docker-specific step
+in `release.yml` (docker CLI install, buildx/qemu setup, the three
+registry logins, the docker socket mount) and the now-meaningless
+`--skip=docker` flag in `develop.yml`/`pr.yml`'s own snapshot builds
+(confirmed live: goreleaser accepts skipping a pipe that isn't
+configured at all without complaint, but there is nothing left to name
+there). `permissions.packages: write` dropped from `release.yml` too —
+nothing left in that job pushes anywhere but the GitHub Release itself.
+
+`build/docker/Dockerfile` — the file meant to be relocated into
+`epicmorg/docker` by the user themselves — was corrected first: it
+installs the raw binary from the release archive (`enodia_linux_
+${TARGETARCH}.tar.gz`, extracted with `tar`) rather than the `.deb`
+via apt, and runs as root rather than a dedicated user, matching the
+same two corrections made to the (now-deleted) root `Dockerfile` above.
+Verified live: `docker build -f build/docker/Dockerfile build/docker`
+against the real, already-published `1.0.0+0` release produces a
+working image, running as root (`id` → `uid=0`), with a real config
+round-tripping through it correctly. README's install section no longer
+claims `ghcr.io/epicmorg/enodia` is kept up to date by this repo's own
+pipeline — it points at `build/docker/Dockerfile` instead, since the
+final `epicmorg/docker` location isn't this repo's to document until
+the user has actually relocated it there.
 
 **Also found and fixed in the same session, unrelated to the image
 change itself:** `secrets.env`'s values were shell-quoted

@@ -1,12 +1,17 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Alternate runtime image built on the user's own house base
-# (ghcr.io/epicmorg/debian:trixie-light) instead of the scratch-based one
-# at the repo root (see ../../Dockerfile, used by .goreleaser.yaml's
-# dockers_v2 for ghcr.io/epicmorg/enodia). That one copies a raw
-# cross-compiled binary in; this one installs the released .deb through
-# apt instead — a full Debian userland (glibc, apt, a shell) rather than
-# scratch, on purpose, for whatever the house image already brings.
+# Runtime image built on the user's own house base
+# (ghcr.io/epicmorg/debian:trixie-light). This is now the only Dockerfile
+# in this repo — goreleaser's own dockers_v2/docker_signs (and the release
+# workflow's docker login/buildx/cosign-for-containers steps) were removed
+# entirely; container publishing moved to the user's own epicmorg/docker
+# repo instead, on its own schedule, decoupled from this repo's release
+# run — see docs/DECISIONS.md D17's "Revisited" entry. This file is meant
+# to be relocated there.
+#
+# Installs the raw binary from the release archive (not the .deb): no
+# apt-installed package, no dedicated system user — this image runs as
+# root, the house image's own default, by request.
 #
 # No repo source is needed to build this: everything is fetched over the
 # network, so `docker build -f build/docker/Dockerfile build/docker`
@@ -21,46 +26,38 @@ FROM ghcr.io/epicmorg/debian:trixie-light
 # "latest" resolves through GitHub's own /releases/latest/download/ alias,
 # which needs no version string at all; pass an exact tag (e.g. "1.0.0+0")
 # to pin one instead. TARGETARCH is set automatically by buildx and
-# already matches nfpm's own file_name_template exactly ("amd64"/"arm64"),
-# no translation needed.
+# already matches goreleaser's own archive name_template exactly
+# ("amd64"/"arm64"), no translation needed.
 ARG ENODIA_VERSION=1.0.0+0
 ARG TARGETARCH=amd64
 
 RUN set -eux; \
 	if [ "${ENODIA_VERSION}" = "latest" ]; then \
-		url="https://github.com/EpicMorg/enodia/releases/latest/download/enodia_linux_${TARGETARCH}.deb"; \
+		url="https://github.com/EpicMorg/enodia/releases/latest/download/enodia_linux_${TARGETARCH}.tar.gz"; \
 	else \
-		url="https://github.com/EpicMorg/enodia/releases/download/${ENODIA_VERSION}/enodia_linux_${TARGETARCH}.deb"; \
+		url="https://github.com/EpicMorg/enodia/releases/download/${ENODIA_VERSION}/enodia_linux_${TARGETARCH}.tar.gz"; \
 	fi && \
 	aria2c \
         --conf-path="/usr/local/share/epicmorg/aria2/config/aria2.conf" \
         --user-agent="$(shuf -n 1 /usr/local/share/epicmorg/user-agents/user-agents.txt)" \
         -d / \
-        -o /tmp/enodia.deb \
+        -o /tmp/enodia.tar.gz \
         "$url" && \
-	apt-get update && \
-	apt-get install -y --no-install-recommends /tmp/enodia.deb && \
+	tar -xzf /tmp/enodia.tar.gz -C /usr/bin enodia && \
+	chmod 0755 /usr/bin/enodia && \
+    /usr/bin/enodia about && \
     echo "clean up" && \
-    apt-get clean -y && \
-    apt-get autoclean -y && \
-    rm -rfv /var/lib/apt/lists/* && \
-    rm -rfv /var/cache/apt/archives/*.deb && \
     rm -rfv /tmp/*
 
-# Config — enodia.yaml/settings.yaml/credentials.yaml. The .deb itself
-# creates this directory empty (see .goreleaser.yaml's nfpms.contents); the
-# volume just makes sure it survives container recreation and is easy to
-# bind-mount from the host, the same shape as the root Dockerfile's own
-# -v /etc/enodia:/config:ro example in README.md.
-VOLUME ["/etc/enodia"]
+# Config — enodia.yaml/settings.yaml/credentials.yaml — and the working
+# directory for exported reports (inventory.jsonl, HTML exports, the
+# resolver's on-disk cache, etc.); neither is created by an installed
+# package here, so both are made explicitly. The volumes just make sure
+# they survive container recreation and are easy to bind-mount from the
+# host.
+RUN mkdir -p /opt/enodia /etc/enodia
 
-# Working directory for exported reports (inventory.jsonl, HTML exports,
-# the resolver's on-disk cache, etc.) — this image's own concern, not
-# something the package creates.
-RUN mkdir -p /opt/enodia
-VOLUME ["/opt/enodia"]
+VOLUME ["/etc/enodia", "/opt/enodia"]
 WORKDIR /opt/enodia
-
-RUN /usr/bin/enodia about
 
 ENTRYPOINT ["/usr/bin/enodia"]

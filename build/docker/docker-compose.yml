@@ -5,9 +5,12 @@ services:
       context: .
     x-squash: false
     x-mirrors:
-      - quay.io/epicmorg/epicmorg/enodia:1
-      - ghcr.io/epicmorg/epicmorg/enodia:1
-      - docker.io/epicmorg/epicmorg/enodia:1
-      - quay.io/epicmorg/epicmorg/enodia:latest
-      - ghcr.io/epicmorg/epicmorg/enodia:latest
-      - docker.io/epicmorg/epicmorg/enodia:latest
+      - quay.io/epicmorg/enodia:1
+      - ghcr.io/epicmorg/enodia:1
+      - docker.io/epicmorg/enodia:1
+      - quay.io/epicmorg/enodia:1.0.0-0
+      - ghcr.io/epicmorg/enodia:1.0.0-0
+      - docker.io/epicmorg/enodia:1.0.0-0
+      - quay.io/epicmorg/enodia:latest
+      - ghcr.io/epicmorg/enodia:latest
+      - docker.io/epicmorg/enodia:latest
