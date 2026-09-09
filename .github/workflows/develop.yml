@@ -2,9 +2,9 @@
 #
 # Manual dev-build snapshot: the same cross-compiled binaries + checksums
 # release.yml produces, minus everything release-specific (no GitHub
-# Release, no GHCR image, no cosign signing) — just the archives, each
-# uploaded as its own separate artifact on this run (one per platform, not
-# one shared zip bundling all of them together).
+# Release, no cosign signing) — just the archives, each uploaded as its
+# own separate artifact on this run (one per platform, not one shared zip
+# bundling all of them together).
 #
 # Deliberately workflow_dispatch only, never on push: this job runs inside
 # ghcr.io/epicmorg/debian:trixie-develop (see release.yml for why — Go, mingw-w64,
@@ -38,12 +38,13 @@ jobs:
 
       # --snapshot implies --skip=announce,publish,validate (no tag, no
       # release, no dirty-worktree check needed for a throwaway build);
-      # docker/sign are skipped explicitly since this never touches GHCR
-      # or a signing identity — no docker CLI is even installed here.
+      # sign is skipped explicitly since this never touches a signing
+      # identity. No docker pipe exists in .goreleaser.yaml at all
+      # anymore (see docs/DECISIONS.md D17) — nothing to skip there.
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           version: "~> v2"
-          args: release --snapshot --clean --skip=docker,sign
+          args: release --snapshot --clean --skip=sign
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
