@@ -1137,3 +1137,55 @@ probe, one file), so once the better-fitting shape was verified there
 was no reason to keep maintaining both. Not a redesign forced by new
 information, just the natural order two live targets arrived in on the
 same day.
+
+---
+
+## D24 — GitHub resolver errors were silently swallowed; pgAdmin needed a tags-based resolver, not Releases
+
+**Decided.** Found while debugging a real production run: `kitsu` and
+`vaultwarden` both showed `resolver_error` in the table with no way to
+tell why, and a separate `vcenter` target showed `unreachable` for what
+turned out to be a TLS cert issue, not a network one. The vcenter case
+was a config fix (`tls: insecure: true` was missing for that
+self-signed-cert target — not a code bug), but the resolver case
+exposed two real gaps, fixed the same day:
+
+**`in.ResolveErr` reached `evaluate.Evaluate` and became
+`ReasonResolverError`, but the actual error — rate limit, DNS, a
+reshaped API — was never surfaced anywhere.** `cmd/enodia/pipeline.go`'s
+`assess` now calls `res.Warn` with the real error whenever `Resolve`
+fails, the same channel already used for corrupt-cache notices, so
+`resolver_error` in the table now comes with a `warning: resolving
+lifecycle for kitsu (github:cgwire/kitsu): ...` line on stderr instead
+of forcing a source dive to find out why.
+
+**`githubSource.Token` existed but nothing ever set it** —
+`resolver.New` built it with no token at all, so every GitHub lifecycle
+lookup (Releases and, as of this decision, tags too) was unauthenticated
+and capped at 60 requests/hour *per source IP*, shared with anything
+else on that egress, not just this process. `resolver.New` now takes a
+`githubToken string` parameter and wires it into both GitHub sources;
+`cmd/enodia/pipeline.go`'s `newLiveResolver` passes
+`os.Getenv("GITHUB_TOKEN")` — the same env var name `gh`, goreleaser and
+GitHub Actions itself already use, not a new enodia-specific credential
+concept, and empty is a valid value (falls back to the unauthenticated
+cap, same as today).
+
+**pgAdmin got a real resolver.** `pgadmin-org/pgadmin4` has no GitHub
+Releases at all — confirmed live, the releases endpoint returns `[]` —
+only tags, shaped `REL-9_17` rather than a dotted version.
+`internal/version`'s numeric-spine extraction on that raw string reads
+just `9`, silently dropping the revision — this is exactly why
+`pgadminProbe`'s `Meta()` deliberately left `DefaultResolver` unset
+before this decision. A new `resolver.githubTagsSource` (`Type:
+"github-tags"`) fetches `/repos/{owner}/{repo}/tags` instead, converts
+`REL-9_17` → `9.17` (strip the non-digit prefix, `_` → `.`), and picks
+the *highest-parsing* tag from the fetched page rather than trusting
+list position — confirmed live that the tags endpoint documents no
+ordering guarantee the way Releases' reverse-chronological order lets
+`githubSource` just take the first eligible entry. `pgadminProbe` now
+sets `DefaultResolver: ResolverRef{Type: "github-tags", ID:
+"pgadmin-org/pgadmin4"}`. The tags endpoint carries no dates and no
+draft/prerelease flags, so every `Cycle` it returns has
+`ReleaseDate`/`EOL`/`Support`/`LTS` all nil — same "unknown, not false"
+reasoning `githubSource` already applies.

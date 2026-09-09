@@ -101,7 +101,10 @@ func newLiveResolver(cmd *cobra.Command) *resolver.Resolver {
 	} else {
 		warnPrinter(cmd)(fmt.Sprintf("lifecycle cache disabled: %v", err))
 	}
-	res := resolver.New(cache)
+	// GITHUB_TOKEN follows the same convention gh/goreleaser/Actions itself
+	// use — an optional bump from GitHub's unauthenticated 60/hour cap to
+	// 5000/hour, not a new credential concept of enodia's own.
+	res := resolver.New(cache, os.Getenv("GITHUB_TOKEN"))
 	res.Warn = warnPrinter(cmd)
 	return res
 }
@@ -122,6 +125,13 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 		var resolveErr error
 		if ref.Type != "" {
 			cycles, resolveErr = res.Resolve(ctx, ref)
+			// Evaluate only sees ReasonResolverError, not why — the actual
+			// error (rate limit, DNS, a corrupt calendar) would otherwise be
+			// invisible to whoever is staring at "resolver_error" in the
+			// table with no way to tell those apart.
+			if resolveErr != nil && res.Warn != nil {
+				res.Warn(fmt.Sprintf("resolving lifecycle for %s (%s:%s): %v", o.Product, ref.Type, ref.ID, resolveErr))
+			}
 		}
 
 		out = append(out, evaluate.Evaluate(evaluate.Input{

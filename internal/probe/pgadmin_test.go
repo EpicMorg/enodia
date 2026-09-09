@@ -91,8 +91,8 @@ func TestPgadminProbeMeta(t *testing.T) {
 	if m.Auth.Required {
 		t.Fatal("the login page needs no credentials")
 	}
-	if m.DefaultResolver.Type != "" {
-		t.Fatalf("got resolver %+v, want none (endoflife.date has no pgadmin calendar; "+
-			"GitHub's own tag format REL-9_17 doesn't fit the resolver's numeric-spine assumption)", m.DefaultResolver)
+	want := ResolverRef{Type: "github-tags", ID: "pgadmin-org/pgadmin4"}
+	if m.DefaultResolver != want {
+		t.Fatalf("got resolver %+v, want %+v", m.DefaultResolver, want)
 	}
 }
