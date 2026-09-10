@@ -260,7 +260,7 @@ func htmlCDN(w io.Writer, r Report, sections []htmlViewSection, theme, cdn strin
 	ew.printf("</select>\n</div>\n</div>\n")
 
 	if theme != ThemeNone {
-		ew.printf("<div class=\"alert alert-dismissible alert-warning\" role=\"alert\">This report loads " +
+		ew.printf("<div class=\"alert alert-dismissible alert-warning\" role=\"alert\" data-dismiss-key=\"cdn-warning\">This report loads " +
 			"Bootstrap and its theme from a CDN — it needs internet access in the browser to render " +
 			"correctly. Generate with the default inline assets (<code>html.assets: inline</code>) for a " +
 			"fully offline report, or <code>html.theme: none</code> for unstyled Bootstrap-class markup " +
@@ -352,11 +352,19 @@ func themeLabel(theme string) string {
 // separate <script> tags, purely to keep the page down to one script
 // block: (1) theme handling — reads a per-viewer theme choice back from
 // localStorage, applies it, races cdn's two mirrors when cdn is "" or
-// CDNAuto, and writes back any change the picker makes; (2) dismissing the
-// CDN warning alert on its close button click — Bootstrap's own Alert
-// component needs bootstrap.bundle.min.js to do this, and pulling in a JS
-// bundle just for one button's click handler isn't worth it when four
-// lines of vanilla JS do the same thing.
+// CDNAuto, and writes back any change the picker makes; (2) dismissing an
+// alert on its close button click, and remembering that dismissal —
+// Bootstrap's own Alert component needs bootstrap.bundle.min.js to even
+// do the removal, and pulling in a JS bundle just for one button's click
+// handler isn't worth it when a few lines of vanilla JS do the same thing.
+//
+// Any alert wanting this remembered-dismissal behavior carries a
+// `data-dismiss-key="..."` attribute (currently just the CDN warning,
+// key "cdn-warning") — keyed so a later second dismissible alert doesn't
+// need its own copy of this script, and dismissing one never hides the
+// other. The key is per viewer (localStorage), not per report: once
+// dismissed, it stays dismissed across regenerated reports too, the same
+// way the theme choice already does.
 //
 // bakedTheme is the theme this exact report was generated with — an
 // unrecognised or corrupted stored value resets to that, not to a
@@ -431,11 +439,23 @@ picker.addEventListener("change", function() {
   apply(theme);
   try { window.localStorage.setItem(KEY, theme); } catch (e) {}
 });
+var DISMISS_PREFIX = "enodia-dismissed-";
+try {
+  var alerts = document.querySelectorAll('.alert[data-dismiss-key]');
+  for (var i = 0; i < alerts.length; i++) {
+    var key = alerts[i].getAttribute("data-dismiss-key");
+    if (key && window.localStorage.getItem(DISMISS_PREFIX + key)) { alerts[i].remove(); }
+  }
+} catch (e) { /* localStorage unavailable — the alert just shows every time */ }
 var closeButtons = document.querySelectorAll('.alert .btn-close[data-bs-dismiss="alert"]');
 for (var i = 0; i < closeButtons.length; i++) {
   closeButtons[i].addEventListener("click", function(e) {
     var alertEl = e.currentTarget.closest(".alert");
-    if (alertEl) { alertEl.remove(); }
+    if (alertEl) {
+      var key = alertEl.getAttribute("data-dismiss-key");
+      if (key) { try { window.localStorage.setItem(DISMISS_PREFIX + key, "1"); } catch (e) {} }
+      alertEl.remove();
+    }
   });
 }
 })();`, knownJSON, bakedTheme, racing, bootstrapVersion, bootstrapVersion, bootswatchVersion, bootswatchVersion)

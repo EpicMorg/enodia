@@ -225,6 +225,23 @@ func TestHTMLCDNWarningAlertIsDismissible(t *testing.T) {
 	}
 }
 
+func TestHTMLCDNWarningAlertDismissalIsRemembered(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `data-dismiss-key="cdn-warning"`) {
+		t.Fatalf("expected the alert to carry a dismiss key so a viewer's dismissal can be remembered, got:\n%s", out)
+	}
+	if !strings.Contains(out, `data-dismiss-key`) || !strings.Contains(out, `localStorage.setItem(DISMISS_PREFIX`) {
+		t.Fatal("expected the script to persist a dismissal to localStorage, keyed by data-dismiss-key")
+	}
+	if !strings.Contains(out, `localStorage.getItem(DISMISS_PREFIX`) {
+		t.Fatal("expected the script to check localStorage on load and skip re-showing an already-dismissed alert")
+	}
+}
+
 func TestHTMLCDNThemeNoneOmitsWarningAlertEntirely(t *testing.T) {
 	var buf bytes.Buffer
 	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: ThemeNone}); err != nil {
