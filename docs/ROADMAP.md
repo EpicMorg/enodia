@@ -980,6 +980,22 @@ Not dates. Order of work, and what each step unblocks.
   previously unused). No `DefaultResolver` for either: Perforce is
   proprietary, no public lifecycle calendar exists. See
   `docs/DECISIONS.md` D28.
+- `p4d`/`p4p`: `runP4Info` now clamps to `t.Timeout` (falling back to
+  `defaultTCPReadTimeout`) before running the `p4` subprocess — it
+  didn't before, so a process stuck dialing an unresponsive target hung
+  the whole collection run. Reported from a real production hang.
+- The CDN-mode HTML report's dismissible warning alert now remembers
+  being dismissed: closing it sets a per-viewer `localStorage` flag
+  (keyed by the alert's own `data-dismiss-key`, "cdn-warning" today),
+  and a matching alert in any later-generated report checks that flag
+  on load and skips re-showing itself — the same per-viewer-memory
+  mechanism the theme picker already uses (D19), just for a second kind
+  of state. Verified end to end in a real JS engine (Node), not just a
+  Go string-match test: dismiss → flag set → simulated fresh page load
+  → alert removed on load with no click needed; a viewer who never
+  dismissed anything still sees it. The key is generic
+  (`data-dismiss-key` on any `.alert`) so a future second dismissible
+  alert doesn't need its own copy of this script.
 
 ## Next
 
