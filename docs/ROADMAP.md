@@ -996,6 +996,52 @@ Not dates. Order of work, and what each step unblocks.
   dismissed anything still sees it. The key is generic
   (`data-dismiss-key` on any `.alert`) so a future second dismissible
   alert doesn't need its own copy of this script.
+- Third-party package manager submissions, outside this repo — noted
+  here since neither is enodia's own release pipeline and neither is
+  live yet, so there's nowhere else this status would otherwise live:
+  - **Chocolatey**: `/opt/git/chocolatey/chocolatey/enodia` (the
+    user's own local checkout) has `enodia.nuspec`/`CHANGELOG.md`/
+    `tools/*.ps1` built for `1.0.0`, `1.1.0`, `1.1.1`, `1.2.0` and
+    `1.2.1`, one folder per version. `1.0.0` is submitted and awaiting
+    moderator review; newer versions can't be pushed to the Chocolatey
+    community feed until that review clears.
+  - **winget**: `/opt/git/winget-pkgs` is the user's fork of
+    `microsoft/winget-pkgs` (`origin`), with `microsoft/winget-pkgs`
+    itself as `upstream`. Six PRs open against upstream, one branch
+    each (`EpicMorg.<Package>-<version>` naming), all pushed from a
+    fork `master` kept in sync with upstream first:
+    - `EpicMorg.Enodia` — [1.0.0](https://github.com/microsoft/winget-pkgs/pull/432884),
+      [1.1.0](https://github.com/microsoft/winget-pkgs/pull/432892),
+      [1.1.1](https://github.com/microsoft/winget-pkgs/pull/432893),
+      [1.2.0](https://github.com/microsoft/winget-pkgs/pull/432894),
+      [1.2.1](https://github.com/microsoft/winget-pkgs/pull/432895)
+      — the `1.0.0` manifest was originally copy-pasted from a
+      MikroTik WinBox manifest the user used to maintain on winget-pkgs
+      (`Mikrotik.Winbox`) and needed a full rewrite: wrong
+      `PackageIdentifier`, MikroTik's own publisher/license/
+      description text untouched in all 5 locales
+      (en-US/ru-RU/uk-UA/be-BY/sr-RS), `RelativeFilePath: Enodia.exe`
+      capitalized wrong (the real binary inside the release zip is
+      lowercase `enodia.exe`, confirmed by downloading and inspecting
+      it directly), and a missing `arm64` installer entry. Every
+      `InstallerSha256` was cross-checked against that version's own
+      real `checksums.txt` from the GitHub release, not trusted as-is.
+    - `EpicMorg.AtlassianDownloader` —
+      [2.0.0.9](https://github.com/microsoft/winget-pkgs/pull/432897)
+      — a brand new manifest (no prior winget presence), for
+      [EpicMorg/atlassian-downloader](https://github.com/EpicMorg/atlassian-downloader),
+      a separate C#/.NET console app (MIT license) also already on
+      Chocolatey. That repo has 20 releases going back to 2021 with
+      three different Windows asset-naming conventions over time
+      (`win7-x64`/`win81-arm` under net5.0/net6.0 → `win-x64`/
+      `win-arm64` under net8.0+/dotnet10.0) — deliberately only the
+      latest release got a manifest; backfilling the other 19 is a
+      separate, explicitly-deferred decision, not an oversight.
+    - Every manifest's `winget validate`/`winget install` checklist
+      box only gets checked in a PR after the user confirms they
+      actually ran it on their own Windows machine — Claude has no
+      Windows environment to run either tool itself. See the
+      `feedback_winget_pr_checklist` memory note for the exact rule.
 
 ## Next
 
