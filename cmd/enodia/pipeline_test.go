@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/EpicMorg/enodia/internal/cve"
 	"github.com/EpicMorg/enodia/internal/evaluate"
 	"github.com/EpicMorg/enodia/internal/inventory"
 	"github.com/EpicMorg/enodia/internal/probe"
@@ -136,7 +137,7 @@ func TestAssessNoResolverForProductWithoutOne(t *testing.T) {
 	}
 	cmd, _, _ := testCmd(t)
 	res := &resolver.Resolver{}
-	got := assess(cmd.Context(), inv, evaluate.Policy{}, res)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, res, nil)
 	if len(got) != 1 || got[0].Reason != evaluate.ReasonNoResolver {
 		t.Fatalf("got %+v", got)
 	}
@@ -155,7 +156,7 @@ func TestAssessUsesResolverForProductWithOne(t *testing.T) {
 			"endoflife": fakeSource{cycles: []resolver.Cycle{{Cycle: "10.3", Latest: "10.3.2"}}},
 		},
 	}
-	got := assess(cmd.Context(), inv, evaluate.Policy{}, res)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, res, nil)
 	if len(got) != 1 {
 		t.Fatalf("got %+v", got)
 	}
@@ -192,7 +193,7 @@ func TestAssessObservationResolverOverridesProductDefault(t *testing.T) {
 			},
 		},
 	}
-	got := assess(cmd.Context(), inv, evaluate.Policy{}, res)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, res, nil)
 	if len(got) != 1 || got[0].Reason != evaluate.ReasonNone || got[0].Patch != evaluate.PatchCurrent {
 		t.Fatalf("got %+v, want a clean match against sonarqube-community, not jira's own default", got)
 	}
@@ -211,9 +212,149 @@ func TestAssessResolverErrorBecomesReason(t *testing.T) {
 			"endoflife": fakeSource{err: resolver.ErrUnreachable},
 		},
 	}
-	got := assess(cmd.Context(), inv, evaluate.Policy{}, res)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, res, nil)
 	if len(got) != 1 || got[0].Reason != evaluate.ReasonResolverError {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+// TestAssessLooksUpCVEFindings proves assess wires a non-nil cve.Index
+// through to Evaluate: a Confluence observation vulnerable per the real
+// BDU:2023-06364 entry (see internal/cve/testdata/sample.xml, the exact
+// CVE-2023-22515 example D18 used to show OSV.dev's gap) must surface it
+// in the resulting Assessment, with no resolver configured at all — CVE
+// lookup is independent of lifecycle resolution.
+func TestAssessLooksUpCVEFindings(t *testing.T) {
+	idx, err := cve.LoadBDU(filepath.Join("..", "..", "internal", "cve", "testdata", "sample.xml"))
+	if err != nil {
+		t.Fatalf("LoadBDU: %v", err)
+	}
+
+	inv := &inventory.File{
+		Header: inventory.Header{CollectedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		Observations: []probe.Observation{
+			{ID: "x", Product: "confluence", Version: "8.1.0", Normalized: "8.1.0"},
+		},
+	}
+	cmd, _, _ := testCmd(t)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, &resolver.Resolver{}, idx)
+	if len(got) != 1 || len(got[0].CVEs) == 0 {
+		t.Fatalf("got %+v, want at least one CVE finding for a vulnerable Confluence version", got)
+	}
+}
+
+// TestAssessNilCVEIndexLeavesCVEsEmpty proves the opt-in nil case (no
+// cve.bdu.path configured) behaves like ReasonNoResolver's "fact simply
+// not available" shape, not a crash — cveIndex.Lookup must be nil-safe.
+func TestAssessNilCVEIndexLeavesCVEsEmpty(t *testing.T) {
+	inv := &inventory.File{
+		Header: inventory.Header{CollectedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		Observations: []probe.Observation{
+			{ID: "x", Product: "confluence", Version: "8.1.0", Normalized: "8.1.0"},
+		},
+	}
+	cmd, _, _ := testCmd(t)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, &resolver.Resolver{}, nil)
+	if len(got) != 1 || len(got[0].CVEs) != 0 {
+		t.Fatalf("got %+v, want no CVEs with a nil index", got)
+	}
+}
+
+// TestLoadCVEIndexMergesBDUAndNVD proves loadCVEIndex wires both
+// cve.bdu.path and cve.nvd.path, when both are configured, into one
+// merged Index rather than one silently overriding the other.
+func TestLoadCVEIndexMergesBDUAndNVD(t *testing.T) {
+	bduPath, err := filepath.Abs(filepath.Join("..", "..", "internal", "cve", "testdata", "sample.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	nvdPath, err := filepath.Abs(filepath.Join("..", "..", "internal", "cve", "testdata", "sample_nvd.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+targets: []
+cve:
+  bdu:
+    path: `+bduPath+`
+  nvd:
+    path: `+nvdPath+`
+`)
+	withConfigFlag(t, path)
+
+	cmd, _, _ := testCmd(t)
+	idx, err := loadCVEIndex(cmd)
+	if err != nil {
+		t.Fatalf("loadCVEIndex: %v", err)
+	}
+	got := idx.Lookup("confluence", "8.3.0", "")
+	sources := map[string]int{}
+	for _, f := range got {
+		sources[f.Source]++
+	}
+	if sources["bdu"] == 0 || sources["nvd"] == 0 {
+		t.Fatalf("got sources %+v, want findings from both bdu and nvd", sources)
+	}
+}
+
+// The cve block must come from whichever config the run actually uses,
+// not only an explicit --config: D30 first required the flag, which
+// silently dropped CVEs for every $ENODIA_CONFIG or auto-located setup
+// (D34). $ENODIA_CONFIG outranks the default search paths, so this is
+// hermetic regardless of what the machine has in /etc/enodia.
+func TestLoadCVEIndexHonorsENODIA_CONFIG(t *testing.T) {
+	nvdPath, err := filepath.Abs(filepath.Join("..", "..", "internal", "cve", "testdata", "nvd_gitlab.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+targets: []
+cve:
+  nvd:
+    path: `+nvdPath+`
+`)
+	withConfigFlag(t, "")
+	t.Setenv("ENODIA_CONFIG", path)
+
+	cmd, _, _ := testCmd(t)
+	idx, err := loadCVEIndex(cmd)
+	if err != nil {
+		t.Fatalf("loadCVEIndex: %v", err)
+	}
+	if got := idx.Lookup("gitlab", "19.2.2", "enterprise"); len(got) == 0 {
+		t.Fatal("got no findings: the cve block of $ENODIA_CONFIG was ignored")
+	}
+}
+
+// A config without a cve block means no CVE correlation, not an error.
+func TestLoadCVEIndexConfigWithoutCVEBlockIsNil(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "enodia.yaml")
+	writeFile(t, path, "schemaVersion: 1\ntargets: []\n")
+	withConfigFlag(t, path)
+
+	cmd, _, _ := testCmd(t)
+	idx, err := loadCVEIndex(cmd)
+	if err != nil {
+		t.Fatalf("loadCVEIndex: %v", err)
+	}
+	if idx != nil {
+		t.Fatalf("got %+v, want nil with no cve block", idx)
+	}
+}
+
+// An explicit --config that doesn't exist is still an error — only "no
+// config located anywhere" (a valid state for check --from) is not.
+func TestLoadCVEIndexMissingExplicitConfigErrors(t *testing.T) {
+	withConfigFlag(t, filepath.Join(t.TempDir(), "nope.yaml"))
+	cmd, _, _ := testCmd(t)
+	if _, err := loadCVEIndex(cmd); err == nil {
+		t.Fatal("expected an error for a missing explicit --config")
 	}
 }
 
@@ -258,5 +399,36 @@ func TestNewLiveResolverWarnsWhenCacheDirUnavailable(t *testing.T) {
 	res := newLiveResolver(cmd)
 	if res == nil || res.Sources["endoflife"] == nil || res.Sources["github"] == nil {
 		t.Fatalf("got %+v, want both sources wired", res)
+	}
+}
+
+// assess must route an observation through cve.Subject: a GitLab CE
+// instance (the probe's own Extra["enterprise"] = "false") sees only the
+// findings that apply to CE, not the EE-only ones in the same real data.
+func TestAssessGitLabEditionFiltersCVEs(t *testing.T) {
+	idx, err := cve.LoadNVD(filepath.Join("..", "..", "internal", "cve", "testdata", "nvd_gitlab.json"))
+	if err != nil {
+		t.Fatalf("LoadNVD: %v", err)
+	}
+	obs := func(id, enterprise string) probe.Observation {
+		return probe.Observation{ID: id, Product: "gitlab", Version: "19.2.2", Normalized: "19.2.2",
+			Extra: map[string]string{"enterprise": enterprise}}
+	}
+	inv := &inventory.File{
+		Header:       inventory.Header{CollectedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		Observations: []probe.Observation{obs("ce", "false"), obs("ee", "true")},
+	}
+	cmd, _, _ := testCmd(t)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, &resolver.Resolver{}, idx)
+	if len(got) != 2 {
+		t.Fatalf("got %d assessments, want 2", len(got))
+	}
+	for _, f := range got[0].CVEs {
+		if f.Edition == "enterprise" {
+			t.Fatalf("CE instance got an enterprise-only finding: %s", f.AdvisoryID)
+		}
+	}
+	if len(got[0].CVEs) >= len(got[1].CVEs) {
+		t.Fatalf("CE got %d findings, EE got %d — EE should see strictly more", len(got[0].CVEs), len(got[1].CVEs))
 	}
 }

@@ -115,3 +115,42 @@ func TestNextcloudProbeMeta(t *testing.T) {
 		t.Fatalf("got resolver %+v, want endoflife/nextcloud", m.DefaultResolver)
 	}
 }
+
+func TestNextcloudProbeCommunityFixtureIsNotEnterprise(t *testing.T) {
+	fixture, err := os.ReadFile(filepath.Join("testdata", "nextcloud_34.0.3.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(fixture)
+	}))
+	defer srv.Close()
+	obs, err := nextcloudProbe{}.Probe(context.Background(), target(srv.URL, "nextcloud"))
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	if obs.Extra["enterprise"] != "false" {
+		t.Fatalf("got enterprise=%q, want \"false\" for the real community reply (edition \"\")", obs.Extra["enterprise"])
+	}
+}
+
+func TestNextcloudEnterprise(t *testing.T) {
+	s := func(v string) *string { return &v }
+	for _, c := range []struct {
+		in      *string
+		want    string
+		present bool
+	}{
+		{nil, "", false},       // older release, no field
+		{s(""), "false", true}, // confirmed live: community
+		{s("Enterprise"), "true", true},
+		{s("enterprise"), "true", true},
+		{s("something-else"), "", false}, // unknown value: don't guess
+	} {
+		got, present := nextcloudEnterprise(c.in)
+		if got != c.want || present != c.present {
+			t.Errorf("nextcloudEnterprise(%v) = %q, %v; want %q, %v", c.in, got, present, c.want, c.present)
+		}
+	}
+}

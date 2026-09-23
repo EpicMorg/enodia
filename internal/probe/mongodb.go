@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"slices"
 	"time"
 )
 
@@ -68,6 +69,14 @@ func (mongodbProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	}
 
 	obs.Version = version
+	// buildInfo's "modules" lists "enterprise" on MongoDB Enterprise builds
+	// and is empty on community ones (the recorded testdata/mongodb_7.0.40.bin
+	// is a community server: an empty array). CVE data splits MongoDB by
+	// edition, so this is recorded as a fact in the same Extra["enterprise"]
+	// key gitlab and vault use; an absent field leaves it unreported.
+	if modules, found, err := bsonTopLevelStrings(doc, "modules"); err == nil && found {
+		obs.Extra = map[string]string{"enterprise": fmt.Sprintf("%t", slices.Contains(modules, "enterprise"))}
+	}
 	obs.Endpoint = addr
 	obs.DurationMS = time.Since(start).Milliseconds()
 	return obs, nil
@@ -160,14 +169,15 @@ func readMongoOpMsgDocument(r io.Reader) ([]byte, error) {
 	return rest[5:], nil
 }
 
-// bsonTopLevelString scans a BSON document's top-level elements for a
-// string-typed field named key, skipping every other field by its own type
-// without needing a general-purpose BSON decoder — buildInfo's document has
-// nested documents, arrays and nearly every scalar type, but this probe
-// only ever reads one flat string field out of it.
-func bsonTopLevelString(doc []byte, key string) (value string, found bool, err error) {
+// bsonTopLevel scans a BSON document's top-level elements for a field
+// named key, skipping every other field by its own type without needing a
+// general-purpose BSON decoder — buildInfo's document has nested
+// documents, arrays and nearly every scalar type, but this probe only
+// reads a couple of fields out of it. It returns the field's BSON type
+// byte and its raw value bytes.
+func bsonTopLevel(doc []byte, key string) (kind byte, value []byte, found bool, err error) {
 	if len(doc) < 5 {
-		return "", false, fmt.Errorf("document too short (%d bytes)", len(doc))
+		return 0, nil, false, fmt.Errorf("document too short (%d bytes)", len(doc))
 	}
 	i := 4 // skip the document's own int32 length prefix
 	for i < len(doc) {
@@ -181,31 +191,82 @@ func bsonTopLevelString(doc []byte, key string) (value string, found bool, err e
 			i++
 		}
 		if i >= len(doc) {
-			return "", false, fmt.Errorf("unterminated element name")
+			return 0, nil, false, fmt.Errorf("unterminated element name")
 		}
 		name := string(doc[nameStart:i])
 		i++ // skip the name's trailing NUL
 
-		if kind == 0x02 && name == key {
-			if i+4 > len(doc) {
-				return "", false, fmt.Errorf("truncated string length for %q", name)
-			}
-			n := int(binary.LittleEndian.Uint32(doc[i : i+4]))
-			start := i + 4
-			if n < 1 || start+n > len(doc) {
-				return "", false, fmt.Errorf("implausible string length %d for %q", n, name)
-			}
-			// n includes the trailing NUL BSON always writes for a string.
-			return string(doc[start : start+n-1]), true, nil
-		}
-
-		skip, err := bsonValueLen(kind, doc[i:])
+		n, err := bsonValueLen(kind, doc[i:])
 		if err != nil {
-			return "", false, fmt.Errorf("skipping field %q: %w", name, err)
+			return 0, nil, false, fmt.Errorf("skipping field %q: %w", name, err)
 		}
-		i += skip
+		if name == key {
+			return kind, doc[i : i+n], true, nil
+		}
+		i += n
 	}
-	return "", false, nil
+	return 0, nil, false, nil
+}
+
+// bsonTopLevelString reads one top-level string-typed field.
+func bsonTopLevelString(doc []byte, key string) (value string, found bool, err error) {
+	kind, v, found, err := bsonTopLevel(doc, key)
+	if err != nil || !found || kind != 0x02 {
+		return "", false, err
+	}
+	s, err := bsonString(v)
+	if err != nil {
+		return "", false, fmt.Errorf("%q: %w", key, err)
+	}
+	return s, true, nil
+}
+
+// bsonTopLevelStrings reads one top-level array field and returns its
+// string elements (any non-string element is skipped). A BSON array is an
+// embedded document keyed "0", "1", ..., so it's walked the same way.
+func bsonTopLevelStrings(doc []byte, key string) (values []string, found bool, err error) {
+	kind, arr, found, err := bsonTopLevel(doc, key)
+	if err != nil || !found || kind != 0x04 {
+		return nil, false, err
+	}
+	i := 4
+	for i < len(arr) {
+		k := arr[i]
+		i++
+		if k == 0x00 {
+			break
+		}
+		for i < len(arr) && arr[i] != 0x00 {
+			i++
+		}
+		i++ // skip the index name's trailing NUL
+		n, err := bsonValueLen(k, arr[i:])
+		if err != nil {
+			return nil, false, fmt.Errorf("%q element: %w", key, err)
+		}
+		if k == 0x02 {
+			s, err := bsonString(arr[i : i+n])
+			if err != nil {
+				return nil, false, fmt.Errorf("%q element: %w", key, err)
+			}
+			values = append(values, s)
+		}
+		i += n
+	}
+	return values, true, nil
+}
+
+// bsonString decodes a BSON string value: int32 length (including the
+// trailing NUL BSON always writes) followed by the bytes.
+func bsonString(v []byte) (string, error) {
+	if len(v) < 5 {
+		return "", fmt.Errorf("truncated string")
+	}
+	n := int(binary.LittleEndian.Uint32(v[:4]))
+	if n < 1 || 4+n > len(v) {
+		return "", fmt.Errorf("implausible string length %d", n)
+	}
+	return string(v[4 : 4+n-1]), nil
 }
 
 // bsonValueLen reports how many bytes the value following a BSON type byte

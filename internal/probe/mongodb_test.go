@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -116,5 +117,53 @@ func TestBSONTopLevelStringRoundTrip(t *testing.T) {
 	}
 	if version != "7.0.40" {
 		t.Fatalf("got %q", version)
+	}
+}
+
+// The recorded reply is a community server: "modules" is an empty array.
+func TestMongoDBProbeCommunityFixtureIsNotEnterprise(t *testing.T) {
+	addr := mongoServer(t, loadMongoDBFixture(t))
+	obs, err := mongodbProbe{}.Probe(context.Background(), Target{ID: "x", Product: "mongodb", Address: addr, Timeout: 2 * time.Second})
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	if obs.Extra["enterprise"] != "false" {
+		t.Fatalf("got enterprise=%q, want \"false\" for the community fixture", obs.Extra["enterprise"])
+	}
+}
+
+// bsonStringArrayDoc builds {key: [values...]} — a minimal stand-in for an
+// Enterprise buildInfo reply, whose only relevant difference from the
+// recorded community one is "modules" carrying "enterprise".
+func bsonStringArrayDoc(key string, values ...string) []byte {
+	var arr []byte
+	for i, v := range values {
+		arr = append(arr, 0x02)
+		arr = append(arr, []byte(strconv.Itoa(i))...)
+		arr = append(arr, 0x00)
+		arr = binary.LittleEndian.AppendUint32(arr, uint32(len(v)+1))
+		arr = append(arr, []byte(v)...)
+		arr = append(arr, 0x00)
+	}
+	arrDoc := binary.LittleEndian.AppendUint32(nil, uint32(4+len(arr)+1))
+	arrDoc = append(append(arrDoc, arr...), 0x00)
+
+	body := append([]byte{0x04}, []byte(key)...)
+	body = append(append(body, 0x00), arrDoc...)
+	doc := binary.LittleEndian.AppendUint32(nil, uint32(4+len(body)+1))
+	return append(append(doc, body...), 0x00)
+}
+
+func TestBSONTopLevelStringsReadsModules(t *testing.T) {
+	got, found, err := bsonTopLevelStrings(bsonStringArrayDoc("modules", "enterprise"), "modules")
+	if err != nil || !found || len(got) != 1 || got[0] != "enterprise" {
+		t.Fatalf("got %v found=%v err=%v, want [enterprise]", got, found, err)
+	}
+	got, found, err = bsonTopLevelStrings(bsonStringArrayDoc("modules"), "modules")
+	if err != nil || !found || len(got) != 0 {
+		t.Fatalf("got %v found=%v err=%v, want an empty, found array", got, found, err)
+	}
+	if _, found, _ := bsonTopLevelStrings(bsonStringArrayDoc("other", "x"), "modules"); found {
+		t.Fatal("an absent field must report found=false")
 	}
 }

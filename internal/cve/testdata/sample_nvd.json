@@ -1,0 +1,223 @@
+{
+  "resultsPerPage": 7,
+  "startIndex": 0,
+  "totalResults": 7,
+  "format": "NVD_CVE",
+  "version": "2.0",
+  "timestamp": "2026-09-23T13:16:11.000",
+  "vulnerabilities": [
+    {
+      "cve": {
+        "id": "CVE-2023-22515",
+        "vulnStatus": "Analyzed",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Atlassian has been made aware of an issue reported by a handful of customers where external attackers may have exploited a previously unknown vulnerability in publicly accessible Confluence Data Center and Server instances to create unauthorized Confluence administrator accounts and access Confluence instances."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            { "cvssData": { "baseSeverity": "CRITICAL" } }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:atlassian:confluence_data_center:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "8.0.0",
+                    "versionEndExcluding": "8.3.3",
+                    "matchCriteriaId": "85B2AD9F-CBA6-4559-9AE3-5F76A9EC3B7F"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:atlassian:confluence_data_center:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "8.4.0",
+                    "versionEndExcluding": "8.4.3",
+                    "matchCriteriaId": "38F9918D-6848-4CD6-8096-4FB48C23818B"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:atlassian:confluence_data_center:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "8.5.0",
+                    "versionEndExcluding": "8.5.2",
+                    "matchCriteriaId": "8D646BCF-214F-449D-AEEB-B253E8715394"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:atlassian:confluence_server:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "8.0.0",
+                    "versionEndExcluding": "8.3.3",
+                    "matchCriteriaId": "970A3DA7-5114-4696-A93D-C3D5AFF5C6C5"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:atlassian:confluence_server:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "8.4.0",
+                    "versionEndExcluding": "8.4.3",
+                    "matchCriteriaId": "A2EB19CD-AE29-4775-91C5-05B01A96AC6C"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:atlassian:confluence_server:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "8.5.0",
+                    "versionEndExcluding": "8.5.2",
+                    "matchCriteriaId": "79229BE7-0AA0-4308-8BB2-8FB11E8B9AD7"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2099-00001",
+        "vulnStatus": "Analyzed",
+        "descriptions": [{ "lang": "en", "value": "synthetic: unmapped product, must be filtered out entirely" }],
+        "metrics": {},
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:example:widget:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "2.0.0"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2099-00002",
+        "vulnStatus": "Analyzed",
+        "descriptions": [{ "lang": "en", "value": "synthetic: open-ended range, no fix published yet" }],
+        "metrics": { "cvssMetricV2": [{ "baseSeverity": "MEDIUM" }] },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:postgresql:postgresql:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "16.0"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2099-00003",
+        "vulnStatus": "Analyzed",
+        "descriptions": [{ "lang": "en", "value": "synthetic: exact version embedded in the CPE string, no bound fields at all" }],
+        "metrics": {},
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:postgresql:postgresql:9.6.24:*:*:*:*:*:*:*"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2099-00004",
+        "vulnStatus": "Analyzed",
+        "descriptions": [{ "lang": "en", "value": "synthetic: garbage version bound, must be dropped without breaking the parse" }],
+        "metrics": {},
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:redhat:keycloak:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "1.2.3-beta"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2099-00005",
+        "vulnStatus": "Rejected",
+        "descriptions": [{ "lang": "en", "value": "Rejected reason: This CVE ID was withdrawn by its CNA." }],
+        "metrics": {},
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:postgresql:postgresql:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "9.0.0"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2099-00006",
+        "vulnStatus": "Analyzed",
+        "descriptions": [{ "lang": "en", "value": "synthetic: no version constraint at all, must be dropped (carries no version information)" }],
+        "metrics": {},
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:keycloak:keycloak:*:*:*:*:*:*:*:*"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

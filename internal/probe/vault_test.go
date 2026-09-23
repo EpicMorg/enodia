@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -131,5 +132,36 @@ func TestVaultProbeMeta(t *testing.T) {
 	}
 	if m.DefaultResolver.Type != "endoflife" || m.DefaultResolver.ID != "hashicorp-vault" {
 		t.Fatalf("got resolver %+v, want endoflife/hashicorp-vault", m.DefaultResolver)
+	}
+}
+
+// The recorded reply is a community server ("enterprise": false). The
+// Enterprise variant flips only that one real field of the same reply;
+// an older Vault without the field reports no edition at all.
+func TestVaultProbeReportsEdition(t *testing.T) {
+	fixture := string(loadVaultFixture(t, "vault_2.1.0.json"))
+	for _, c := range []struct {
+		name, body, want string
+		present          bool
+	}{
+		{"community (real)", fixture, "false", true},
+		{"enterprise", strings.Replace(fixture, `"enterprise": false`, `"enterprise": true`, 1), "true", true},
+		{"field absent", strings.Replace(fixture, `"enterprise": false,`, ``, 1), "", false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(c.body))
+			}))
+			defer srv.Close()
+			obs, err := vaultProbe{}.Probe(context.Background(), target(srv.URL, "vault"))
+			if err != nil {
+				t.Fatalf("Probe: %v", err)
+			}
+			got, present := obs.Extra["enterprise"]
+			if got != c.want || present != c.present {
+				t.Fatalf("got enterprise=%q present=%v, want %q present=%v", got, present, c.want, c.present)
+			}
+		})
 	}
 }

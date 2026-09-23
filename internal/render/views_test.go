@@ -50,6 +50,18 @@ func TestCompactRowsReasonDefaultsToDash(t *testing.T) {
 	}
 }
 
+// The CVES column is a bare count: "-" with no findings, the count
+// otherwise — confluence-a carries one in sampleReport (see testdata_test.go).
+func TestCompactRowsCVEColumn(t *testing.T) {
+	_, rows, _ := compactRows(sampleReport())
+	if row := findRow(rows, 0, "confluence-a"); row[7] != "1" {
+		t.Fatalf("got %q, want \"1\"", row[7])
+	}
+	if row := findRow(rows, 0, "jira-b"); row[7] != "-" {
+		t.Fatalf("got %q, want \"-\" with no CVE findings", row[7])
+	}
+}
+
 // compactRows tones by OverallSeverity: jira-a is warn (lifecycle warn),
 // jira-b is warn too (lifecycle warn even though patch is current), "down"
 // is warn (probe_failed's floor), confluence-a is warn (branch warn).
@@ -303,5 +315,19 @@ func TestViewRowsEmptyDefaultsToCompact(t *testing.T) {
 	if len(gotHeaders) != len(wantHeaders) || len(gotRows) != len(wantRows) {
 		t.Fatalf("empty view did not default to compact: got %d headers/%d rows, want %d/%d",
 			len(gotHeaders), len(gotRows), len(wantHeaders), len(wantRows))
+	}
+}
+
+// Drift shows CVES the same way compact does: last column, bare count.
+func TestDriftRowsCVEColumn(t *testing.T) {
+	headers, rows, _ := driftRows(sampleReport())
+	if headers[len(headers)-1] != "CVES" {
+		t.Fatalf("got last header %q, want CVES", headers[len(headers)-1])
+	}
+	if row := findRow(rows, 0, "confluence-a"); row[6] != "1" {
+		t.Fatalf("got %q, want \"1\"", row[6])
+	}
+	if row := findRow(rows, 0, "jira-b"); row[6] != "-" {
+		t.Fatalf("got %q, want \"-\" with no CVE findings", row[6])
 	}
 }

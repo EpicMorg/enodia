@@ -23,8 +23,9 @@
 # pushed from anywhere, which is what a bare `on.push.tags` filter alone
 # would allow.
 #
-# The job runs inside ghcr.io/epicmorg/debian:trixie-develop (the user's own image)
-# rather than bare ubuntu-latest: it already carries the Go version this
+# The job runs inside ghcr.io/epicmorg/go:1.26 (the user's own Go build
+# image, built on their lighter apt-only Debian develop base) rather than
+# bare ubuntu-latest: it already carries the Go version this
 # project requires, mingw-w64 (windows/amd64 and windows/386 resource
 # icons), and llvm-mingw (windows/arm64's, which Debian's own mingw-w64
 # package cannot produce at all — confirmed, it ships no
@@ -32,7 +33,7 @@
 #
 # Actions are pinned by commit SHA (version in the trailing comment) rather
 # than a floating tag, so a compromised or force-moved tag upstream can't
-# silently change what runs in this pipeline. ghcr.io/epicmorg/debian:trixie-develop
+# silently change what runs in this pipeline. ghcr.io/epicmorg/go:1.26
 # below is deliberately the exception: it is the user's own first-party
 # build environment, not a third party's, and floating-by-design is the
 # actual point of it — this repo picking up a newly added cross-compiler
@@ -57,7 +58,7 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/epicmorg/debian:trixie-develop
+      image: ghcr.io/epicmorg/go:1.26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
