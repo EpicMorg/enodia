@@ -595,3 +595,15 @@ func TestHTMLCVEModalShowsEdition(t *testing.T) {
 		t.Fatalf("expected the edition next to the source, got:\n%s", buf.String())
 	}
 }
+
+// Bootstrap 5.3 declares every --bs-modal-* variable on .modal; without
+// that class the dialog rendered transparent and full-width in CDN mode.
+func TestHTMLCVEModalOverlayCarriesBootstrapModalClass(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if !strings.Contains(buf.String(), `class="modal enodia-cve-modal-overlay"`) {
+		t.Fatal("expected the overlay to carry Bootstrap's own .modal class")
+	}
+}
