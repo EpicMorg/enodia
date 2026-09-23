@@ -602,7 +602,7 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 	// decides visibility; inline mode has no .modal rule at all.
 	fmt.Fprintf(b, `<div id="%s" class="modal enodia-cve-modal-overlay">`, anchorID)
 	fmt.Fprintf(b, `<a href="#" class="enodia-cve-modal-backdrop" aria-label="Close" tabindex="-1"></a>`)
-	fmt.Fprintf(b, `<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="dialog" aria-modal="true" aria-labelledby="%s">`, titleID)
+	fmt.Fprintf(b, `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="dialog" aria-modal="true" aria-labelledby="%s">`, titleID)
 	fmt.Fprintf(b, `<div class="modal-content"><div class="modal-header">`)
 	fmt.Fprintf(b, `<h5 class="modal-title" id="%s">CVEs — %s</h5>`, titleID, html.EscapeString(rowID))
 	fmt.Fprintf(b, `<a href="#" class="btn-close" aria-label="Close"></a></div>`)
@@ -723,8 +723,8 @@ footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ccc; color:
 .enodia-cve-modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; align-items: center; justify-content: center; }
 .enodia-cve-modal-overlay:target { display: flex; }
 .enodia-cve-modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); }
-.enodia-cve-modal-overlay .modal-dialog { position: relative; z-index: 1; max-width: 32rem; width: 90vw; max-height: 80vh; margin: 0; }
-.enodia-cve-modal-overlay .modal-content { display: flex; flex-direction: column; max-height: 80vh; background: Canvas; color: CanvasText; border: 1px solid #888; border-radius: 0.4rem; }
+.enodia-cve-modal-overlay .modal-dialog { position: relative; z-index: 1; max-width: 71.25rem; width: 95vw; max-height: 85vh; margin: 0; }
+.enodia-cve-modal-overlay .modal-content { display: flex; flex-direction: column; max-height: 85vh; background: Canvas; color: CanvasText; border: 1px solid #888; border-radius: 0.4rem; }
 .enodia-cve-modal-overlay .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #ccc; }
 .enodia-cve-modal-overlay .modal-title { margin: 0; font-size: 1.1em; }
 .enodia-cve-modal-overlay .modal-body { padding: 1rem; overflow-y: auto; }
