@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Same build as develop.yml (see there for why epicmorg/debian:trixie-
-# develop, --snapshot, and what gets skipped), but auto-triggered on every
+# Same build as develop.yml (see there for why ghcr.io/epicmorg/go:1.26,
+# --snapshot, and what gets skipped), but auto-triggered on every
 # pull request instead of run by hand: a PR is an explicit review
 # checkpoint, not routine commit-by-commit iteration, so pulling that
-# ~5GB image here is an accepted cost — unlike on every push to develop,
+# ~3.5GB (compressed) image here is an accepted cost — unlike on every push to develop,
 # which is exactly what develop.yml exists to avoid.
 name: pr build
 
@@ -19,7 +19,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/epicmorg/debian:trixie-develop
+      image: ghcr.io/epicmorg/go:1.26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

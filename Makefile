@@ -12,7 +12,7 @@ WINDRES_386   ?= i686-w64-mingw32-windres
 
 # Debian's mingw-w64 package ships no aarch64-w64-mingw32-windres at all —
 # confirmed, it only has i686/x86_64 — so arm64 needs a different source:
-# epicmorg/debian:trixie-develop carries llvm-mingw and sets $LLVM_MINGW_DIR
+# ghcr.io/epicmorg/go:1.26 carries llvm-mingw and sets $LLVM_MINGW_DIR
 # to its version-stamped root (e.g. .../llvm-mingw/20260826). Inside that
 # root, the *-ubuntu-22.04-x86_64 subdirectory is the one host bundle whose
 # bin/ has cross windres for every target, arm64 included. The date in that
@@ -83,7 +83,7 @@ windows-resources:
 	sed -e 's/@VERSION_CSV@/$(VERSION_CSV)/g' -e 's/@VERSION_STR@/$(VERSION)/g' $(RES_SRC)/meta.rc.in > $(RES_SRC)/meta.rc
 	@command -v $(WINDRES_AMD64) >/dev/null 2>&1 && (cd $(RES_SRC) && $(WINDRES_AMD64) -i meta.rc -O coff -o ../../$(RES_PKG)/resource_windows_amd64.syso) || echo "skip windows-resources (amd64): $(WINDRES_AMD64) not found (apt install mingw-w64)"
 	@command -v $(WINDRES_386) >/dev/null 2>&1 && (cd $(RES_SRC) && $(WINDRES_386) -i meta.rc -O coff -o ../../$(RES_PKG)/resource_windows_386.syso) || echo "skip windows-resources (386): $(WINDRES_386) not found (apt install mingw-w64)"
-	@command -v $(WINDRES_ARM64) >/dev/null 2>&1 && (cd $(RES_SRC) && $(WINDRES_ARM64) -i meta.rc -O coff -o ../../$(RES_PKG)/resource_windows_arm64.syso) || echo "skip windows-resources (arm64): $(WINDRES_ARM64) not found (needs llvm-mingw, e.g. epicmorg/debian:trixie-develop)"
+	@command -v $(WINDRES_ARM64) >/dev/null 2>&1 && (cd $(RES_SRC) && $(WINDRES_ARM64) -i meta.rc -O coff -o ../../$(RES_PKG)/resource_windows_arm64.syso) || echo "skip windows-resources (arm64): $(WINDRES_ARM64) not found (needs llvm-mingw, e.g. ghcr.io/epicmorg/go:1.26)"
 
 windows-resources-clean:
 	rm -f $(RES_SRC)/meta.rc $(RES_PKG)/resource_windows_amd64.syso $(RES_PKG)/resource_windows_386.syso $(RES_PKG)/resource_windows_arm64.syso
