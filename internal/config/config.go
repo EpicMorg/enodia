@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
+	"unicode"
 
 	"gopkg.in/yaml.v3"
 
@@ -191,6 +193,14 @@ func (c *Config) Validate() error {
 	case c.SchemaVersion > SchemaVersion:
 		return fmt.Errorf("%s: schemaVersion %d is newer than this build understands (max %d) — upgrade enodia",
 			c.path, c.SchemaVersion, SchemaVersion)
+	}
+
+	for key, p := range map[string]string{"cve.bdu.path": c.CVE.BDU.Path, "cve.nvd.path": c.CVE.NVD.Path} {
+		if strings.ContainsFunc(p, unicode.IsControl) {
+			return fmt.Errorf("%s: %s %q contains a control character — a Windows path in double quotes "+
+				"turns \\t, \\n into a tab and a newline; write it unquoted, in single quotes, or with forward slashes",
+				c.path, key, p)
+		}
 	}
 
 	seen := make(map[string]bool, len(c.Targets))
