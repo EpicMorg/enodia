@@ -2016,3 +2016,49 @@ management APIs, one probe would cover almost none of it, and there's
 no test hardware to verify any of it against. Treated like `tails` —
 off the list, not waiting.
 
+
+---
+
+## D35 — CVE modal groups findings per CVE; structured CVSS ratings
+
+**Decided.** Asked directly how the modal chose its text: it didn't —
+every Finding showed its own source's text, so the same CVE appeared
+once from BDU and once or more from NVD (once per matching CPE:
+`confluence_server` and `confluence_data_center` are two findings for
+one CVE-2023-22515), and the CVES count counted findings, not CVEs.
+
+- **One line per CVE**, in the modal and in the count (`cveGroup`,
+  `internal/render`). BDU and NVD findings for the same CVE ID merge;
+  a BDU advisory citing no CVE stays its own line. This is presentation
+  only — the JSON export keeps every per-source Finding as the fact it
+  is (D7). Measured on the real exports: TeamCity 2023.05.4 goes from
+  245 to 134, GitLab 19.2.2 EE from 13 to 9.
+- **Text:** BDU's Russian title when BDU has the CVE, NVD's English
+  description otherwise.
+- **Rating:** a structured `Finding.CVSS` (version, base score,
+  CRITICAL/HIGH/MEDIUM/LOW/NONE), parsed per source; the source's own
+  `Severity` text is kept as-is. Shown as `CRITICAL · CVSS 3.1 9.8`,
+  NVD's when it has one (the scoring authority BDU itself cites),
+  BDU's otherwise, the raw text only when nothing parsed. CVSS 3.x is
+  preferred over 4.0 and 2.0 when a record carries several, so every
+  score in one list is on the same scale; within a version NVD's own
+  Primary rating beats a CNA's Secondary one (they disagree in real
+  data: CVE-2026-18252 is 7.3 from GitLab, 8.1 from NVD). NVD's
+  metrics now include `cvssMetricV40` (18,587 records in the 2026
+  file alone). BDU's pattern was built against all 96,135 severity
+  strings in the real export with nothing left unparsed — beyond the
+  common shape that took "Нет опасности" as a level, "оценка" without
+  "базовая" on 4.0 ratings, and a decimal point instead of a comma.
+- **Order:** by score, then severity, then newest CVE first (compared
+  numerically, so CVE-2026-85706 sorts as newer than CVE-2026-9807).
+- The modal is also `modal-xl` now (inline mode gets the same ~1140px
+  from its own CSS).
+
+Edition filtering (D33/D34) still applies per finding before grouping,
+so a group can end up BDU-only for one edition: GitLab's
+CVE-2026-18252 is EE-only in NVD, but BDU files it under GitLab with no
+edition, so a CE instance still sees it — from BDU. That's the data,
+not a bug.
+
+`cacheFormat` bumps to 3, since cached findings now carry the parsed
+rating.

@@ -558,7 +558,7 @@ func writeCVESection(ew *errWriter, s htmlViewSection, r Report, useTones bool, 
 				anchor := fmt.Sprintf("enodia-cve-modal-%s-%d", s.view, i)
 				ew.printf(
 					`<td>%d <a href="#%s" class="enodia-cve-info" aria-haspopup="dialog" aria-label="CVE details for %s">&#9432;</a></td>`,
-					len(a.CVEs), anchor, html.EscapeString(a.ID),
+					distinctCVECount(a.CVEs), anchor, html.EscapeString(a.ID),
 				)
 				writeCVEModalOverlay(&modals, anchor, a.ID, a.CVEs)
 				continue
@@ -580,17 +580,11 @@ func writeCVESection(ew *errWriter, s htmlViewSection, r Report, useTones bool, 
 // mode's own htmlCSS — one markup shape, two stylesheets, the same
 // approach toneClass already uses for table rows.
 //
-// Every CVE ID a Finding carries links to nvd.nist.gov's own detail page
-// — the one identifier both BDU and NVD findings share, so it's always
-// correct regardless of which source produced the Finding. A "bdu"
-// Finding additionally links its own AdvisoryID to bdu.fstec.ru's real
-// per-entry page — confirmed live at https://bdu.fstec.ru/vul/2023-06364
-// (BDU:2023-06364 with the "BDU:" prefix stripped, see bduAdvisoryURL)
-// after the site turned out to need its own CA trusted rather than being
-// genuinely unreachable, correcting D32's original "not verified live, so
-// not linked" note. A "bdu" Finding with no CVE ID at all (BDU's own doc
-// comment notes this can happen) now links via that BDU URL instead of
-// showing bare unlinked text.
+// One line per CVE, not per Finding (see groupCVEs): each CVE ID links to
+// nvd.nist.gov's detail page and its cve.org record, and every BDU
+// advisory for it to bdu.fstec.ru's real per-entry page (confirmed live:
+// BDU:2023-06364 -> /vul/2023-06364, see bduURL). A BDU advisory citing
+// no CVE at all is its own line, linked by that BDU URL alone.
 func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings []cve.Finding) {
 	titleID := anchorID + "-title"
 	// "modal" is what gives Bootstrap's own modal-dialog/modal-content
@@ -607,30 +601,35 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 	fmt.Fprintf(b, `<h5 class="modal-title" id="%s">CVEs — %s</h5>`, titleID, html.EscapeString(rowID))
 	fmt.Fprintf(b, `<a href="#" class="btn-close" aria-label="Close"></a></div>`)
 	fmt.Fprintf(b, `<div class="modal-body"><ul class="list-unstyled mb-0">`)
-	for _, f := range findings {
+	for _, g := range groupCVEs(findings) {
 		fmt.Fprintf(b, `<li class="mb-2"><div>`)
-		if len(f.CVEIDs) > 0 {
-			label := strings.Join(f.CVEIDs, ", ")
-			nvdURL := "https://nvd.nist.gov/vuln/detail/" + f.CVEIDs[0]
-			fmt.Fprintf(b, `<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(nvdURL), html.EscapeString(label))
-			fmt.Fprintf(b, ` &middot; <a href="%s" target="_blank" rel="noopener noreferrer">CVE.org</a>`, html.EscapeString(cveOrgURL(f.CVEIDs[0])))
-			if bduURL := bduAdvisoryURL(f); bduURL != "" {
-				fmt.Fprintf(b, ` &middot; <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(bduURL), html.EscapeString(f.AdvisoryID))
+		var links []string
+		for _, id := range g.cveIDs {
+			links = append(links, externalLink("https://nvd.nist.gov/vuln/detail/"+id, id))
+		}
+		if len(g.cveIDs) > 0 {
+			links = append(links, externalLink(cveOrgURL(g.cveIDs[0]), "CVE.org"))
+		}
+		for _, id := range g.bduIDs {
+			if u := bduURL(id); u != "" {
+				links = append(links, externalLink(u, id))
+			} else {
+				links = append(links, html.EscapeString(id))
 			}
-		} else if bduURL := bduAdvisoryURL(f); bduURL != "" {
-			fmt.Fprintf(b, `<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(bduURL), html.EscapeString(f.AdvisoryID))
-		} else {
-			b.WriteString(html.EscapeString(f.AdvisoryID))
 		}
-		if f.Severity != "" {
-			fmt.Fprintf(b, " &mdash; %s", html.EscapeString(f.Severity))
+		if len(links) == 0 {
+			links = append(links, html.EscapeString(g.key))
 		}
-		if tag := strings.Join(nonEmpty(f.Source, f.Edition), " &middot; "); tag != "" {
+		b.WriteString(strings.Join(links, " &middot; "))
+		if r := g.ratingText(); r != "" {
+			fmt.Fprintf(b, " &mdash; <strong>%s</strong>", html.EscapeString(r))
+		}
+		if tag := strings.Join(nonEmpty(g.tags...), " &middot; "); tag != "" {
 			fmt.Fprintf(b, ` <span class="text-body-secondary">(%s)</span>`, tag)
 		}
 		b.WriteString("</div>")
-		if f.Title != "" {
-			fmt.Fprintf(b, `<div class="small text-body-secondary">%s</div>`, html.EscapeString(f.Title))
+		if g.title != "" {
+			fmt.Fprintf(b, `<div class="small text-body-secondary">%s</div>`, html.EscapeString(g.title))
 		}
 		b.WriteString("</li>")
 	}
@@ -656,19 +655,20 @@ func nonEmpty(parts ...string) []string {
 	return out
 }
 
-// bduAdvisoryURL returns f's real bdu.fstec.ru detail page, or "" when f
-// isn't a BDU finding or its AdvisoryID doesn't have the expected
-// "BDU:"-prefixed shape. The URL path is the identifier with that prefix
-// stripped (confirmed live: BDU:2023-06364 -> /vul/2023-06364).
-func bduAdvisoryURL(f cve.Finding) string {
-	if f.Source != "bdu" {
+// bduURL returns a BDU advisory's real bdu.fstec.ru detail page, or ""
+// when id doesn't have the expected "BDU:"-prefixed shape. The URL path
+// is the identifier with that prefix stripped (confirmed live:
+// BDU:2023-06364 -> /vul/2023-06364).
+func bduURL(id string) string {
+	rest, ok := strings.CutPrefix(id, "BDU:")
+	if !ok || rest == "" {
 		return ""
 	}
-	id, ok := strings.CutPrefix(f.AdvisoryID, "BDU:")
-	if !ok || id == "" {
-		return ""
-	}
-	return "https://bdu.fstec.ru/vul/" + id
+	return "https://bdu.fstec.ru/vul/" + rest
+}
+
+func externalLink(href, text string) string {
+	return fmt.Sprintf(`<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(href), html.EscapeString(text))
 }
 
 // writeHTMLSection writes one view's table. tones may be nil (inline mode,

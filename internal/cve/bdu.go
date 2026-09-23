@@ -123,6 +123,7 @@ func indexVul(idx *Index, v bduVul, softToProduct map[bduKey]bduTarget) {
 			MatchedName: soft.Name,
 			RangeText:   soft.Version,
 			FixStatus:   v.FixStatus,
+			CVSS:        bduCVSS(v.Severity),
 			Edition:     target.edition,
 			rng:         rng,
 		})
@@ -198,4 +199,12 @@ func openTarGzXML(path string) (io.Reader, func(), error) {
 			return tr, func() { _ = gz.Close(); _ = f.Close() }, nil
 		}
 	}
+}
+
+func bduCVSS(severity string) CVSS {
+	c, ok := parseBDUSeverity(severity)
+	if !ok {
+		return CVSS{}
+	}
+	return CVSS{Version: c.version, Score: c.score, Severity: c.severity}
 }

@@ -66,14 +66,16 @@ func compactRows(r Report) (headers []string, rows [][]string, tones []RowTone) 
 	return headers, rows, tones
 }
 
-// cveCount is the CVES cell shared by every view that shows one: a bare
-// count, "-" when there are no findings. Always the last column, so the
-// HTML renderer can find it without a per-view index table.
+// cveCount is the CVES cell shared by every view that shows one: how many
+// distinct CVEs a's findings cover (BDU and NVD each report the same CVE,
+// NVD once per matching CPE — see groupCVEs), "-" when there are none.
+// Always the last column, so the HTML renderer can find it without a
+// per-view index table.
 func cveCount(a evaluate.Assessment) string {
 	if len(a.CVEs) == 0 {
 		return "-"
 	}
-	return strconv.Itoa(len(a.CVEs))
+	return strconv.Itoa(distinctCVECount(a.CVEs))
 }
 
 // isUnreachableAnomaly reports whether a's Reason is a genuine reachability

@@ -44,18 +44,22 @@ type nvdConfiguration struct {
 }
 
 type nvdCVSSData struct {
-	BaseSeverity string `json:"baseSeverity"`
+	BaseScore    float64 `json:"baseScore"`
+	BaseSeverity string  `json:"baseSeverity"`
 }
 
 // BaseSeverity is checked in two places: nested under CVSSData for the
-// v3.x metric shape, and top-level on the metric itself for the older
-// v2 shape — confirmed live against real records of each kind.
+// v3.x/v4.0 metric shape, and top-level on the metric itself for the
+// older v2 shape — confirmed live against real records of each kind.
+// Type is "Primary" for NVD's own analysis, "Secondary" for a CNA's.
 type nvdCVSSMetric struct {
+	Type         string      `json:"type"`
 	CVSSData     nvdCVSSData `json:"cvssData"`
 	BaseSeverity string      `json:"baseSeverity"`
 }
 
 type nvdMetrics struct {
+	CVSSMetricV40 []nvdCVSSMetric `json:"cvssMetricV40"`
 	CVSSMetricV31 []nvdCVSSMetric `json:"cvssMetricV31"`
 	CVSSMetricV30 []nvdCVSSMetric `json:"cvssMetricV30"`
 	CVSSMetricV2  []nvdCVSSMetric `json:"cvssMetricV2"`
@@ -223,7 +227,7 @@ func indexNVDVuln(idx *Index, v nvdCVE, cpeToProduct map[cpeName]string) {
 			break
 		}
 	}
-	severity := nvdSeverity(v.Metrics)
+	rating, _ := nvdCVSS(v.Metrics)
 
 	for _, cfg := range v.Configurations {
 		for _, node := range cfg.Nodes {
@@ -248,7 +252,8 @@ func indexNVDVuln(idx *Index, v nvdCVE, cpeToProduct map[cpeName]string) {
 					AdvisoryID:  v.ID,
 					CVEIDs:      []string{v.ID},
 					Title:       title,
-					Severity:    severity,
+					Severity:    rating.severity,
+					CVSS:        CVSS{Version: rating.version, Score: rating.score, Severity: rating.severity},
 					MatchedName: m.Criteria,
 					RangeText:   rng.String(),
 					Edition:     cpeSWEdition(m.Criteria),
@@ -259,20 +264,34 @@ func indexNVDVuln(idx *Index, v nvdCVE, cpeToProduct map[cpeName]string) {
 	}
 }
 
-// nvdSeverity picks the first available CVSS baseSeverity, preferring the
-// newest metric version present — the same "best available, not every
-// available" choice most CVE tooling makes when a record carries more
-// than one CVSS scoring.
-func nvdSeverity(m nvdMetrics) string {
-	for _, list := range [][]nvdCVSSMetric{m.CVSSMetricV31, m.CVSSMetricV30} {
-		if len(list) > 0 && list[0].CVSSData.BaseSeverity != "" {
-			return list[0].CVSSData.BaseSeverity
+// nvdCVSS picks one structured rating out of a record's metrics, in
+// cvssPreference order. Within one version NVD's own Primary rating wins
+// over a CNA's Secondary one; the version is keyed by which metric list
+// it came from, not cvssData's own "version" field, so a record trimmed
+// down to just its severity (as this package's own test fixtures are)
+// still yields one.
+func nvdCVSS(m nvdMetrics) (cvss, bool) {
+	byVersion := map[string]cvss{}
+	for version, list := range map[string][]nvdCVSSMetric{
+		"4.0": m.CVSSMetricV40, "3.1": m.CVSSMetricV31, "3.0": m.CVSSMetricV30, "2.0": m.CVSSMetricV2,
+	} {
+		if len(list) == 0 {
+			continue
 		}
+		chosen := list[0]
+		for _, e := range list {
+			if e.Type == "Primary" {
+				chosen = e
+				break
+			}
+		}
+		severity := chosen.CVSSData.BaseSeverity
+		if severity == "" {
+			severity = chosen.BaseSeverity // the v2 shape
+		}
+		byVersion[version] = cvss{version: version, score: chosen.CVSSData.BaseScore, severity: severity}
 	}
-	if len(m.CVSSMetricV2) > 0 {
-		return m.CVSSMetricV2[0].BaseSeverity
-	}
-	return ""
+	return pickCVSS(byVersion)
 }
 
 // parseNVDRange turns one cpeMatch's version-bound fields into a

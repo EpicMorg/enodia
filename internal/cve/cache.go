@@ -42,6 +42,7 @@ type cachedFinding struct {
 	RangeText   string
 	FixStatus   string
 	Edition     string
+	CVSS        CVSS
 	Rng         versionRange
 }
 
@@ -65,7 +66,7 @@ type cacheFile struct {
 
 // cacheFormat is bumped whenever what a Finding carries, or how a source
 // is parsed into one, changes in a way an old cache entry can't express.
-const cacheFormat = 2
+const cacheFormat = 3
 
 // indexFingerprint identifies the parser and product tables a cache entry
 // was built with. Without it the cache's own freshness check (source-file
@@ -229,7 +230,7 @@ func tryLoadCache(cachePath string, sigs []fileSignature, warn func(string)) *In
 			out = append(out, Finding{
 				Source: cfF.Source, AdvisoryID: cfF.AdvisoryID, CVEIDs: cfF.CVEIDs,
 				Title: cfF.Title, Severity: cfF.Severity, MatchedName: cfF.MatchedName,
-				RangeText: cfF.RangeText, FixStatus: cfF.FixStatus, Edition: cfF.Edition, rng: cfF.Rng,
+				RangeText: cfF.RangeText, FixStatus: cfF.FixStatus, Edition: cfF.Edition, CVSS: cfF.CVSS, rng: cfF.Rng,
 			})
 		}
 		idx.byProduct[product] = out
@@ -253,7 +254,7 @@ func writeCache(cachePath string, sigs []fileSignature, idx *Index) error {
 			out[i] = cachedFinding{
 				Source: f.Source, AdvisoryID: f.AdvisoryID, CVEIDs: f.CVEIDs,
 				Title: f.Title, Severity: f.Severity, MatchedName: f.MatchedName,
-				RangeText: f.RangeText, FixStatus: f.FixStatus, Edition: f.Edition, Rng: f.rng,
+				RangeText: f.RangeText, FixStatus: f.FixStatus, Edition: f.Edition, CVSS: f.CVSS, Rng: f.rng,
 			}
 		}
 		cf.ByProduct[product] = out

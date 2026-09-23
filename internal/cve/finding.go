@@ -24,8 +24,21 @@ type Finding struct {
 	// didn't restrict it. See Index.Lookup for how it's
 	// matched against an observation's own edition.
 	Edition string `json:",omitempty"`
+	// CVSS is Severity parsed into a structured rating, for sorting and a
+	// short display; the zero value when the source gave none this package
+	// could parse. Severity itself stays the source's own text.
+	CVSS CVSS `json:",omitzero"`
 
 	rng versionRange
+}
+
+// CVSS is one structured rating: the CVSS version it's scored in, its base
+// score (0 when the source gave only a qualitative level), and its
+// severity in CVSS's own words (CRITICAL, HIGH, MEDIUM, LOW, NONE).
+type CVSS struct {
+	Version  string  `json:",omitempty"`
+	Score    float64 `json:",omitempty"`
+	Severity string  `json:",omitempty"`
 }
 
 // Matches reports whether probed falls inside this finding's range. Only
