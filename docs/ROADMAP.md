@@ -1110,6 +1110,11 @@ Not dates. Order of work, and what each step unblocks.
   and MongoDB, each probe now reporting its server's own edition in
   `Extra["enterprise"]`; BDU's separately listed Enterprise/Community
   products carry their edition too. See `docs/DECISIONS.md` D34.
+- CVE modal shows one line per CVE (BDU and NVD merged, NVD's per-CPE
+  duplicates collapsed), BDU's Russian text when available, a short
+  `CRITICAL · CVSS 3.1 9.8` rating parsed from both sources, most
+  severe first; the CVES count now counts CVEs. See `docs/DECISIONS.md`
+  D35.
 
 ## Next
 
