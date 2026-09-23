@@ -14,68 +14,6 @@ import (
 	"strings"
 )
 
-// Finding is one product/CVE match extracted from a BDU export, kept only
-// for products productSoftNames maps. BDU's own free-text fields are
-// carried through as-is (D7: facts, not a verdict) — Severity here is
-// BDU's own published rating, not something this project computed.
-type Finding struct {
-	BDUID     string   // e.g. "BDU:2023-06364"
-	CVEIDs    []string // e.g. ["CVE-2023-22515"]; may be empty — not every BDU entry cites one
-	Title     string
-	Severity  string // BDU's own free-text severity
-	SoftName  string // the exact <soft><name> this range came from
-	RangeText string // the original <version> text, kept for display
-	FixStatus string
-
-	rng bduRange
-}
-
-// Matches reports whether probed (a raw version string, as a probe
-// reports it) falls inside this finding's range.
-func (f Finding) Matches(probed string) bool {
-	parts, ok := cleanVersionParts(probed)
-	if !ok {
-		return false
-	}
-	return f.rng.matches(parts)
-}
-
-// Index is a parsed, filtered BDU export: only the products
-// productSoftNames knows about, nothing else — confirmed live the full
-// export carries 90000+ entries across every vendor FSTEC tracks, the
-// overwhelming majority of which enodia has no probe for at all and would
-// just be dead weight to keep in memory or on disk.
-//
-// One real limitation, found live rather than guessed: a single <vul> can
-// list several <soft> ranges for the very same product name, one per
-// maintenance branch, each with its own fix version as the upper bound —
-// confirmed against CVE-2023-22515's real Confluence entry ("от 8.0.0 до
-// 8.3.3" / "8.4.3" / "8.5.2", one per branch). BDU's own data doesn't say
-// which branch a range belongs to beyond the numbers themselves, so a
-// widest-range match can flag an exact branch-fix version (8.3.3 here) as
-// still vulnerable purely because it's numerically inside a wider
-// *sibling* branch's range. Deliberately not "fixed": between silently
-// under-reporting (a real miss) and occasionally telling someone to
-// double-check a version that's actually already safe on its own branch,
-// this project takes the side that doesn't risk a missed vulnerability.
-type Index struct {
-	byProduct map[string][]Finding
-}
-
-// Lookup returns every finding for product whose range contains probed.
-func (idx *Index) Lookup(product, probed string) []Finding {
-	if idx == nil {
-		return nil
-	}
-	var out []Finding
-	for _, f := range idx.byProduct[product] {
-		if f.Matches(probed) {
-			out = append(out, f)
-		}
-	}
-	return out
-}
-
 // bduSoft and bduVul mirror just the fields this project reads out of a
 // real <vul> element — confirmed live against the real export (see
 // docs/DECISIONS.md D30). encoding/xml ignores elements this struct
@@ -170,14 +108,15 @@ func indexVul(idx *Index, v bduVul, softToProduct map[string]string) {
 			continue
 		}
 		idx.byProduct[product] = append(idx.byProduct[product], Finding{
-			BDUID:     v.Identifier,
-			CVEIDs:    cveIDs,
-			Title:     v.Name,
-			Severity:  v.Severity,
-			SoftName:  soft.Name,
-			RangeText: soft.Version,
-			FixStatus: v.FixStatus,
-			rng:       rng,
+			Source:      "bdu",
+			AdvisoryID:  v.Identifier,
+			CVEIDs:      cveIDs,
+			Title:       v.Name,
+			Severity:    v.Severity,
+			MatchedName: soft.Name,
+			RangeText:   soft.Version,
+			FixStatus:   v.FixStatus,
+			rng:         rng,
 		})
 	}
 }

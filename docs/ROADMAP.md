@@ -1068,6 +1068,20 @@ Not dates. Order of work, and what each step unblocks.
   starts small (confluence/jira/keycloak/postgresql) and grows
   incrementally like `probe/registry.go` does. See `docs/DECISIONS.md`
   D30 for the full design and its accepted limitations.
+- CVE correlation, second source: NIST NVD, via its yearly downloadable
+  JSON exports (`cve.nvd.path`, a file or a directory of them — not the
+  live API). Combined with BDU by `cve.MergeIndex`, either/both/neither
+  configurable independently. NVD's own CPE-match version ranges
+  (`versionStart`/`EndIncluding`/`Excluding`) carry both bounds per
+  branch, so they don't share BDU's overlapping-sibling-branch
+  limitation for the same CVEs. `bduRange` was generalized into a
+  source-neutral `versionRange` to fit NVD's numeric bound fields
+  without a second matching engine; the on-disk cache was generalized
+  from one file's mtime+size to a set of file signatures, so a
+  directory of yearly archives invalidates correctly when a file is
+  added or removed, not just changed. Verified live against two full
+  real yearly exports (2023+2024, ~40,000 CVEs, ~40MB compressed): ~7s
+  parse, ~26MB peak RSS. See `docs/DECISIONS.md` D31.
 
 ## Next
 

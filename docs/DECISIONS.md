@@ -1590,3 +1590,133 @@ new backward-compatible functionality), this doesn't need one — an
 additive, opt-in config block and additive struct fields — but calling
 it a 2.0 milestone is a legitimate marketing choice to make at release
 time, not a technical requirement decided here.
+
+**Extended by D31**, which adds NIST NVD as a second, independent
+source alongside BDU, sharing this decision's operator-supplied-file
+design and its `versionRange` matching engine (generalized from this
+decision's original `bduRange`).
+
+---
+
+## D31 — NVD added as a second CVE source, alongside BDU
+
+**Decided.** After D30 shipped BDU-based correlation, the same
+capability was checked against NIST's NVD (nvd.nist.gov) too — not to
+replace BDU, but because NVD's CPE-match version ranges turn out to
+solve the exact same problem D18/D30 already describe, sometimes more
+precisely than BDU's own data, and because a real, still-live NVD
+export requires no live polling either, matching D30's core operator-
+supplied-file requirement.
+
+**The classic per-year JSON feeds were not actually retired.**
+First guessed (wrongly, from stale memory, not verified) that NVD's
+downloadable bulk feeds had been sunset in favor of API-only access.
+Checked live and that was false: `nvd.nist.gov/feeds/json/cve/2.0/
+nvdcve-2.0-<year>.json.gz` (also `.json.zip`, plus per-file `.meta`
+sidecars carrying `sha256`/`size`/`lastModifiedDate`) are still served
+for every year 2002 through the current one, the current year's file
+actively updated same-day. `recent`/`modified` incremental feeds (last
+8 days) exist too but aren't used here — the operator re-downloading a
+whole year file occasionally is simpler than enodia reconciling
+incremental deltas, and fits the same "operator decides the refresh
+cadence" shape D30 already established.
+
+**Confirmed live against real data, not the separate CPE dictionary
+API:** an NVD CVE record's `configurations[].nodes[].cpeMatch[]`
+carries a `criteria` CPE 2.3 string plus up to four bound fields
+(`versionStartIncluding`/`versionStartExcluding`/
+`versionEndIncluding`/`versionEndExcluding`) — the same product-own-
+numbering shape BDU's ranges already have. Fetching the live
+`cves/2.0` API for CVE-2023-22515 (the same real CVE D18/D30 use)
+confirms this: three Confluence Data Center ranges and three Server
+ranges, each carrying *both* its own lower and upper bound
+(8.0.0–8.3.3, 8.4.0–8.4.3, 8.5.0–8.5.2). That's strictly better than
+BDU's equivalent entry for the very same CVE, whose three ranges all
+share one lower bound (8.0.0) and only vary the upper — the exact
+shape behind D30's accepted overlapping-branch limitation. NVD simply
+doesn't have that limitation for this CVE: confirmed live (against the
+real 2023+2024 yearly exports) that Confluence's real fix version
+`8.3.3` matches zero NVD ranges, where it matches two of BDU's.
+
+The separate CPE dictionary (`cpes/2.0`) turned out to be the wrong
+tool for building the product mapping: it doesn't even list
+`confluence_server`/`confluence_data_center` as registered products
+(only a bare `confluence`), yet CVE-2023-22515's own `criteria` use
+exactly those two strings. The dictionary catalogs known
+product+version combinations for browsing/autocomplete; it is not
+authoritative for what criteria strings a CVE's own configurations
+actually reference. `productCPENames` (`internal/cve/productmap.go`)
+is therefore built from real CVE records directly, the same
+live-verification discipline `productSoftNames` already used for BDU.
+
+**Two more real quirks found live, not guessed past:**
+
+- Keycloak's real CVE history uses two different NVD vendors for the
+  same open-source project: `keycloak:keycloak` (older CVEs) and
+  `redhat:keycloak` (newer ones) — an apparent vendor re-registration,
+  not a fork or rename. `redhat:single_sign_on` (Red Hat's differently
+  versioned commercial productization) is deliberately excluded — its
+  version numbers don't correspond to upstream Keycloak's at all.
+- Some Atlassian products distinguish Server from Data Center via the
+  CPE product slug itself (Confluence), others via the CPE
+  `sw_edition` field on one shared slug instead (Jira Service Desk:
+  confirmed live on CVE-2019-14994/-15003, one `jira_service_desk`
+  product with `sw_edition` set to `server` or `data_center`).
+  `productCPENames["jira"]` only lists the slug-distinguished variants
+  that correspond to Jira Software (what enodia's own `jira` probe
+  targets) — `jira_service_desk`/`jira_service_management` is a
+  different product with its own versioning, deliberately not mapped
+  here, and matching an `sw_edition` split wasn't attempted for this
+  first pass.
+
+**Config, cache and matching engine are shared with BDU, not
+duplicated.** `cve.nvd.path` (`NVDSpec`, `Config.NVDPath()`) is BDU's
+`cve.bdu.path` sibling, same relative-to-config-file resolution. `path`
+may be a single file (`.json`/`.json.gz`/`.json.zip`) or a directory —
+NVD ships one archive per year, so an operator who wants several just
+points `cve.nvd.path` at the directory they downloaded them into,
+rather than needing a fetch helper in enodia itself (D30's "enodia
+never fetches this itself" applies here unchanged: no `enodia cve
+fetch-nvd` subcommand was added, on purpose — curl/cron on the
+operator's own side is one command, not worth a new maintained code
+path). `bduRange` was generalized into a source-neutral `versionRange`
+(adding a `LoInclusive` flag `bduRange` never needed — BDU's own "от X"
+text has no exclusive-lower-bound form, but NVD's
+`versionStartExcluding` does) and reused as-is for NVD's numeric bound
+fields, no separate range-matching implementation. The on-disk cache
+(`loadCached`) was generalized from "one source file's mtime+size" to
+"a set of file signatures", so `LoadNVDCached` also correctly
+invalidates when a directory gains or loses a yearly archive, not only
+when an existing one's content changes. `Finding` itself gained a
+`Source` field (`"bdu"`/`"nvd"`) and its `BDUID`/`SoftName` fields were
+renamed to `AdvisoryID`/`MatchedName` to stop being BDU-specific names
+for a now source-neutral concept; `loadCVEIndex`
+(`cmd/enodia/pipeline.go`) loads whichever of `cve.bdu.path`/
+`cve.nvd.path` are configured (independently — either, both, or
+neither) and combines them with `cve.MergeIndex`, so a product's CVE
+list can carry findings from both sources side by side.
+
+**Not modeled: NVD's node-level AND/OR/NOT configuration logic.** A
+CVE's `configurations` can express boolean preconditions across
+multiple CPEs (e.g. "vulnerable only if product X AND library Y are
+both present"). This project doesn't reconstruct that: every
+individual `vulnerable: true` cpeMatch entry for a mapped product is
+recorded independently, regardless of which node or operator it came
+from. An enodia probe only ever reports one product and one version
+per observation, so there is no second CPE available to evaluate a
+real AND against regardless — the same false-positive-over-silent-miss
+bias D30 already accepts for BDU's overlapping branches applies here
+for the same reason.
+
+**A cpeMatch with no version bounds and no literal version in its own
+CPE string (`version: "*"`, no known fix published) is treated as
+matching every probed version**, not discarded — confirmed this is a
+real, legitimate shape in live data (a CVE with no fixed version yet),
+not just a hypothetical edge case worth guessing about.
+
+Verified live end-to-end against two full real yearly exports (2023 +
+2024, ~40,000 CVE records, ~40MB compressed): parses in ~7s at ~26MB
+peak RSS, and correctly reproduces CVE-2023-22515's known Confluence
+ranges plus several other real, independently checkable Confluence and
+Jira CVEs from that period (e.g. CVE-2024-21683/-21685 against real
+Jira Server 9.4.x/9.12.x LTS ranges).
