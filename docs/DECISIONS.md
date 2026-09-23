@@ -1720,3 +1720,21 @@ peak RSS, and correctly reproduces CVE-2023-22515's known Confluence
 ranges plus several other real, independently checkable Confluence and
 Jira CVEs from that period (e.g. CVE-2024-21683/-21685 against real
 Jira Server 9.4.x/9.12.x LTS ranges).
+
+**Then re-verified against every year NVD publishes, not just two.**
+All 25 yearly exports (2002–2026, ~222MB compressed) were downloaded
+and checked against each year's own `.meta` sha256 (which, confirmed
+live, hashes the *uncompressed* JSON, not the `.gz` itself — the first
+naive check against the compressed bytes predictably failed all 25
+before this was caught). Parsing all 25 at once: ~35.6s, ~90MB peak
+RSS. The same CVE-2023-22515/CVE-2024-21683 checks above still hold at
+full scale, and `internal/cve/testdata/nvd_full_products.json` freezes
+this into a real, committed regression fixture: every one of the 561
+real CVE records (out of the full ~270,000) whose `configurations`
+mention a `productCPENames`-mapped CPE, trimmed to only the fields
+`LoadNVD` reads (English description, best available `baseSeverity`,
+configurations) — the same "real but reduced" treatment `sample.xml`
+already got for BDU. `internal/cve/nvd_full_test.go` re-runs the exact
+checks above against it, so a future change to the matching logic gets
+caught against real multi-decade data, not only the small hand-built
+`sample_nvd.json`.
