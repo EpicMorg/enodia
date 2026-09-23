@@ -34,9 +34,10 @@ You describe your services once. Enodia handles the rest.
 > **[docs.enodia.sh](https://docs.enodia.sh)** · full docs, config reference,
 > and per-product probe notes.
 
-> **Status: 1.2.** The full pipeline (collect → inventory → evaluate →
-> render), 89 probes, `settings.yaml`, and the release/packaging pipeline are
-> all implemented and used against real production infrastructure. See
+> **Status: 2.0.** The full pipeline (collect → inventory → evaluate →
+> render), 90 probes, CVE correlation against BDU ФСТЭК and NVD,
+> `settings.yaml`, and the release/packaging pipeline are all implemented
+> and used against real production infrastructure. See
 > [`CHANGELOG.md`](CHANGELOG.md) for release history, or the
 > [latest release](https://github.com/EpicMorg/enodia/releases/latest) for
 > downloads.
@@ -76,10 +77,10 @@ credentials:
 
 ```console
 $ enodia check
-ID           PRODUCT  PATCH   LIFECYCLE  BRANCH     SEVERITY  REASON
-jira-main    jira     behind  active     newer_lts  warn      -
-gitlab-main  gitlab   behind  eol        newer      fail      -
-web01        debian   current active     latest     ok        -
+ID           PRODUCT  PATCH   LIFECYCLE  BRANCH     SEVERITY  REASON  CVES
+jira-main    jira     behind  active     newer_lts  warn      -       -
+gitlab-main  gitlab   behind  eol        newer      fail      -       -
+web01        debian   current active     latest     ok        -       -
 ```
 
 Save this as `enodia.yaml` next to the binary — see "File locations" below
@@ -179,9 +180,9 @@ cycle:
 
 ```console
 $ enodia check --from inventory.jsonl --view drift
-ID           PRODUCT  CURRENT  LATEST   CYCLE  PATCH
-jira-main    jira     10.3.1   10.3.25  10.3   behind
-gitlab-main  gitlab   17.5.0   17.5.5   17.5   behind
+ID           PRODUCT  CURRENT  LATEST   CYCLE  PATCH   CVES
+jira-main    jira     10.3.1   10.3.25  10.3   behind  5
+gitlab-main  gitlab   17.5.0   17.5.5   17.5   behind  255
 ```
 
 **`fleet`** — version spread and reachability across every instance of a
@@ -343,6 +344,44 @@ the fleet view's rows from the same data:
 </tbody>
 </table>
 ```
+
+## CVE correlation
+
+Optional. enodia can match every probed version against two local
+vulnerability databases, BDU ФСТЭК and NIST NVD. It never downloads them:
+you fetch the files yourself, as often as you like, and point `enodia.yaml`
+at them.
+
+```yaml
+cve:
+  bdu:
+    path: /var/lib/enodia/cve/bdu/vulxml.zip   # https://bdu.fstec.ru/files/documents/vulxml.zip
+  nvd:
+    path: /var/lib/enodia/cve/nvd              # a directory of nvdcve-2.0-<year>.json.gz
+```
+
+Either block works alone. `bdu.path` is the export as published (`.zip`),
+or the `.xml` inside it, or a `.tar.gz`. `nvd.path` is one file or a
+directory of NVD's yearly files (`.json`, `.json.gz` or `.json.zip`, from
+https://nvd.nist.gov/feeds/json/cve/2.0/). Relative paths resolve against
+the config file's own directory. The block is read from whichever
+`enodia.yaml` the run uses (see "File locations").
+
+On Windows any of these work: `C:\enodia\cve\nvd` unquoted,
+`'C:\enodia\cve\nvd'` in single quotes, `C:/enodia/cve/nvd`, or a UNC path.
+Avoid double quotes — YAML turns `\t` and `\n` inside them into a tab and a
+newline, so `"C:\temp\nvd"` is rejected at load with a hint.
+
+The first run after a database file changes parses it in full — about a
+minute for all of NVD plus BDU — and caches the result in the OS cache
+directory (`~/.cache/enodia/cve`, `%LocalAppData%\enodia\cve`). Every later
+run reads the cache in under a second.
+
+Findings show up as a CVES count in `check`'s compact and drift views and
+as a per-CVE list in `export --format html`; `export --format json` carries
+every finding with its source. Which products are matched, and why some
+(general-purpose Linux distributions among them) deliberately aren't, is
+in `docs/DECISIONS.md` D30–D35.
 
 ## File locations
 

@@ -8,7 +8,10 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
+	"unicode"
 
 	"gopkg.in/yaml.v3"
 
@@ -31,11 +34,63 @@ type Config struct {
 	Defaults        Defaults                  `yaml:"defaults,omitempty"`
 	Credentials     map[string]CredentialSpec `yaml:"credentials,omitempty"`
 	Targets         []TargetSpec              `yaml:"targets,omitempty"`
+	CVE             CVESpec                   `yaml:"cve,omitempty"`
 
 	// path is where this config was loaded from. Kept so error messages can
-	// name the file and so credentials_file resolves relative to it rather
-	// than to the process's working directory.
+	// name the file and so credentials_file/cve.bdu.path resolve relative to
+	// it rather than to the process's working directory.
 	path string
+}
+
+// CVESpec configures vulnerability correlation. See docs/DECISIONS.md D30
+// for why this lives in enodia.yaml (data that affects evaluation, per D19)
+// rather than settings.yaml (display preferences), and why enodia never
+// fetches the underlying data itself.
+type CVESpec struct {
+	BDU BDUSpec `yaml:"bdu,omitempty"`
+	NVD NVDSpec `yaml:"nvd,omitempty"`
+}
+
+// BDUSpec points at a local copy of FSTEC's БДУ export the operator
+// downloaded themselves — enodia has no code path that reaches
+// bdu.fstec.ru on its own. Path may be a raw .xml file, a .zip (BDU's own
+// publication format), or a .tar.gz, and may be relative to the config
+// file, the same convention CredentialsFile already uses.
+type BDUSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
+// NVDSpec points at a local copy of NIST NVD's yearly CVE exports the
+// operator downloaded themselves — enodia has no code path that reaches
+// nvd.nist.gov on its own (see docs/DECISIONS.md D31). Path may be a
+// single file (.json, .json.gz, or .json.zip — NVD's own publication
+// formats) or a directory containing any number of them, and may be
+// relative to the config file, the same convention BDUSpec.Path uses.
+type NVDSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
+// BDUPath returns the configured BDU export path, resolved relative to
+// the config file's own directory if it isn't already absolute — the same
+// rule resolveCredentialsFile applies to CredentialsFile. ok is false when
+// cve.bdu.path was never set, which is the normal case for most installs.
+func (c *Config) BDUPath() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.BDU.Path)
+}
+
+// NVDPath is BDUPath's counterpart for cve.nvd.path.
+func (c *Config) NVDPath() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.NVD.Path)
+}
+
+func resolvePathRelativeToConfig(configPath, p string) (path string, ok bool) {
+	if p == "" {
+		return "", false
+	}
+	if !filepath.IsAbs(p) && configPath != "" {
+		p = filepath.Join(filepath.Dir(configPath), p)
+	}
+	return p, true
 }
 
 // Defaults apply to every target that does not override them.
@@ -138,6 +193,14 @@ func (c *Config) Validate() error {
 	case c.SchemaVersion > SchemaVersion:
 		return fmt.Errorf("%s: schemaVersion %d is newer than this build understands (max %d) — upgrade enodia",
 			c.path, c.SchemaVersion, SchemaVersion)
+	}
+
+	for key, p := range map[string]string{"cve.bdu.path": c.CVE.BDU.Path, "cve.nvd.path": c.CVE.NVD.Path} {
+		if strings.ContainsFunc(p, unicode.IsControl) {
+			return fmt.Errorf("%s: %s %q contains a control character — a Windows path in double quotes "+
+				"turns \\t, \\n into a tab and a newline; write it unquoted, in single quotes, or with forward slashes",
+				c.path, key, p)
+		}
 	}
 
 	seen := make(map[string]bool, len(c.Targets))

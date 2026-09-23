@@ -980,6 +980,141 @@ Not dates. Order of work, and what each step unblocks.
   previously unused). No `DefaultResolver` for either: Perforce is
   proprietary, no public lifecycle calendar exists. See
   `docs/DECISIONS.md` D28.
+- `p4d`/`p4p`: `runP4Info` now clamps to `t.Timeout` (falling back to
+  `defaultTCPReadTimeout`) before running the `p4` subprocess — it
+  didn't before, so a process stuck dialing an unresponsive target hung
+  the whole collection run. Reported from a real production hang.
+- The CDN-mode HTML report's dismissible warning alert now remembers
+  being dismissed: closing it sets a per-viewer `localStorage` flag
+  (keyed by the alert's own `data-dismiss-key`, "cdn-warning" today),
+  and a matching alert in any later-generated report checks that flag
+  on load and skips re-showing itself — the same per-viewer-memory
+  mechanism the theme picker already uses (D19), just for a second kind
+  of state. Verified end to end in a real JS engine (Node), not just a
+  Go string-match test: dismiss → flag set → simulated fresh page load
+  → alert removed on load with no click needed; a viewer who never
+  dismissed anything still sees it. The key is generic
+  (`data-dismiss-key` on any `.alert`) so a future second dismissible
+  alert doesn't need its own copy of this script.
+- Third-party package manager submissions, outside this repo — noted
+  here since neither is enodia's own release pipeline and neither is
+  live yet, so there's nowhere else this status would otherwise live:
+  - **Chocolatey**: `/opt/git/chocolatey/chocolatey/enodia` (the
+    user's own local checkout) has `enodia.nuspec`/`CHANGELOG.md`/
+    `tools/*.ps1` built for `1.0.0`, `1.1.0`, `1.1.1`, `1.2.0` and
+    `1.2.1`, one folder per version. `1.0.0` is submitted and awaiting
+    moderator review; newer versions can't be pushed to the Chocolatey
+    community feed until that review clears.
+  - **winget**: `/opt/git/winget-pkgs` is the user's fork of
+    `microsoft/winget-pkgs` (`origin`), with `microsoft/winget-pkgs`
+    itself as `upstream`. Six PRs open against upstream, one branch
+    each (`EpicMorg.<Package>-<version>` naming), all pushed from a
+    fork `master` kept in sync with upstream first:
+    - `EpicMorg.Enodia` — [1.0.0](https://github.com/microsoft/winget-pkgs/pull/432884),
+      [1.1.0](https://github.com/microsoft/winget-pkgs/pull/432892),
+      [1.1.1](https://github.com/microsoft/winget-pkgs/pull/432893),
+      [1.2.0](https://github.com/microsoft/winget-pkgs/pull/432894),
+      [1.2.1](https://github.com/microsoft/winget-pkgs/pull/432895)
+      — the `1.0.0` manifest was originally copy-pasted from a
+      MikroTik WinBox manifest the user used to maintain on winget-pkgs
+      (`Mikrotik.Winbox`) and needed a full rewrite: wrong
+      `PackageIdentifier`, MikroTik's own publisher/license/
+      description text untouched in all 5 locales
+      (en-US/ru-RU/uk-UA/be-BY/sr-RS), `RelativeFilePath: Enodia.exe`
+      capitalized wrong (the real binary inside the release zip is
+      lowercase `enodia.exe`, confirmed by downloading and inspecting
+      it directly), and a missing `arm64` installer entry. Every
+      `InstallerSha256` was cross-checked against that version's own
+      real `checksums.txt` from the GitHub release, not trusted as-is.
+    - `EpicMorg.AtlassianDownloader` —
+      [2.0.0.9](https://github.com/microsoft/winget-pkgs/pull/432897)
+      — a brand new manifest (no prior winget presence), for
+      [EpicMorg/atlassian-downloader](https://github.com/EpicMorg/atlassian-downloader),
+      a separate C#/.NET console app (MIT license) also already on
+      Chocolatey. That repo has 20 releases going back to 2021 with
+      three different Windows asset-naming conventions over time
+      (`win7-x64`/`win81-arm` under net5.0/net6.0 → `win-x64`/
+      `win-arm64` under net8.0+/dotnet10.0) — deliberately only the
+      latest release got a manifest; backfilling the other 19 is a
+      separate, explicitly-deferred decision, not an oversight.
+    - Every manifest's `winget validate`/`winget install` checklist
+      box only gets checked in a PR after the user confirms they
+      actually ran it on their own Windows machine — Claude has no
+      Windows environment to run either tool itself. See the
+      `feedback_winget_pr_checklist` memory note for the exact rule.
+- `fortios` — unblocked once the user got real test credentials to a
+  live FortiGate 601E appliance, closing D23's "no freely obtainable
+  test image" gap directly. Confirmed live exactly what D23 predicted:
+  `GET /api/v2/monitor/system/status` with a plain `Authorization:
+  Bearer <token>` (a REST API Admin's own API key), no session/CSRF —
+  `AuthBearer` already covers it, no new `AuthKind`. `DefaultResolver`
+  is `endoflife:fortios` (confirmed live to exist); that page has no
+  `latest` field on any cycle at all, so `check --view drift` correctly
+  shows `LATEST: -`/`PATCH: unknown` rather than inventing a
+  comparison. See `docs/DECISIONS.md` D29.
+- CVE correlation, via an operator-supplied БДУ ФСТЭК export — reopens
+  the "Later" bullet below, but through `bdu.fstec.ru`
+  (`vulxml.zip`, FSTEC's full export) rather than OSV.dev, which stays
+  rejected for the reasons D18 already gives. The operator places the
+  export file themselves and points `cve.bdu.path` at it in
+  `enodia.yaml`; enodia never polls FSTEC on its own. New
+  `internal/cve` package: a streaming XML parser (615MB real export,
+  ~19s/~83MB peak RSS), a version-range parser pinned against two real
+  CVEs (CVE-2023-22515, CVE-2021-44228) for BDU's "до X"/"до X
+  включительно" semantics, and a disk cache keyed by the source file's
+  own mtime+size (no TTL — the operator alone controls when it
+  changes). `check`'s compact view gained a CVES column (a bare count;
+  severity is not yet wired into `OverallSeverity`). Product mapping
+  starts small (confluence/jira/keycloak/postgresql) and grows
+  incrementally like `probe/registry.go` does. See `docs/DECISIONS.md`
+  D30 for the full design and its accepted limitations.
+- CVE correlation, second source: NIST NVD, via its yearly downloadable
+  JSON exports (`cve.nvd.path`, a file or a directory of them — not the
+  live API). Combined with BDU by `cve.MergeIndex`, either/both/neither
+  configurable independently. NVD's own CPE-match version ranges
+  (`versionStart`/`EndIncluding`/`Excluding`) carry both bounds per
+  branch, so they don't share BDU's overlapping-sibling-branch
+  limitation for the same CVEs. `bduRange` was generalized into a
+  source-neutral `versionRange` to fit NVD's numeric bound fields
+  without a second matching engine; the on-disk cache was generalized
+  from one file's mtime+size to a set of file signatures, so a
+  directory of yearly archives invalidates correctly when a file is
+  added or removed, not just changed. Verified live against two full
+  real yearly exports (2023+2024, ~40,000 CVEs, ~40MB compressed): ~7s
+  parse, ~26MB peak RSS. See `docs/DECISIONS.md` D31.
+- CVE detail modal in `check`/`export --format html`'s compact view —
+  the CVES column's info icon opens a per-row popup listing each
+  finding, linked to its CVE's `nvd.nist.gov` page and, for a
+  `bdu`-sourced finding, its own real `bdu.fstec.ru/vul/<id>` page too
+  (confirmed live once curl was told to trust FSTEC's own TLS cert with
+  `-k` — the site was never actually unreachable, just presenting a CA
+  a default trust store rejects). Pure CSS (`:target` pseudo-class), no
+  JavaScript in either Assets mode — an early `<dialog>`+JS version was
+  reverted specifically to keep `TestHTMLIsSelfContained`'s
+  zero-`<script>` guarantee for the default inline report (D19) intact.
+  See `docs/DECISIONS.md` D32.
+- CVE mapping extended from 4 products to 53 — every probe with usable
+  data in NVD or BDU, each vendor/product pair verified verbatim
+  against the full real exports before being added. BDU now matches on
+  (vendor, name); `ssh` splits into OpenSSH vs Dropbear by banner;
+  GitLab CE vs EE findings are filtered by the probe's own edition
+  signal; NVD "no version constraint" entries are dropped (they were
+  mostly decades-old CVEs); the cache now also invalidates when
+  enodia's own product tables change. Distros, BSDs, Solaris,
+  ESXi/vCenter and Synology DSM are deliberately left out, each for a
+  stated reason. See `docs/DECISIONS.md` D33.
+- CVE block now read from whichever config the run uses (`--config`,
+  `$ENODIA_CONFIG` or the default search paths), not only an explicit
+  `--config` — previously every auto-located setup silently showed no
+  CVEs. Edition-aware matching extended from GitLab to Vault, Nextcloud
+  and MongoDB, each probe now reporting its server's own edition in
+  `Extra["enterprise"]`; BDU's separately listed Enterprise/Community
+  products carry their edition too. See `docs/DECISIONS.md` D34.
+- CVE modal shows one line per CVE (BDU and NVD merged, NVD's per-CPE
+  duplicates collapsed), BDU's Russian text when available, a short
+  `CRITICAL · CVSS 3.1 9.8` rating parsed from both sources, most
+  severe first; the CVES count now counts CVEs. See `docs/DECISIONS.md`
+  D35.
 
 ## Next
 
@@ -989,9 +1124,11 @@ requested.
 
 ## Later
 
-- CVE correlation via OSV.dev — investigated twice, deferred both times;
-  revisit only if a workable data source appears — see DECISIONS.md D18
-  for exactly what was tried and why it's closed, not just deferred
+- CVE correlation via OSV.dev specifically — investigated twice,
+  deferred both times, and stays closed for the reasons in DECISIONS.md
+  D18 (proprietary-product coverage, distro-package epoch mismatches).
+  CVE correlation itself is no longer blocked: see Done above and
+  DECISIONS.md D30 for the БДУ ФСТЭК-based implementation
 - `kafka` probe — the wire protocol's entire anonymous surface
   (`ApiVersionsRequest`) is a list of per-API version-number ranges, no
   software version string anywhere — confirmed live against a real
@@ -1021,16 +1158,10 @@ requested.
   implemented — see Done above). Revisit if a real target becomes
   available, or if unattended-install support lands in this tree for its
   own reasons — see DECISIONS.md D23
-- `truenas` — no vmactions coverage, and no Docker image runs the actual
-  appliance (only unrelated helper tools turned up on Docker Hub under
-  that name); its own installer is ISO-only, the same shape of blocker
-  `openbsd`/`netbsd` had before vmactions covered them — see
-  DECISIONS.md D23
-- `fortios`, `cisco-ios-xe` — both have a documented HTTP API (FortiGate
-  REST, IOS-XE RESTCONF/NETCONF) that would fit this project's existing
-  probe shape better than SSH CLI-scraping, but both are licensed
-  commercial appliances with no freely obtainable test image, so neither
-  the CLI nor the API shape has been confirmed live — see DECISIONS.md D23
+- `cisco-ios-xe` — dropped, not deferred. Cisco's platform/OS zoo
+  (IOS, IOS-XE, IOS-XR, NX-OS, ASA, each with its own management API and
+  versioning) makes one probe meaningless, and there's no test hardware
+  to verify any of them against — see DECISIONS.md D34
 - `tails` — a live, amnesic OS deliberately designed to resist
   unattended persistent access. Ruled out on principle, not a tooling
   gap — the user confirmed this one stays crossed off entirely, not

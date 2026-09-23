@@ -44,6 +44,9 @@ type vaultHealth struct {
 	Sealed      bool   `json:"sealed"`
 	Standby     bool   `json:"standby"`
 	ClusterName string `json:"cluster_name"`
+	// Enterprise is a pointer so "field absent" (an older Vault that
+	// doesn't report it) stays distinguishable from a real false.
+	Enterprise *bool `json:"enterprise"`
 }
 
 func (vaultProbe) Probe(ctx context.Context, t Target) (Observation, error) {
@@ -86,6 +89,12 @@ func (vaultProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	}
 	if info.ClusterName != "" {
 		obs.Extra["clusterName"] = info.ClusterName
+	}
+	// Same key gitlab uses: CVE data splits Vault by edition (NVD's
+	// sw_edition "enterprise", BDU's separate "Vault Enterprise" product),
+	// and this is the one place the server says which it is.
+	if info.Enterprise != nil {
+		obs.Extra["enterprise"] = fmt.Sprintf("%t", *info.Enterprise)
 	}
 	return obs, nil
 }

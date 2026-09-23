@@ -4,6 +4,7 @@ package evaluate
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -179,7 +180,7 @@ func TestEvaluateIsDeterministicAcrossAsOf(t *testing.T) {
 	a1NoDates, a2NoDates := a1, a2
 	a1NoDates.EOLDate, a1NoDates.SupportEnds = nil, nil
 	a2NoDates.EOLDate, a2NoDates.SupportEnds = nil, nil
-	if a1NoDates != a2NoDates {
+	if !reflect.DeepEqual(a1NoDates, a2NoDates) {
 		t.Fatalf("Evaluate was not deterministic for the same asOf:\n%+v\n%+v", a1, a2)
 	}
 	if (a1.EOLDate == nil) != (a2.EOLDate == nil) || (a1.EOLDate != nil && !a1.EOLDate.Equal(*a2.EOLDate)) {

@@ -61,7 +61,11 @@ func runCheckCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	policy := evaluate.Policy{WarnDays: checkWarnDaysFlag, FailOn: checkFailOnFlag}
-	assessments := assess(cmd.Context(), inv, policy, buildResolver(cmd))
+	cveIndex, err := loadCVEIndex(cmd)
+	if err != nil {
+		return &ExitError{Code: 1, Err: err}
+	}
+	assessments := assess(cmd.Context(), inv, policy, buildResolver(cmd), cveIndex)
 
 	if err := render.Table(cmd.OutOrStdout(), render.View(view), buildReport(inv, assessments)); err != nil {
 		return &ExitError{Code: 2, Err: err}

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/EpicMorg/enodia/internal/cve"
 	"github.com/EpicMorg/enodia/internal/evaluate"
 )
 
@@ -225,6 +226,23 @@ func TestHTMLCDNWarningAlertIsDismissible(t *testing.T) {
 	}
 }
 
+func TestHTMLCDNWarningAlertDismissalIsRemembered(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `data-dismiss-key="cdn-warning"`) {
+		t.Fatalf("expected the alert to carry a dismiss key so a viewer's dismissal can be remembered, got:\n%s", out)
+	}
+	if !strings.Contains(out, `data-dismiss-key`) || !strings.Contains(out, `localStorage.setItem(DISMISS_PREFIX`) {
+		t.Fatal("expected the script to persist a dismissal to localStorage, keyed by data-dismiss-key")
+	}
+	if !strings.Contains(out, `localStorage.getItem(DISMISS_PREFIX`) {
+		t.Fatal("expected the script to check localStorage on load and skip re-showing an already-dismissed alert")
+	}
+}
+
 func TestHTMLCDNThemeNoneOmitsWarningAlertEntirely(t *testing.T) {
 	var buf bytes.Buffer
 	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN, Theme: ThemeNone}); err != nil {
@@ -415,5 +433,177 @@ func TestHTMLCDNScriptResetsToBakedTheme(t *testing.T) {
 	out := buf.String()
 	if !strings.Contains(out, `var BAKED = "darkly"`) {
 		t.Fatalf("expected the script's fallback constant to be the baked theme (darkly), got:\n%s", out)
+	}
+}
+
+// The CVE modal must never depend on JavaScript — TestHTMLIsSelfContained
+// already forbids any <script> in inline mode (D19), so the modal has to
+// work as pure CSS (:target) in both modes, not just inline.
+func TestHTMLCVEModalHasNoScriptEvenInCDNMode(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "enodia-cve-modal-overlay") {
+		t.Fatal("expected sampleReport's confluence-a CVE finding to produce a modal overlay")
+	}
+	if strings.Contains(out, "JSON.parse") || strings.Contains(out, "showModal") {
+		t.Fatalf("the CVE modal must be pure CSS (:target), not JS-driven, got:\n%s", out)
+	}
+}
+
+func TestHTMLCVEModalLinksToNVDByCVEID(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="https://nvd.nist.gov/vuln/detail/CVE-2023-22515"`) {
+		t.Fatalf("expected a link to nvd.nist.gov for the finding's CVE ID, got:\n%s", out)
+	}
+	if !strings.Contains(out, `<a href="#enodia-cve-modal-`) {
+		t.Fatal("expected an info link opening the modal via its #anchor")
+	}
+}
+
+// A BDU Finding with no CVEIDs at all (BDU's own doc comment notes this
+// can happen) links via its own real bdu.fstec.ru page instead — not
+// nvd.nist.gov, which has nothing to show without a CVE ID.
+func TestHTMLCVEModalBDUFindingWithoutCVEIDLinksToBDU(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "confluence-a")
+	r.Assessments[i].CVEs = []cve.Finding{
+		{Source: "bdu", AdvisoryID: "BDU:2024-99999", Title: "no CVE assigned yet"},
+	}
+	var buf bytes.Buffer
+	if err := HTML(&buf, r, HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="https://bdu.fstec.ru/vul/2024-99999"`) {
+		t.Fatalf("expected a link to bdu.fstec.ru's real per-entry page, got:\n%s", out)
+	}
+	if strings.Contains(out, "nvd.nist.gov") {
+		t.Fatalf("nvd.nist.gov has nothing to show without a CVE ID, got:\n%s", out)
+	}
+}
+
+// A "nvd" Finding never gets a BDU link — bduAdvisoryURL only applies to
+// Source == "bdu", regardless of what AdvisoryID happens to contain.
+func TestHTMLCVEModalNVDFindingNeverLinksToBDU(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "confluence-a")
+	r.Assessments[i].CVEs = []cve.Finding{
+		{Source: "nvd", AdvisoryID: "CVE-2023-22515", CVEIDs: []string{"CVE-2023-22515"}},
+	}
+	var buf bytes.Buffer
+	if err := HTML(&buf, r, HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if strings.Contains(buf.String(), "bdu.fstec.ru") {
+		t.Fatalf("an nvd-sourced finding must never link to bdu.fstec.ru, got:\n%s", buf.String())
+	}
+}
+
+// A BDU finding that DOES carry a CVE ID gets both links: NVD for the
+// CVE, and BDU's own page for the advisory itself.
+func TestHTMLCVEModalBDUFindingWithCVEIDLinksToBoth(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil { // confluence-a's fixture finding: bdu, BDU:2023-06364, CVE-2023-22515
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="https://nvd.nist.gov/vuln/detail/CVE-2023-22515"`) {
+		t.Fatalf("expected the NVD link, got:\n%s", out)
+	}
+	if !strings.Contains(out, `href="https://bdu.fstec.ru/vul/2023-06364"`) {
+		t.Fatalf("expected the BDU link, got:\n%s", out)
+	}
+}
+
+func TestHTMLCVEModalAbsentWhenNoFindings(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	// jira-b (sampleReport) has no CVEs at all: its CVES cell must stay a
+	// bare "-", not an info link.
+	row := out[strings.Index(out, "jira-b"):]
+	row = row[:strings.Index(row, "</tr>")]
+	if strings.Contains(row, "enodia-cve-info") {
+		t.Fatalf("jira-b has no CVEs, should not get an info link: %s", row)
+	}
+}
+
+// --view drift alone (no compact section at all) must still carry its
+// own modal overlays, not link to compact's anchors that aren't there.
+func TestHTMLDriftViewHasItsOwnCVEModal(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{View: ViewDrift}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="#enodia-cve-modal-drift-`) {
+		t.Fatalf("expected a drift-scoped info link, got:\n%s", out)
+	}
+	if !strings.Contains(out, `id="enodia-cve-modal-drift-`) {
+		t.Fatalf("expected a drift-scoped modal overlay, got:\n%s", out)
+	}
+}
+
+// With all four sections on one page, compact and drift each carry their
+// own overlay per row — ids must never collide.
+func TestHTMLCVEModalAnchorsAreUniqueAcrossViews(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	for _, id := range []string{`<div id="enodia-cve-modal-compact-`, `<div id="enodia-cve-modal-drift-`} {
+		if strings.Count(out, id) != 1 { // sampleReport has exactly one row with findings
+			t.Fatalf("got %d overlays matching %s, want 1", strings.Count(out, id), id)
+		}
+	}
+}
+
+// Every CVE ID also links to its CNA-published record on cve.org, next
+// to NVD's enriched page.
+func TestHTMLCVEModalLinksToCVEOrg(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if !strings.Contains(buf.String(), `href="https://www.cve.org/CVERecord?id=CVE-2023-22515"`) {
+		t.Fatalf("expected a cve.org link, got:\n%s", buf.String())
+	}
+}
+
+// An edition-restricted finding says so, next to its source.
+func TestHTMLCVEModalShowsEdition(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "confluence-a")
+	r.Assessments[i].CVEs = []cve.Finding{
+		{Source: "nvd", AdvisoryID: "CVE-2026-18252", CVEIDs: []string{"CVE-2026-18252"}, Edition: "enterprise"},
+	}
+	var buf bytes.Buffer
+	if err := HTML(&buf, r, HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if !strings.Contains(buf.String(), "(nvd &middot; enterprise)") {
+		t.Fatalf("expected the edition next to the source, got:\n%s", buf.String())
+	}
+}
+
+// Bootstrap 5.3 declares every --bs-modal-* variable on .modal; without
+// that class the dialog rendered transparent and full-width in CDN mode.
+func TestHTMLCVEModalOverlayCarriesBootstrapModalClass(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if !strings.Contains(buf.String(), `class="modal enodia-cve-modal-overlay"`) {
+		t.Fatal("expected the overlay to carry Bootstrap's own .modal class")
 	}
 }

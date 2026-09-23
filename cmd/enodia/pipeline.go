@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/EpicMorg/enodia/internal/collect"
 	"github.com/EpicMorg/enodia/internal/config"
+	"github.com/EpicMorg/enodia/internal/cve"
 	"github.com/EpicMorg/enodia/internal/evaluate"
 	"github.com/EpicMorg/enodia/internal/inventory"
 	"github.com/EpicMorg/enodia/internal/probe"
@@ -111,8 +113,12 @@ func newLiveResolver(cmd *cobra.Command) *resolver.Resolver {
 
 // assess evaluates every observation in inv against its product's lifecycle
 // calendar (via res), per policy, as of inv's own collection time — D8
-// forbids reaching for time.Now() here.
-func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, res *resolver.Resolver) []evaluate.Assessment {
+// forbids reaching for time.Now() here. cveIndex may be nil (no
+// cve.bdu.path configured, or --config wasn't passed at all — see
+// loadCVEIndex), in which case every Assessment's CVEs stays empty, the
+// same "fact simply not available" shape ReasonNoResolver already uses for
+// lifecycle data.
+func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, res *resolver.Resolver, cveIndex *cve.Index) []evaluate.Assessment {
 	asOf := inv.Header.CollectedAt
 	out := make([]evaluate.Assessment, 0, len(inv.Observations))
 	for _, o := range inv.Observations {
@@ -137,14 +143,83 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 			}
 		}
 
+		var findings []cve.Finding
+		if cveProduct, cveVersion, edition, ok := cve.Subject(o.Product, o.Version, o.Extra); ok {
+			findings = cveIndex.Lookup(cveProduct, cveVersion, edition)
+		}
+
 		out = append(out, evaluate.Evaluate(evaluate.Input{
 			Observation: o,
 			Resolver:    ref,
 			Cycles:      cycles,
 			ResolveErr:  resolveErr,
+			CVEFindings: findings,
 		}, asOf, policy))
 	}
 	return out
+}
+
+// loadCVEIndex returns the merged BDU/NVD vulnerability index the active
+// config's cve.bdu.path/cve.nvd.path name, or nil if neither is
+// configured — the normal case for most installs. "The active config" is
+// the same file collection itself uses (config.Locate: --config,
+// $ENODIA_CONFIG, then the default search paths), not only an explicit
+// --config. D30 first required the flag, and in practice that silently
+// dropped the cve block of the very file the run's targets came from —
+// every auto-located or $ENODIA_CONFIG setup (serve under systemd or
+// Docker, /etc/enodia) showed no CVEs with no hint why (see
+// docs/DECISIONS.md D34). No config found at all is not an error here:
+// `check --from` legitimately runs without one.
+func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
+	path, err := config.Locate(configFlag)
+	if errors.Is(err, config.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		return nil, err
+	}
+
+	warn := warnPrinter(cmd)
+	cacheDir, cacheErr := cve.DefaultCacheDir()
+	if cacheErr != nil {
+		warn(fmt.Sprintf("cve cache disabled: %v", cacheErr))
+	}
+
+	var idx *cve.Index
+	if bduPath, ok := cfg.BDUPath(); ok {
+		bduIdx, err := loadOneCVESource(bduPath, cacheDir, cacheErr, cve.LoadBDU, cve.LoadBDUCached, warn)
+		if err != nil {
+			return nil, err
+		}
+		idx = cve.MergeIndex(idx, bduIdx)
+	}
+	if nvdPath, ok := cfg.NVDPath(); ok {
+		nvdIdx, err := loadOneCVESource(nvdPath, cacheDir, cacheErr, cve.LoadNVD, cve.LoadNVDCached, warn)
+		if err != nil {
+			return nil, err
+		}
+		idx = cve.MergeIndex(idx, nvdIdx)
+	}
+	return idx, nil
+}
+
+// loadOneCVESource loads a single configured source (BDU or NVD), going
+// through its own on-disk cache unless DefaultCacheDir itself failed
+// (cacheErr non-nil, already warned about by the caller).
+func loadOneCVESource(
+	sourcePath, cacheDir string, cacheErr error,
+	load func(string) (*cve.Index, error),
+	loadCached func(string, string, func(string)) (*cve.Index, error),
+	warn func(string),
+) (*cve.Index, error) {
+	if cacheErr != nil {
+		return load(sourcePath)
+	}
+	return loadCached(sourcePath, cacheDir, warn)
 }
 
 // worstSeverity is the max OverallSeverity across every assessment.

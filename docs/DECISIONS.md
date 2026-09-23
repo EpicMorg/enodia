@@ -972,7 +972,9 @@ a different, confirmed-live reason, not a blanket "too hard":
   a real device to confirm the actual response shape would be precisely
   the "confident-looking guess about vendor API shapes" docs/CLAUDE.md's
   "Working style" section warns against, so both stay unimplemented
-  rather than written blind.
+  rather than written blind. `fortios` was unblocked and shipped once
+  real hardware access existed — see D29. `cisco-ios-xe` is still open;
+  the user has the hardware now but hadn't powered it on yet as of D29.
 - **`tails`** — a live, amnesic, privacy-focused OS that boots fresh from
   read-only media on every start and is deliberately designed to discard
   state and resist exactly the kind of unattended, persistent,
@@ -1410,3 +1412,663 @@ process (`sh -c "sleep 5"`) doesn't also kill an orphaned grandchild,
 so the test's fake binary uses `exec sleep 5` to actually become the
 process being killed, matching what the real (non-shell-wrapped) `p4`
 binary is.
+
+---
+
+## D29 — `fortios` shipped once real hardware access existed
+
+**Decided.** D23 deferred `fortios` specifically for lack of a freely
+obtainable test image — Fortinet's FortiGate VM requires a vendor
+account and an accepted EULA, not obtainable anonymously. The user got
+test credentials to a real FortiGate 601E appliance, closing that gap
+directly rather than through a substitute image.
+
+Confirmed live exactly what D23 predicted: `GET
+/api/v2/monitor/system/status` answers with `Authorization: Bearer
+<token>` — a REST API Admin's own API key, generated once in the GUI
+and shown exactly once — no query-string `access_token`, no
+session/CSRF dance. The same shape `AuthBearer` already sends for
+every other bearer-token probe here, so no new `AuthKind` was needed.
+A missing or wrong token answers HTTP 401 with an Apache-style HTML
+error page, not JSON, but `FetchHTTP` already turns 401/403 into
+`ErrAuth` before `fortiosProbe` ever sees the body, so there was
+nothing HTML-shaped to handle.
+
+`version` comes back as `"v7.4.12"` — stored as-is in
+`Observation.Version` (not stripped here), since `internal/collect`
+already runs every `Version` through `version.Clean` to fill
+`Normalized`, and `Clean`'s own prefix regex already strips a leading
+`v`/`V`. `DefaultResolver: ResolverRef{Type: "endoflife", ID:
+"fortios"}` — confirmed live the page exists and its cycle `"7.4"`
+matches. Confirmed live too: `endoflife.date`'s `fortios` page has no
+`latest` field on any cycle at all (a real data-source limitation, not
+a probe bug) — `check --view drift` correctly shows `LATEST: -` and
+`PATCH: unknown` rather than fabricating a comparison the upstream data
+doesn't support.
+
+`cisco-ios-xe` remains open — same D23 reasoning, and the user's own
+hardware for it exists but wasn't powered on yet as of this decision.
+(Dropped entirely by D34.)
+
+---
+
+## D30 — CVE correlation via an operator-supplied БДУ ФСТЭК export
+
+**Decided.** D18 deferred CVE correlation over OSV.dev for two reasons:
+zero coverage for proprietary products (Atlassian: CVE-2023-22515 →
+404), and distro-ecosystem entries keyed on packaged versions with
+epochs, which would misjudge every upstream version string enodia's
+probes actually report. `bdu.fstec.ru` — FSTEC's (Russia's) public
+vulnerability database — closes both gaps at once, confirmed against
+the real data rather than assumed:
+
+- `https://bdu.fstec.ru/files/documents/vulxml.zip` is FSTEC's own full
+  export (confirmed live: ~33MB zipped, 615MB uncompressed XML, 92,324
+  `<vul>` entries). Each entry carries real CVE cross-references
+  (`<identifiers><identifier type="CVE">`) and one or more
+  `<vulnerable_software><soft>` ranges keyed to the *product's own*
+  version numbering — not a distro package's. `BDU:2023-06364`, the
+  real entry for CVE-2023-22515 (the same example D18 used to show
+  OSV.dev's gap), lists three ranges for "Confluence Server" (`от 8.0.0
+  до 8.3.3` / `8.4.3` / `8.5.2`, one per maintenance branch, each ending
+  at that branch's real Atlassian-published fix) plus one for "Jira
+  Data Center" — exactly the shape D18 needed and OSV.dev didn't have.
+- A separate per-distro OVAL scanner content package also exists (e.g.
+  `scanovalcontent_redos8.rpm` → package-level vulnerability scanning
+  for RED OS) but was **not** used here: it's built for
+  distro-packaged-version scanning, the same shape D18 already rejected
+  for OSV.dev, whereas the full export's product-version ranges map
+  directly onto enodia's existing "one product, one version" model.
+
+**The operator supplies the file; enodia never polls FSTEC itself.**
+Explicit requirement, not a shortcut: `bdu.fstec.ru`'s main site
+blocks a bare default User-Agent (403; a plain browser UA gets 200 —
+simple bot-blocking, not a geo-block), the export is large enough that
+polling it on every collection cycle would be wasteful even without
+that, and an operator who already has to place the file makes exactly
+one decision (when to refresh it) instead of enodia making a silent
+background one. Config shape (`internal/config`, D19: this is data
+that affects evaluation, so it lives in `enodia.yaml`, not
+`settings.yaml`):
+
+```yaml
+cve:
+  bdu:
+    path: ./bdu-export.zip   # .xml, .zip, or .tar.gz/.tgz; relative to enodia.yaml's own dir
+```
+
+`Config.BDUPath()` resolves a relative path against the config file's
+directory, the same convention resolver/inventory paths already use
+elsewhere. CVE lookup is opt-in twice over: no `cve.bdu.path` set means
+no lookup at all (`loadCVEIndex` returns a nil `*cve.Index`, and
+`Index.Lookup` is nil-safe — the same "fact simply not available" shape
+`ReasonNoResolver` already uses for lifecycle data), and it only
+activates when `--config` is explicitly passed, even for `check --from`
+(which otherwise never touches a config file at all, per D4) — a config
+file merely sitting in the current directory must not silently turn CVE
+correlation on.
+
+**Parsing is streaming, never a full `Unmarshal`:** `internal/cve.LoadBDU`
+walks the XML with `encoding/xml.Decoder` token-by-token, calling
+`DecodeElement` only once it sees a `<vul>` start element, discarding
+everything else immediately. Necessary at this file's real size — a
+full in-memory parse of 615MB of XML would multiply badly through Go's
+DOM-shaped unmarshal. Confirmed live: the real export parses in ~19s
+with ~83MB peak RSS (`/usr/bin/time -v`). Only entries naming a product
+`internal/cve.productSoftNames` maps get kept (confirmed live: the full
+export tracks 90,000+ entries across every vendor FSTEC watches, the
+overwhelming majority irrelevant to any probe this project has).
+
+**Product mapping starts small and deliberately incomplete.**
+`productSoftNames` currently maps `confluence`, `jira`, `keycloak`,
+`postgresql` to their real BDU `<soft><name>` strings — a handful of
+names verified against the live export, not an attempt at exhaustive
+coverage in one pass. Real BDU data has a dozen-plus more Jira name
+variants alone ("Jira Software Data Center and Server", "Jira Service
+Management", ...); expanding this table incrementally as more products
+get verified is the intended shape, the same way `probe/registry.go`
+grows one probe at a time rather than all at once.
+
+**Version-range parsing rules, pinned against two real, independently
+documented CVEs rather than guessed:**
+
+- Bare `"до X"` (no suffix): X is the first **safe** (fixed) version —
+  excluded from the vulnerable range. Confirmed: Confluence's own real
+  fix version `8.3.3` must not match `от 8.0.0 до 8.3.3`.
+- `"до X включительно"`: X is the last **vulnerable** build — included
+  in the range. Confirmed against a kernel-style real entry (`от 4.5 до
+  4.9.192 включительно`), and cross-checked against Log4Shell
+  (CVE-2021-44228): the real first-safe release `2.17.0` must not match
+  a bare `до 2.17.0` entry.
+- `"от"` is optional on a bounded range (`"X до Y"` with the leading
+  word dropped) — found live in 53 of the export's 70,878 distinct
+  `<version>` strings, initially mis-rejected until
+  `bduBoundedRangePattern` stopped requiring it.
+- A bound must be pure digits-and-dots (`cleanVersionParts`, backed by
+  `^\d+(?:\.\d+)*$` against the *entire* trimmed string) — not
+  `version.Parts`/`version.Core` directly, which extract a numeric
+  prefix too permissively and would silently accept garbage bounds as
+  real ones (`"24.2R2-EVO"` → `24.2`; a literal date used as a bound,
+  `"2015-04-01"` → `2015`). Caught by running the parser against the
+  full real 70,878-string corpus before trusting it, not by inspection.
+  Final acceptance: 66.4% parse cleanly; the rest is genuinely
+  non-version vendor firmware text, not a parser bug.
+- A bare single version with no range syntax at all is treated as an
+  exact-point range (`[X, X]`, inclusive both ends).
+
+**Known limitation, accepted rather than fixed:** a single BDU `<vul>`
+can list several `<soft>` ranges for the *same* product name, one per
+maintenance branch. `Index.Lookup`/`Finding.Matches` has no way to tell
+which branch a range belongs to beyond its numbers, so an exact
+branch-fix version can still match a numerically wider *sibling*
+branch's range (confirmed against the real Confluence entry above:
+`8.3.3`, safe on its own branch, still matches the `до 8.5.2` sibling
+range; `8.5.2` itself matches none, correctly). Between silently
+missing a real vulnerability and occasionally asking an operator to
+double-check a version that's actually already safe, this project
+takes the side that doesn't risk the miss.
+
+**Cache mirrors `resolver.Cache`'s convention but not its TTL.**
+`cve.DefaultCacheDir()` uses `os.UserCacheDir()/enodia/cve`, the same
+as `resolver.Cache` — never `/tmp`, an explicit requirement, not the
+obvious default. Unlike `resolver.Cache` (which fronts a live HTTP
+source needing periodic refresh), there's no TTL: the cache key is the
+source file's own `mtime` + size, since the operator alone controls
+when the file changes at all. A stale or corrupt cache falls back to a
+full re-parse; a failed cache *write* only warns, never fails the run.
+
+**CVE severity is not yet wired into `OverallSeverity` or exit codes.**
+`Assessment.CVEs []cve.Finding` (D7: BDU's own free-text `Severity`
+field is carried through as-is, a fact, not a verdict this project
+computed) and `check`'s compact view's new CVES column are both
+count/presence only — whether a CVE match should escalate severity,
+and how, is an open policy question left for a future decision, not
+decided by omission here.
+
+Not addressed by this decision: whether this warrants a MAJOR version
+bump. By this project's own semver convention (PATCH = fixes, MINOR =
+new backward-compatible functionality), this doesn't need one — an
+additive, opt-in config block and additive struct fields — but calling
+it a 2.0 milestone is a legitimate marketing choice to make at release
+time, not a technical requirement decided here. (Decided at release time:
+shipped as 2.0.0+0, as a milestone — nothing in it breaks compatibility.)
+
+**Extended by D31**, which adds NIST NVD as a second, independent
+source alongside BDU, sharing this decision's operator-supplied-file
+design and its `versionRange` matching engine (generalized from this
+decision's original `bduRange`).
+
+---
+
+## D31 — NVD added as a second CVE source, alongside BDU
+
+**Decided.** After D30 shipped BDU-based correlation, the same
+capability was checked against NIST's NVD (nvd.nist.gov) too — not to
+replace BDU, but because NVD's CPE-match version ranges turn out to
+solve the exact same problem D18/D30 already describe, sometimes more
+precisely than BDU's own data, and because a real, still-live NVD
+export requires no live polling either, matching D30's core operator-
+supplied-file requirement.
+
+**The classic per-year JSON feeds were not actually retired.**
+First guessed (wrongly, from stale memory, not verified) that NVD's
+downloadable bulk feeds had been sunset in favor of API-only access.
+Checked live and that was false: `nvd.nist.gov/feeds/json/cve/2.0/
+nvdcve-2.0-<year>.json.gz` (also `.json.zip`, plus per-file `.meta`
+sidecars carrying `sha256`/`size`/`lastModifiedDate`) are still served
+for every year 2002 through the current one, the current year's file
+actively updated same-day. `recent`/`modified` incremental feeds (last
+8 days) exist too but aren't used here — the operator re-downloading a
+whole year file occasionally is simpler than enodia reconciling
+incremental deltas, and fits the same "operator decides the refresh
+cadence" shape D30 already established.
+
+**Confirmed live against real data, not the separate CPE dictionary
+API:** an NVD CVE record's `configurations[].nodes[].cpeMatch[]`
+carries a `criteria` CPE 2.3 string plus up to four bound fields
+(`versionStartIncluding`/`versionStartExcluding`/
+`versionEndIncluding`/`versionEndExcluding`) — the same product-own-
+numbering shape BDU's ranges already have. Fetching the live
+`cves/2.0` API for CVE-2023-22515 (the same real CVE D18/D30 use)
+confirms this: three Confluence Data Center ranges and three Server
+ranges, each carrying *both* its own lower and upper bound
+(8.0.0–8.3.3, 8.4.0–8.4.3, 8.5.0–8.5.2). That's strictly better than
+BDU's equivalent entry for the very same CVE, whose three ranges all
+share one lower bound (8.0.0) and only vary the upper — the exact
+shape behind D30's accepted overlapping-branch limitation. NVD simply
+doesn't have that limitation for this CVE: confirmed live (against the
+real 2023+2024 yearly exports) that Confluence's real fix version
+`8.3.3` matches zero NVD ranges, where it matches two of BDU's.
+
+The separate CPE dictionary (`cpes/2.0`) turned out to be the wrong
+tool for building the product mapping: it doesn't even list
+`confluence_server`/`confluence_data_center` as registered products
+(only a bare `confluence`), yet CVE-2023-22515's own `criteria` use
+exactly those two strings. The dictionary catalogs known
+product+version combinations for browsing/autocomplete; it is not
+authoritative for what criteria strings a CVE's own configurations
+actually reference. `productCPENames` (`internal/cve/productmap.go`)
+is therefore built from real CVE records directly, the same
+live-verification discipline `productSoftNames` already used for BDU.
+
+**Two more real quirks found live, not guessed past:**
+
+- Keycloak's real CVE history uses two different NVD vendors for the
+  same open-source project: `keycloak:keycloak` (older CVEs) and
+  `redhat:keycloak` (newer ones) — an apparent vendor re-registration,
+  not a fork or rename. `redhat:single_sign_on` (Red Hat's differently
+  versioned commercial productization) is deliberately excluded — its
+  version numbers don't correspond to upstream Keycloak's at all.
+- Some Atlassian products distinguish Server from Data Center via the
+  CPE product slug itself (Confluence), others via the CPE
+  `sw_edition` field on one shared slug instead (Jira Service Desk:
+  confirmed live on CVE-2019-14994/-15003, one `jira_service_desk`
+  product with `sw_edition` set to `server` or `data_center`).
+  `productCPENames["jira"]` only lists the slug-distinguished variants
+  that correspond to Jira Software (what enodia's own `jira` probe
+  targets) — `jira_service_desk`/`jira_service_management` is a
+  different product with its own versioning, deliberately not mapped
+  here, and matching an `sw_edition` split wasn't attempted for this
+  first pass. (D33 adds it, for GitLab's CE/EE split.)
+
+**Config, cache and matching engine are shared with BDU, not
+duplicated.** `cve.nvd.path` (`NVDSpec`, `Config.NVDPath()`) is BDU's
+`cve.bdu.path` sibling, same relative-to-config-file resolution. `path`
+may be a single file (`.json`/`.json.gz`/`.json.zip`) or a directory —
+NVD ships one archive per year, so an operator who wants several just
+points `cve.nvd.path` at the directory they downloaded them into,
+rather than needing a fetch helper in enodia itself (D30's "enodia
+never fetches this itself" applies here unchanged: no `enodia cve
+fetch-nvd` subcommand was added, on purpose — curl/cron on the
+operator's own side is one command, not worth a new maintained code
+path). `bduRange` was generalized into a source-neutral `versionRange`
+(adding a `LoInclusive` flag `bduRange` never needed — BDU's own "от X"
+text has no exclusive-lower-bound form, but NVD's
+`versionStartExcluding` does) and reused as-is for NVD's numeric bound
+fields, no separate range-matching implementation. The on-disk cache
+(`loadCached`) was generalized from "one source file's mtime+size" to
+"a set of file signatures", so `LoadNVDCached` also correctly
+invalidates when a directory gains or loses a yearly archive, not only
+when an existing one's content changes. `Finding` itself gained a
+`Source` field (`"bdu"`/`"nvd"`) and its `BDUID`/`SoftName` fields were
+renamed to `AdvisoryID`/`MatchedName` to stop being BDU-specific names
+for a now source-neutral concept; `loadCVEIndex`
+(`cmd/enodia/pipeline.go`) loads whichever of `cve.bdu.path`/
+`cve.nvd.path` are configured (independently — either, both, or
+neither) and combines them with `cve.MergeIndex`, so a product's CVE
+list can carry findings from both sources side by side.
+
+**Not modeled: NVD's node-level AND/OR/NOT configuration logic.** A
+CVE's `configurations` can express boolean preconditions across
+multiple CPEs (e.g. "vulnerable only if product X AND library Y are
+both present"). This project doesn't reconstruct that: every
+individual `vulnerable: true` cpeMatch entry for a mapped product is
+recorded independently, regardless of which node or operator it came
+from. An enodia probe only ever reports one product and one version
+per observation, so there is no second CPE available to evaluate a
+real AND against regardless — the same false-positive-over-silent-miss
+bias D30 already accepts for BDU's overlapping branches applies here
+for the same reason.
+
+**A cpeMatch with no version bounds and no literal version in its own
+CPE string (`version: "*"`, no known fix published) is treated as
+matching every probed version**, not discarded — confirmed this is a
+real, legitimate shape in live data (a CVE with no fixed version yet),
+not just a hypothetical edge case worth guessing about. **Reversed by
+D33** once measured against the full exports: those matches turned out
+to be overwhelmingly 1999-2016 CVEs attached to current releases.
+
+Verified live end-to-end against two full real yearly exports (2023 +
+2024, ~40,000 CVE records, ~40MB compressed): parses in ~7s at ~26MB
+peak RSS, and correctly reproduces CVE-2023-22515's known Confluence
+ranges plus several other real, independently checkable Confluence and
+Jira CVEs from that period (e.g. CVE-2024-21683/-21685 against real
+Jira Server 9.4.x/9.12.x LTS ranges).
+
+**Then re-verified against every year NVD publishes, not just two.**
+All 25 yearly exports (2002–2026, ~222MB compressed) were downloaded
+and checked against each year's own `.meta` sha256 (which, confirmed
+live, hashes the *uncompressed* JSON, not the `.gz` itself — the first
+naive check against the compressed bytes predictably failed all 25
+before this was caught). Parsing all 25 at once: ~35.6s, ~90MB peak
+RSS. The same CVE-2023-22515/CVE-2024-21683 checks above still hold at
+full scale, and `internal/cve/testdata/nvd_full_products.json` freezes
+this into a real, committed regression fixture: every one of the 561
+real CVE records (out of the full ~270,000) whose `configurations`
+mention a `productCPENames`-mapped CPE, trimmed to only the fields
+`LoadNVD` reads (English description, best available `baseSeverity`,
+configurations) — the same "real but reduced" treatment `sample.xml`
+already got for BDU. `internal/cve/nvd_full_test.go` re-runs the exact
+checks above against it, so a future change to the matching logic gets
+caught against real multi-decade data, not only the small hand-built
+`sample_nvd.json`.
+
+---
+
+## D32 — HTML CVE detail modal is pure CSS, not JavaScript
+
+**Decided.** `check`/`export --format html`'s compact view carried only
+a bare CVE count (D30/D31) with no way to see which CVEs, their
+severity, or a link to read more, without re-running the tool with
+`--format json`. Requested directly: an info icon next to the count
+that opens a modal listing each finding.
+
+**No JavaScript, in either Assets mode.** The obvious implementation —
+a shared `<dialog>`, one click handler reading a `data-cves` JSON
+attribute, `.showModal()` — was built first and then reverted:
+`TestHTMLIsSelfContained` already enforces, and long predates this
+decision, that the **default inline report carries zero `<script>`
+tags at all** (D19: "fully offline single file"). That test is not
+incidental — it is exactly the guarantee an operator on a closed
+network relies on. A CVE detail popup is not worth becoming the one
+exception to it.
+
+Instead, the modal is one CSS pseudo-class: `:target`. Each compact-view
+row with findings gets its own `<div id="enodia-cve-modal-N">` (an
+overlay, `display: none` by default), and its info cell is a plain
+`<a href="#enodia-cve-modal-N">` — clicking it navigates the page's URL
+fragment to that id, which `#enodia-cve-modal-N:target { display: ... }`
+then reveals; a full-viewport `<a href="#">` behind the dialog content
+acts as a click-to-close backdrop, and an explicit close link resets
+the fragment the same way. This works identically in both Assets modes
+and needed no change to the D19 test at all — the honest outcome of
+picking a design that doesn't need one.
+
+**Real trade-off accepted, not overlooked:** no Escape-to-close and no
+focus trap — both need JavaScript to implement, and `cdnModeScript`'s
+own doc comment already made the same call for the alert-dismiss
+feature ("pulling in a JS bundle just for one button's click handler
+isn't worth it"). Click-the-backdrop and an explicit close link cover
+the same need with plain HTML.
+
+**Per-row modal blocks, not one shared dialog.** The JS version could
+share one dialog, populated on click; the CSS version can't (`:target`
+needs a real element per anchor), so every row with findings gets its
+own overlay block emitted once after the table. Real per-row finding
+counts are small (single digits, confirmed against both the hand-built
+fixtures and the 561-record full-scale one), so repeating a short
+block per row is simpler and more robust than trying to force the
+data through a single reused shell.
+
+**Every CVE ID links to `nvd.nist.gov/vuln/detail/<CVE-ID>`, regardless
+of source.** A CVE ID is the one identifier BDU and NVD findings both
+carry, so it's the one link guaranteed correct either way — verified
+live at `nvd.nist.gov` throughout D31's own work.
+
+**Corrected after this decision first shipped:** `bdu.fstec.ru`'s own
+per-vulnerability page was initially left unlinked, believed
+unreachable when checked live from this environment. It wasn't
+actually unreachable — the site presents its own (Russian national/GOST)
+TLS certificate, which curl's default trust store rejects outright, the
+same way a browser without that CA installed would show a hard TLS
+warning rather than a slow timeout; `curl -k` (skip certificate
+verification, appropriate for a one-off manual check of a known public
+URL, not something this project's own code does) got past that and
+confirmed the real shape live: `https://bdu.fstec.ru/vul/<id>`, the
+`BDU:` prefix stripped from the identifier (`BDU:2023-06364` ->
+`/vul/2023-06364`) — confirmed against that exact real entry, whose page
+does carry `CVE-2023-22515`. A `bdu`-sourced Finding now links its
+`AdvisoryID` there via `bduAdvisoryURL`, in addition to its CVE ID's NVD
+link when it has one; a `bdu` Finding with no CVE ID at all (`Finding.
+CVEIDs` can be empty, BDU's own doc comment already notes this) now
+links via that BDU URL too, rather than the plain unlinked text this
+decision originally shipped with. An `nvd`-sourced Finding never gets a
+BDU link, regardless of what its `AdvisoryID` (the CVE ID again, for
+that source) happens to look like.
+
+Markup reuses Bootstrap's own class names (`modal-dialog`,
+`modal-dialog-centered`, `modal-dialog-scrollable`, `modal-content`,
+`modal-header`, `modal-body`, `btn-close`) as requested, without the
+`.modal` wrapper Bootstrap's real JS-driven markup would use — the
+overlay `<div>` gives `.modal-dialog-centered` the same fixed,
+full-viewport ancestor to center against that `.modal` normally would,
+so its CSS resolves the same way even without the wrapper. CDN mode
+gets Bootstrap's full styling on these classes for free; inline mode's
+own `htmlCSS` gives the same class names a minimal bare-bones
+equivalent — one markup shape, two stylesheets, the same approach
+`toneClass` already uses for table row coloring.
+
+**Corrected after a screenshot of the real CDN-mode report:** dropping
+the `.modal` wrapper was wrong. Bootstrap 5.3 declares every
+`--bs-modal-*` custom property (background, width, padding, border) on
+`.modal` itself, so without it `.modal-content` had no background and
+no width — the dialog rendered as transparent text across the whole
+page. The overlay now carries `class="modal enodia-cve-modal-overlay"`;
+Bootstrap's own `.modal { display: none }` loses to
+`.enodia-cve-modal-overlay:target` on specificity, so `:target` still
+decides visibility, and inline mode has no `.modal` rule to interfere.
+Verified this time by rendering both modes in headless Chromium, not
+only by asserting on markup.
+
+**Extended to the drift view** on request: drift now ends in the same
+CVES column (`cveCount`, shared with compact) with the same info link
+and modal. Both views build one row per Assessment in
+`r.Assessments` order, which is what lets the shared `writeCVESection`
+map row *i* back to its findings; lifecycle and fleet don't carry the
+column (fleet groups several instances per row, so "this row's CVEs"
+has no single answer there). Overlay anchors include the view name
+(`enodia-cve-modal-compact-N` / `-drift-N`), so the two sections'
+overlays for the same row never collide when all four render on one
+page, and `--view drift` on its own still carries its own overlays
+instead of linking to compact's absent ones.
+
+---
+
+## D33 — CVE mapping for every probe, edition-aware matching
+
+**Decided.** D30/D31 mapped four products (confluence, jira, keycloak,
+postgresql) as a deliberately small start. Asked to go through every
+probe instead, against the operator's own full exports (NVD 2002-2026
+yearly files and BDU's `vulxml.zip`, at `/var/lib/enodia/cve/{nvd,bdu}`
+on the test host), this decision maps **53 CVE products** — every probe
+with usable data in either source.
+
+**Method, not guesswork.** Both exports were reduced to a full
+inventory first: 122,139 distinct NVD `(part, vendor, product)` triples
+with their CVE counts and `sw_edition` values, and 26,859 distinct BDU
+`(vendor, name)` pairs. Candidates for each of the 90 registered
+probes were pulled from those by name, checked by hand, and written
+into one spec file; a script then required every pair in it to exist
+verbatim in the inventories before the Go tables were generated from
+it (zero missing) — a typo in a vendor string doesn't fail loudly, it
+silently matches nothing.
+
+**Deliberately not mapped, with the reason each time:**
+
+- General-purpose Linux distributions (debian, ubuntu, rhel, alma,
+  rocky, fedora, РЕД ОС, Astra Linux, …): tens of thousands of CVEs each
+  (debian_linux alone: 10,005 in NVD; Astra Linux SE: 15,208 in BDU),
+  but they're *package* vulnerabilities. A release number can't say
+  which packages have been patched since — the same mismatch D18 ruled
+  OSV.dev's distro ecosystems out for.
+- The BSDs and Solaris: base-system CVEs, but NVD keys their patch
+  levels (FreeBSD's `-p5`, OpenBSD errata) in the CPE `update` field,
+  which this package doesn't read — matching on the release alone would
+  flag a fully patched host with every CVE ever fixed in that release.
+- ESXi and vCenter: same `update`-field problem, measured — 934 of
+  roughly 1,000 recent ESXi/vCenter entries are `7.0` + `update_1`-style
+  literals, so the result would be either nothing or everything.
+- Synology DSM: bounds like `6.2.4-25556-3` (version-build-update),
+  which the strict bound parser rejects — every one would be dropped.
+- TrueNAS: three `truenas_firmware` entries only, versioned
+  differently from what the probe reports.
+- No usable data at all in either source: kitsu, zou,
+  postgres_exporter, p4p, perforce-swarm.
+- Explicitly excluded sub-products with their own, unrelated
+  versioning: HAProxy Enterprise, NGINX Plus, Jaeger UI, Nextcloud's
+  and Bitwarden's desktop/mobile clients, Zabbix agent, Oracle HTTP
+  Server, Pivotal's Redis, GitLab Runner, Jira Align and Jira Service
+  Management.
+
+**BDU is now matched on (vendor, name), not name alone.** The same
+`<soft><name>` appears under different vendors in the real export —
+"HTTP Server" is both Apache Software Foundation's and Oracle Corp.'s
+(Oracle HTTP Server, its own 12.2.1.x numbering), and name-only
+matching would have handed Oracle's findings to Apache httpd targets.
+
+**`cve.Subject` translates an observation before lookup.** One probe,
+`ssh`, covers unrelated implementations: its Version is the whole
+RFC 4253 software string, so `OpenSSH_…` looks up `openssh`,
+`dropbear_…` looks up `dropbear`, and any other SSH stack gets no
+lookup at all rather than borrowing OpenSSH's CVEs. The probed version
+is compared by its numeric spine (`version.Core`: `9.6p1` → `9.6`):
+bounds keep D30's strict whole-string rule, but NVD's own OpenSSH
+bounds are plain `9.6`/`10.4`, so rejecting a suffixed probed version
+outright would have made OpenSSH match nothing.
+
+**Edition-aware matching.** NVD's CPE `sw_edition` is carried into
+`Finding.Edition`. GitLab CE and EE share one version numbering but not
+one CVE list — confirmed: of 19.2.2's nine real NVD findings, five are
+EE-only. The gitlab probe already reports `/api/v4/version`'s own
+`enterprise` boolean in Extra (a `-ee`/`-ce` version suffix is the
+fallback), so a CE instance now sees 4 of those 9 and EE sees all 9.
+When a probe doesn't know its edition, every finding is kept —
+Grafana, MongoDB, Nextcloud and Vault all have edition splits in the
+data but no probe signal for it yet, so they stay unfiltered.
+
+**Reverses D31 on "no version constraint".** A cpeMatch with neither
+bounds nor a version in its CPE string (`*`) was read as "every
+version, forever". Measured against the full exports, those matches
+were almost all noise: ten of Apache httpd 2.4.58's eleven were CVEs
+from 1999-2008, 64 of macOS 14.4's 67 from 1999-2016. NVD's `*` there
+meant every version that existed when the CVE was analyzed, not every
+version released after. They're now dropped; the accepted cost is the
+rare genuinely unfixed-yet CVE recorded that way.
+
+**Fixed along the way: the cache never noticed enodia itself
+changing.** Its freshness check was the source files' mtime and size
+only, so an upgrade adding products would have kept serving the old
+index — without those products — until the operator happened to
+replace an export file. Cache entries now carry a fingerprint of
+`cacheFormat` plus both product tables, and any mismatch rebuilds.
+
+**The modal also links cve.org** (`/CVERecord?id=…`) next to NVD — the
+CNA-published record NVD's own page enriches, confirmed live for
+CVE-2026-85706 (published by GitLab as its own CNA) — and shows an
+edition next to the source when a finding has one.
+
+Measured end-to-end with the real binary against the operator's real
+exports: first run ~57s and ~285MB (parsing both sources in full, all
+53 products), every later run ~0.8s from the ~52MB on-disk cache.
+Spot-checked against known data: GitLab 19.2.2 CE/EE as above;
+`dropbear_2022.83` gets no findings because NVD's own Terrapin
+(CVE-2023-48795) range for Dropbear ends *before* 2022.83 — followed
+as data, not second-guessed (D7).
+
+---
+
+## D34 — CVE block from the active config; editions for Vault, Nextcloud, MongoDB; Cisco dropped
+
+**Decided, three unrelated items.**
+
+**The cve block now comes from whichever config the run uses.** D30
+had `loadCVEIndex` require an explicit `--config`, reasoning about
+`check --from` (which otherwise needs no config at all): a file merely
+sitting in the current directory shouldn't silently switch CVE
+correlation on. In practice that reasoning broke the normal case —
+reported directly as "GitLab still shows a dash under CVES". Without
+the flag, `config.Locate` still finds the config (`$ENODIA_CONFIG`,
+`./enodia.yaml`, `~/.config/enodia/`, `/etc/enodia/`) and the run's
+targets come from it, but that same file's `cve:` block was dropped
+without a word. Reproduced against a fake GitLab 19.2.2-ee endpoint:
+0 findings via auto-location and via `$ENODIA_CONFIG`, 9 with an
+explicit `--config`. Every `serve` deployment under systemd or Docker
+would have shown no CVEs at all. Now the same `config.Locate` result
+drives both; no config located anywhere is still fine (nil index, no
+error) for `check --from`, and a missing explicit `--config` is still
+an error.
+
+**Edition-aware matching for Vault, Nextcloud and MongoDB**, the same
+way D33 did it for GitLab. Each probe now records its server's own
+edition as a fact in `Extra["enterprise"]` (`"true"`/`"false"`), only
+when the API actually says so:
+
+- Vault: `/v1/sys/health`'s own `"enterprise"` boolean, present in the
+  real recorded reply (`false` on the community dev server).
+- Nextcloud: `status.php`'s `"edition"` — `""` on the real recorded
+  community server. `"enterprise"` (any case) is what an Enterprise
+  subscription is expected to report but has not been seen on a live
+  instance, so any other non-empty value is left unreported instead of
+  guessed at.
+- MongoDB: `buildInfo`'s `"modules"` array — empty on the real recorded
+  community reply; Enterprise builds list `"enterprise"` there. Reading
+  it meant generalizing the probe's BSON field scanner from one string
+  field to any top-level field, plus string arrays.
+
+A field the API doesn't send (an older release) leaves the key unset,
+which `cve.Subject` treats as an unknown edition — every finding kept.
+On the BDU side, which has no `sw_edition`, the separately listed
+"Vault Enterprise", "Vault Community Edition", "Nextcloud Enterprise
+Server" and "MongoDB Enterprise Server" products now carry their
+edition into `Finding.Edition`, and the cache fingerprint includes it.
+Measured against the real exports: Nextcloud 27.1.3 CE drops from 23
+NVD findings to 11; Vault 1.15.2 and MongoDB 7.0.5 each lose one
+EE-only finding.
+
+Grafana stays unfiltered: its CVE data splits by edition too, but the
+probed `/api/health` doesn't say which edition answered, and the
+endpoint that does (the frontend settings' build info) hasn't been
+checked against a live server — not worth guessing a vendor API shape.
+
+**`cisco-ios-xe` dropped, not deferred.** D23/D29 kept it open pending
+hardware. Decided against it: Cisco's lineup is a zoo of separately
+versioned platforms (IOS, IOS-XE, IOS-XR, NX-OS, ASA …) with different
+management APIs, one probe would cover almost none of it, and there's
+no test hardware to verify any of it against. Treated like `tails` —
+off the list, not waiting.
+
+
+---
+
+## D35 — CVE modal groups findings per CVE; structured CVSS ratings
+
+**Decided.** Asked directly how the modal chose its text: it didn't —
+every Finding showed its own source's text, so the same CVE appeared
+once from BDU and once or more from NVD (once per matching CPE:
+`confluence_server` and `confluence_data_center` are two findings for
+one CVE-2023-22515), and the CVES count counted findings, not CVEs.
+
+- **One line per CVE**, in the modal and in the count (`cveGroup`,
+  `internal/render`). BDU and NVD findings for the same CVE ID merge;
+  a BDU advisory citing no CVE stays its own line. This is presentation
+  only — the JSON export keeps every per-source Finding as the fact it
+  is (D7). Measured on the real exports: TeamCity 2023.05.4 goes from
+  245 to 134, GitLab 19.2.2 EE from 13 to 9.
+- **Text:** BDU's Russian title when BDU has the CVE, NVD's English
+  description otherwise.
+- **Rating:** a structured `Finding.CVSS` (version, base score,
+  CRITICAL/HIGH/MEDIUM/LOW/NONE), parsed per source; the source's own
+  `Severity` text is kept as-is. Shown as `CRITICAL · CVSS 3.1 9.8`,
+  NVD's when it has one (the scoring authority BDU itself cites),
+  BDU's otherwise, the raw text only when nothing parsed. CVSS 3.x is
+  preferred over 4.0 and 2.0 when a record carries several, so every
+  score in one list is on the same scale; within a version NVD's own
+  Primary rating beats a CNA's Secondary one (they disagree in real
+  data: CVE-2026-18252 is 7.3 from GitLab, 8.1 from NVD). NVD's
+  metrics now include `cvssMetricV40` (18,587 records in the 2026
+  file alone). BDU's pattern was built against all 96,135 severity
+  strings in the real export with nothing left unparsed — beyond the
+  common shape that took "Нет опасности" as a level, "оценка" without
+  "базовая" on 4.0 ratings, and a decimal point instead of a comma.
+- **Order:** by score, then severity, then newest CVE first (compared
+  numerically, so CVE-2026-85706 sorts as newer than CVE-2026-9807).
+- The modal is also `modal-xl` now (inline mode gets the same ~1140px
+  from its own CSS).
+
+Edition filtering (D33/D34) still applies per finding before grouping,
+so a group can end up BDU-only for one edition: GitLab's
+CVE-2026-18252 is EE-only in NVD, but BDU files it under GitLab with no
+edition, so a CE instance still sees it — from BDU. That's the data,
+not a bug.
+
+`cacheFormat` bumps to 3, since cached findings now carry the parsed
+rating.
+
+The rating renders as two Bootstrap badges in one color — the level and
+`CVSS <version> <score>` — requested on top of the text form:
+`text-bg-danger` for CRITICAL and HIGH, `text-bg-warning` for MEDIUM,
+`text-bg-info` otherwise. (Asked for as "danger for HIGH, info for the
+rest"; CRITICAL got danger too rather than info, which would have made
+the most severe level look the calmest.) `text-bg-*`, not `bg-*`: same
+background, but Bootstrap also sets a readable text color. Inline mode
+defines the same classes in its own CSS with Bootstrap's colors.
