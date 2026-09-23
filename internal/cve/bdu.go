@@ -50,9 +50,9 @@ type bduVul struct {
 // Unmarshal, since the real export is several hundred MB — decoding it as
 // one in-memory tree would multiply that many times over in Go's own XML
 // object overhead. Only <vul> elements whose <vulnerable_software><soft>
-// list contains a name productSoftNames maps are kept; everything else is
-// decoded (encoding/xml has to look at every byte regardless) and then
-// immediately discarded.
+// list contains a (vendor, name) pair productSoftNames maps are kept;
+// everything else is decoded (encoding/xml has to look at every byte
+// regardless) and then immediately discarded.
 func LoadBDU(path string) (*Index, error) {
 	r, cleanup, err := openBDUSource(path)
 	if err != nil {
@@ -60,10 +60,10 @@ func LoadBDU(path string) (*Index, error) {
 	}
 	defer cleanup()
 
-	softToProduct := make(map[string]string, len(productSoftNames)*2)
+	softToProduct := make(map[bduName]string, len(productSoftNames)*2)
 	for product, names := range productSoftNames {
-		for _, name := range names {
-			softToProduct[name] = product
+		for _, n := range names {
+			softToProduct[n] = product
 		}
 	}
 
@@ -90,7 +90,7 @@ func LoadBDU(path string) (*Index, error) {
 	return idx, nil
 }
 
-func indexVul(idx *Index, v bduVul, softToProduct map[string]string) {
+func indexVul(idx *Index, v bduVul, softToProduct map[bduName]string) {
 	var cveIDs []string
 	for _, id := range v.CVEs {
 		if strings.EqualFold(id.Type, "CVE") {
@@ -99,7 +99,7 @@ func indexVul(idx *Index, v bduVul, softToProduct map[string]string) {
 	}
 
 	for _, soft := range v.Software {
-		product, ok := softToProduct[soft.Name]
+		product, ok := softToProduct[bduName{strings.TrimSpace(soft.Vendor), strings.TrimSpace(soft.Name)}]
 		if !ok {
 			continue
 		}

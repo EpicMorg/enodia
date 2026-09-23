@@ -1093,6 +1093,16 @@ Not dates. Order of work, and what each step unblocks.
   reverted specifically to keep `TestHTMLIsSelfContained`'s
   zero-`<script>` guarantee for the default inline report (D19) intact.
   See `docs/DECISIONS.md` D32.
+- CVE mapping extended from 4 products to 53 — every probe with usable
+  data in NVD or BDU, each vendor/product pair verified verbatim
+  against the full real exports before being added. BDU now matches on
+  (vendor, name); `ssh` splits into OpenSSH vs Dropbear by banner;
+  GitLab CE vs EE findings are filtered by the probe's own edition
+  signal; NVD "no version constraint" entries are dropped (they were
+  mostly decades-old CVEs); the cache now also invalidates when
+  enodia's own product tables change. Distros, BSDs, Solaris,
+  ESXi/vCenter and Synology DSM are deliberately left out, each for a
+  stated reason. See `docs/DECISIONS.md` D33.
 
 ## Next
 

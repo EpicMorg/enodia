@@ -38,12 +38,10 @@ func cleanVersionParts(s string) ([]int, bool) {
 // and NVD's four separate versionStart/EndIncluding/Excluding fields both
 // reduce to this same shape). A nil Lo means no stated lower bound
 // (anything up to Hi is vulnerable); a nil Hi means no stated upper bound
-// (anything from Lo on is vulnerable, i.e. no fix is known yet) — both nil
-// means the source asserted no version constraint at all, which for NVD
-// legitimately happens (a CPE match with no version fields at all, no
-// known fixed version) and is treated as "every version matches", the same
-// bias toward a false positive over a silent miss D30 already accepts for
-// BDU's own overlapping-branch limitation.
+// (anything from Lo on is vulnerable, i.e. no fix is known yet). Neither
+// parser produces both nil: an entry with no version information at all
+// is rejected at parse time (see parseNVDRange), so matches never has to
+// decide what "no constraint" means.
 type versionRange struct {
 	Lo          []int
 	LoInclusive bool // meaningless when Lo == nil

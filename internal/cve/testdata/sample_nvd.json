@@ -200,7 +200,7 @@
       "cve": {
         "id": "CVE-2099-00006",
         "vulnStatus": "Analyzed",
-        "descriptions": [{ "lang": "en", "value": "synthetic: no version constraint at all, every version named vulnerable" }],
+        "descriptions": [{ "lang": "en", "value": "synthetic: no version constraint at all, must be dropped (carries no version information)" }],
         "metrics": {},
         "configurations": [
           {

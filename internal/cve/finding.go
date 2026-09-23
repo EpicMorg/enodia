@@ -2,6 +2,8 @@
 
 package cve
 
+import "github.com/EpicMorg/enodia/internal/version"
+
 // Finding is one product/CVE match extracted from a vulnerability source
 // (BDU or NVD), kept only for products that source's own product map
 // names. Every field is the source's own data carried through as-is (D7:
@@ -16,14 +18,25 @@ type Finding struct {
 	MatchedName string // the exact BDU <soft><name>, or NVD CPE criteria, this range matched
 	RangeText   string // the original version-range text, kept for display
 	FixStatus   string
+	// Edition is the product edition this range is restricted to, from
+	// NVD's CPE sw_edition field ("community", "enterprise", ...), or empty
+	// when the source didn't restrict it. See Index.Lookup for how it's
+	// matched against an observation's own edition.
+	Edition string `json:",omitempty"`
 
 	rng versionRange
 }
 
-// Matches reports whether probed (a raw version string, as a probe
-// reports it) falls inside this finding's range.
+// Matches reports whether probed falls inside this finding's range. Only
+// probed's numeric spine is compared (version.Core: "9.6p1" -> "9.6",
+// "1.3.8b" -> "1.3.8"): bounds are held to the strict whole-string rule
+// (cleanVersionParts) because a garbage bound would be a wrong verdict,
+// but probed comes from enodia's own probe, and the real NVD bounds for
+// exactly these suffixed products are plain dotted numbers (OpenSSH's are
+// "9.6", "10.4", never "9.6p1") — rejecting probed outright would silently
+// match nothing at all for them.
 func (f Finding) Matches(probed string) bool {
-	parts, ok := cleanVersionParts(probed)
+	parts, ok := cleanVersionParts(version.Core(probed))
 	if !ok {
 		return false
 	}
@@ -58,13 +71,22 @@ type Index struct {
 	byProduct map[string][]Finding
 }
 
-// Lookup returns every finding for product whose range contains probed.
-func (idx *Index) Lookup(product, probed string) []Finding {
+// Lookup returns every finding for product whose range contains probed
+// and whose edition applies. edition is the observation's own edition
+// (see Subject), or "" when the probe doesn't know it — in which case
+// every finding is kept regardless of its Edition, the same "false
+// positive over a silent miss" bias D30 already takes. A finding with no
+// Edition applies to every edition. Confirmed live why this matters: of
+// GitLab 19.2.2's nine real NVD findings, five are Enterprise-only.
+func (idx *Index) Lookup(product, probed, edition string) []Finding {
 	if idx == nil {
 		return nil
 	}
 	var out []Finding
 	for _, f := range idx.byProduct[product] {
+		if edition != "" && f.Edition != "" && f.Edition != edition {
+			continue
+		}
 		if f.Matches(probed) {
 			out = append(out, f)
 		}

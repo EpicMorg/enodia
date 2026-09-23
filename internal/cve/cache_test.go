@@ -3,6 +3,7 @@
 package cve
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -32,7 +33,7 @@ func TestLoadBDUCachedBuildsThenReuses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first LoadBDUCached: %v", err)
 	}
-	if got := idx1.Lookup("confluence", "8.3.0"); len(got) != 3 {
+	if got := idx1.Lookup("confluence", "8.3.0", ""); len(got) != 3 {
 		t.Fatalf("got %d findings on first load, want 3", len(got))
 	}
 
@@ -71,10 +72,10 @@ func TestLoadBDUCachedBuildsThenReuses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second LoadBDUCached (should have served from cache): %v", err)
 	}
-	if got := idx2.Lookup("confluence", "8.3.0"); len(got) != 3 {
+	if got := idx2.Lookup("confluence", "8.3.0", ""); len(got) != 3 {
 		t.Fatalf("got %d findings from cache, want 3", len(got))
 	}
-	if got := idx2.Lookup("jira", "8.1.0"); len(got) != 1 {
+	if got := idx2.Lookup("jira", "8.1.0", ""); len(got) != 1 {
 		t.Fatalf("got %d jira findings from cache, want 1", len(got))
 	}
 	if len(warnings) != 0 {
@@ -103,7 +104,7 @@ func TestLoadBDUCachedRebuildsAfterSourceChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second LoadBDUCached: %v", err)
 	}
-	if got := idx.Lookup("confluence", "8.3.0"); len(got) != 0 {
+	if got := idx.Lookup("confluence", "8.3.0", ""); len(got) != 0 {
 		t.Fatalf("got %d findings after the source was replaced with an empty export, want 0 (stale cache was reused)", len(got))
 	}
 }
@@ -139,7 +140,7 @@ func TestLoadBDUCachedCorruptCacheFallsBackAndWarns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadBDUCached with a corrupt cache: %v", err)
 	}
-	if got := idx.Lookup("confluence", "8.3.0"); len(got) != 3 {
+	if got := idx.Lookup("confluence", "8.3.0", ""); len(got) != 3 {
 		t.Fatalf("got %d findings after falling back past a corrupt cache, want 3", len(got))
 	}
 	if len(warnings) == 0 {
@@ -168,7 +169,7 @@ func TestLoadNVDCachedBuildsThenReuses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first LoadNVDCached: %v", err)
 	}
-	if got := idx1.Lookup("confluence", "8.3.0"); len(got) != 2 {
+	if got := idx1.Lookup("confluence", "8.3.0", ""); len(got) != 2 {
 		t.Fatalf("got %d findings on first load, want 2", len(got))
 	}
 
@@ -195,7 +196,7 @@ func TestLoadNVDCachedBuildsThenReuses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second LoadNVDCached (should have served from cache): %v", err)
 	}
-	if got := idx2.Lookup("confluence", "8.3.0"); len(got) != 2 {
+	if got := idx2.Lookup("confluence", "8.3.0", ""); len(got) != 2 {
 		t.Fatalf("got %d findings from cache, want 2", len(got))
 	}
 }
@@ -214,7 +215,7 @@ func TestLoadNVDCachedDirectoryInvalidatesWhenFileAdded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first LoadNVDCached: %v", err)
 	}
-	if got := idx1.Lookup("confluence", "8.3.0"); len(got) != 2 {
+	if got := idx1.Lookup("confluence", "8.3.0", ""); len(got) != 2 {
 		t.Fatalf("got %d findings on first load, want 2", len(got))
 	}
 
@@ -226,7 +227,7 @@ func TestLoadNVDCachedDirectoryInvalidatesWhenFileAdded(t *testing.T) {
 	}
 	// Both files carry the same fixture, so a correct rebuild doubles the
 	// finding count; a stale cache hit would still report 2.
-	if got := idx2.Lookup("confluence", "8.3.0"); len(got) != 4 {
+	if got := idx2.Lookup("confluence", "8.3.0", ""); len(got) != 4 {
 		t.Fatalf("got %d findings after adding a second file, want 4 (cache should have invalidated)", len(got))
 	}
 }
@@ -242,7 +243,7 @@ func TestMergeIndexCombinesBothSources(t *testing.T) {
 	}
 
 	merged := MergeIndex(bduIdx, nvdIdx)
-	got := merged.Lookup("confluence", "8.3.0")
+	got := merged.Lookup("confluence", "8.3.0", "")
 	var sources = map[string]int{}
 	for _, f := range got {
 		sources[f.Source]++
@@ -265,5 +266,76 @@ func TestMergeIndexNilSafe(t *testing.T) {
 	}
 	if got := MergeIndex(nil, idx); got != idx {
 		t.Fatal("MergeIndex(nil, idx) should return idx unchanged")
+	}
+}
+
+// A cache written by an enodia with different product tables must not be
+// reused just because the source files are untouched — otherwise an
+// upgrade that maps a new product keeps serving the old index.
+func TestLoadCachedRebuildsWhenFingerprintDiffers(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "sample.xml")
+	copySample(t, src)
+	cacheDir := filepath.Join(dir, "cache")
+
+	if _, err := LoadBDUCached(src, cacheDir, nil); err != nil {
+		t.Fatalf("first LoadBDUCached: %v", err)
+	}
+	entries, err := os.ReadDir(cacheDir)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("expected one cache file, got %v (err %v)", entries, err)
+	}
+	cachePath := filepath.Join(cacheDir, entries[0].Name())
+	raw, err := os.ReadFile(cachePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cf cacheFile
+	if err := json.Unmarshal(raw, &cf); err != nil {
+		t.Fatal(err)
+	}
+	// Simulate an older enodia's cache: different fingerprint, and an
+	// index that knows no products at all.
+	cf.Fingerprint = "built-by-an-older-enodia"
+	cf.ByProduct = map[string][]cachedFinding{}
+	raw, err = json.Marshal(cf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cachePath, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	idx, err := LoadBDUCached(src, cacheDir, nil)
+	if err != nil {
+		t.Fatalf("second LoadBDUCached: %v", err)
+	}
+	if got := idx.Lookup("confluence", "8.3.0", ""); len(got) != 3 {
+		t.Fatalf("got %d findings, want 3 — the stale-fingerprint cache should have been rebuilt, not reused", len(got))
+	}
+}
+
+// Edition must survive a round trip through the cache: dropped there, a
+// cached run would silently show a CE instance every EE-only finding.
+func TestLoadNVDCachedKeepsEdition(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "nvd_gitlab.json")
+	copyFile(t, filepath.Join("testdata", "nvd_gitlab.json"), src)
+	cacheDir := filepath.Join(dir, "cache")
+
+	if _, err := LoadNVDCached(src, cacheDir, nil); err != nil {
+		t.Fatalf("first LoadNVDCached: %v", err)
+	}
+	idx, err := LoadNVDCached(src, cacheDir, nil) // served from cache
+	if err != nil {
+		t.Fatalf("second LoadNVDCached: %v", err)
+	}
+	for _, f := range idx.Lookup("gitlab", "19.2.2", "community") {
+		if f.Edition == "enterprise" {
+			t.Fatalf("cached index returned an enterprise-only finding (%s) for a community lookup", f.AdvisoryID)
+		}
+	}
+	if len(idx.Lookup("gitlab", "19.2.2", "community")) == len(idx.Lookup("gitlab", "19.2.2", "enterprise")) {
+		t.Fatal("community and enterprise lookups returned the same count from cache — Edition was lost")
 	}
 }

@@ -1667,7 +1667,7 @@ live-verification discipline `productSoftNames` already used for BDU.
   targets) — `jira_service_desk`/`jira_service_management` is a
   different product with its own versioning, deliberately not mapped
   here, and matching an `sw_edition` split wasn't attempted for this
-  first pass.
+  first pass. (D33 adds it, for GitLab's CE/EE split.)
 
 **Config, cache and matching engine are shared with BDU, not
 duplicated.** `cve.nvd.path` (`NVDSpec`, `Config.NVDPath()`) is BDU's
@@ -1712,7 +1712,9 @@ for the same reason.
 CPE string (`version: "*"`, no known fix published) is treated as
 matching every probed version**, not discarded — confirmed this is a
 real, legitimate shape in live data (a CVE with no fixed version yet),
-not just a hypothetical edge case worth guessing about.
+not just a hypothetical edge case worth guessing about. **Reversed by
+D33** once measured against the full exports: those matches turned out
+to be overwhelmingly 1999-2016 CVEs attached to current releases.
 
 Verified live end-to-end against two full real yearly exports (2023 +
 2024, ~40,000 CVE records, ~40MB compressed): parses in ~7s at ~26MB
@@ -1835,3 +1837,107 @@ has no single answer there). Overlay anchors include the view name
 overlays for the same row never collide when all four render on one
 page, and `--view drift` on its own still carries its own overlays
 instead of linking to compact's absent ones.
+
+---
+
+## D33 — CVE mapping for every probe, edition-aware matching
+
+**Decided.** D30/D31 mapped four products (confluence, jira, keycloak,
+postgresql) as a deliberately small start. Asked to go through every
+probe instead, against the operator's own full exports (NVD 2002-2026
+yearly files and BDU's `vulxml.zip`, at `/var/lib/enodia/cve/{nvd,bdu}`
+on the test host), this decision maps **53 CVE products** — every probe
+with usable data in either source.
+
+**Method, not guesswork.** Both exports were reduced to a full
+inventory first: 122,139 distinct NVD `(part, vendor, product)` triples
+with their CVE counts and `sw_edition` values, and 26,859 distinct BDU
+`(vendor, name)` pairs. Candidates for each of the 90 registered
+probes were pulled from those by name, checked by hand, and written
+into one spec file; a script then required every pair in it to exist
+verbatim in the inventories before the Go tables were generated from
+it (zero missing) — a typo in a vendor string doesn't fail loudly, it
+silently matches nothing.
+
+**Deliberately not mapped, with the reason each time:**
+
+- General-purpose Linux distributions (debian, ubuntu, rhel, alma,
+  rocky, fedora, РЕД ОС, Astra Linux, …): tens of thousands of CVEs each
+  (debian_linux alone: 10,005 in NVD; Astra Linux SE: 15,208 in BDU),
+  but they're *package* vulnerabilities. A release number can't say
+  which packages have been patched since — the same mismatch D18 ruled
+  OSV.dev's distro ecosystems out for.
+- The BSDs and Solaris: base-system CVEs, but NVD keys their patch
+  levels (FreeBSD's `-p5`, OpenBSD errata) in the CPE `update` field,
+  which this package doesn't read — matching on the release alone would
+  flag a fully patched host with every CVE ever fixed in that release.
+- ESXi and vCenter: same `update`-field problem, measured — 934 of
+  roughly 1,000 recent ESXi/vCenter entries are `7.0` + `update_1`-style
+  literals, so the result would be either nothing or everything.
+- Synology DSM: bounds like `6.2.4-25556-3` (version-build-update),
+  which the strict bound parser rejects — every one would be dropped.
+- TrueNAS: three `truenas_firmware` entries only, versioned
+  differently from what the probe reports.
+- No usable data at all in either source: kitsu, zou,
+  postgres_exporter, p4p, perforce-swarm.
+- Explicitly excluded sub-products with their own, unrelated
+  versioning: HAProxy Enterprise, NGINX Plus, Jaeger UI, Nextcloud's
+  and Bitwarden's desktop/mobile clients, Zabbix agent, Oracle HTTP
+  Server, Pivotal's Redis, GitLab Runner, Jira Align and Jira Service
+  Management.
+
+**BDU is now matched on (vendor, name), not name alone.** The same
+`<soft><name>` appears under different vendors in the real export —
+"HTTP Server" is both Apache Software Foundation's and Oracle Corp.'s
+(Oracle HTTP Server, its own 12.2.1.x numbering), and name-only
+matching would have handed Oracle's findings to Apache httpd targets.
+
+**`cve.Subject` translates an observation before lookup.** One probe,
+`ssh`, covers unrelated implementations: its Version is the whole
+RFC 4253 software string, so `OpenSSH_…` looks up `openssh`,
+`dropbear_…` looks up `dropbear`, and any other SSH stack gets no
+lookup at all rather than borrowing OpenSSH's CVEs. The probed version
+is compared by its numeric spine (`version.Core`: `9.6p1` → `9.6`):
+bounds keep D30's strict whole-string rule, but NVD's own OpenSSH
+bounds are plain `9.6`/`10.4`, so rejecting a suffixed probed version
+outright would have made OpenSSH match nothing.
+
+**Edition-aware matching.** NVD's CPE `sw_edition` is carried into
+`Finding.Edition`. GitLab CE and EE share one version numbering but not
+one CVE list — confirmed: of 19.2.2's nine real NVD findings, five are
+EE-only. The gitlab probe already reports `/api/v4/version`'s own
+`enterprise` boolean in Extra (a `-ee`/`-ce` version suffix is the
+fallback), so a CE instance now sees 4 of those 9 and EE sees all 9.
+When a probe doesn't know its edition, every finding is kept —
+Grafana, MongoDB, Nextcloud and Vault all have edition splits in the
+data but no probe signal for it yet, so they stay unfiltered.
+
+**Reverses D31 on "no version constraint".** A cpeMatch with neither
+bounds nor a version in its CPE string (`*`) was read as "every
+version, forever". Measured against the full exports, those matches
+were almost all noise: ten of Apache httpd 2.4.58's eleven were CVEs
+from 1999-2008, 64 of macOS 14.4's 67 from 1999-2016. NVD's `*` there
+meant every version that existed when the CVE was analyzed, not every
+version released after. They're now dropped; the accepted cost is the
+rare genuinely unfixed-yet CVE recorded that way.
+
+**Fixed along the way: the cache never noticed enodia itself
+changing.** Its freshness check was the source files' mtime and size
+only, so an upgrade adding products would have kept serving the old
+index — without those products — until the operator happened to
+replace an export file. Cache entries now carry a fingerprint of
+`cacheFormat` plus both product tables, and any mismatch rebuilds.
+
+**The modal also links cve.org** (`/CVERecord?id=…`) next to NVD — the
+CNA-published record NVD's own page enriches, confirmed live for
+CVE-2026-85706 (published by GitLab as its own CNA) — and shows an
+edition next to the source when a finding has one.
+
+Measured end-to-end with the real binary against the operator's real
+exports: first run ~57s and ~285MB (parsing both sources in full, all
+53 products), every later run ~0.8s from the ~52MB on-disk cache.
+Spot-checked against known data: GitLab 19.2.2 CE/EE as above;
+`dropbear_2022.83` gets no findings because NVD's own Terrapin
+(CVE-2023-48795) range for Dropbear ends *before* 2022.83 — followed
+as data, not second-guessed (D7).
+

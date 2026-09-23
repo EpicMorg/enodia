@@ -127,9 +127,9 @@ type Input struct {
 	// "no calendar exists" from "fetching the calendar failed".
 	ResolveErr error
 
-	// CVEFindings is what cve.Index.Lookup(product, version) already
-	// returned for this observation — nil when no cve.bdu.path is
-	// configured, or when the product isn't in cve's own name mapping yet.
+	// CVEFindings is what cve.Index.Lookup already returned for this
+	// observation (via cve.Subject) — nil when no cve.bdu.path/cve.nvd.path
+	// is configured, or when the product isn't in cve's own mapping.
 	// Computed entirely outside this package (matching how Cycles arrives
 	// already resolved): D30 keeps the actual version-range matching in
 	// package cve, not duplicated here.

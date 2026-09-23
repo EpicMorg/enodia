@@ -10,10 +10,11 @@ import (
 // testdata/nvd_full_products.json is real NVD data, not synthetic: every
 // one of NVD's own yearly exports for 2002 through 2026 (the full,
 // unfiltered downloads verified live against each year's own .meta
-// sha256, ~222MB compressed in total) was streamed through the exact same
-// vendor/product filter productCPENames uses, keeping the complete,
-// untrimmed CVE record for every one that mentions a mapped CPE — 561
-// records — then trimming each record to only the fields LoadNVD actually
+// sha256, ~222MB compressed in total) was streamed through
+// productCPENames' filter as it stood then — confluence, jira, keycloak
+// and postgresql only; the table has since grown (D33) and this fixture
+// deliberately hasn't, it's a point-in-time snapshot — keeping every
+// record that mentions one of those CPEs, 561 of them, then trimming each record to only the fields LoadNVD actually
 // reads (English description only, baseSeverity, configurations), the
 // same "real but reduced" treatment BDU's own sample.xml got. This is
 // the fixture docs/DECISIONS.md D31's "verified live against two full
@@ -45,16 +46,16 @@ func TestLoadNVDFullProductsFixture(t *testing.T) {
 	// callback) and CVE-2024-21683 (a real Jira Server LTS range), each
 	// checked at both its own real fix version (must not match) and a
 	// version inside its real vulnerable range (must match).
-	if got := idx.Lookup("confluence", "8.3.3"); has(got, "CVE-2023-22515") {
+	if got := idx.Lookup("confluence", "8.3.3", ""); has(got, "CVE-2023-22515") {
 		t.Error("CVE-2023-22515 must not match confluence 8.3.3, Atlassian's own real fix version")
 	}
-	if got := idx.Lookup("confluence", "8.3.0"); !has(got, "CVE-2023-22515") {
+	if got := idx.Lookup("confluence", "8.3.0", ""); !has(got, "CVE-2023-22515") {
 		t.Error("CVE-2023-22515 must match confluence 8.3.0")
 	}
-	if got := idx.Lookup("jira", "9.4.10"); !has(got, "CVE-2024-21683") {
+	if got := idx.Lookup("jira", "9.4.10", ""); !has(got, "CVE-2024-21683") {
 		t.Error("CVE-2024-21683 must match jira 9.4.10 (a real Server LTS range)")
 	}
-	if got := idx.Lookup("jira", "9.4.21"); has(got, "CVE-2024-21683") {
+	if got := idx.Lookup("jira", "9.4.21", ""); has(got, "CVE-2024-21683") {
 		t.Error("CVE-2024-21683 must not match jira 9.4.21, its own real fix version")
 	}
 
@@ -71,7 +72,7 @@ func TestLoadNVDFullProductsFixture(t *testing.T) {
 		{"keycloak", "20.0.0", 1},
 		{"postgresql", "14.0", 1},
 	} {
-		if got := len(idx.Lookup(tc.product, tc.version)); got < tc.wantAtLeast {
+		if got := len(idx.Lookup(tc.product, tc.version, "")); got < tc.wantAtLeast {
 			t.Errorf("%s %s: got %d findings, want at least %d", tc.product, tc.version, got, tc.wantAtLeast)
 		}
 	}
@@ -79,7 +80,7 @@ func TestLoadNVDFullProductsFixture(t *testing.T) {
 	// An unmapped product must still find nothing across 25 years of
 	// real data, the same filtering guarantee the small synthetic
 	// fixture (sample_nvd.json) already checks in isolation.
-	if got := idx.Lookup("widget", "1.0.0"); len(got) != 0 {
+	if got := idx.Lookup("widget", "1.0.0", ""); len(got) != 0 {
 		t.Errorf("got %d findings for an unmapped product, want 0", len(got))
 	}
 }
