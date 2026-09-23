@@ -1103,6 +1103,13 @@ Not dates. Order of work, and what each step unblocks.
   enodia's own product tables change. Distros, BSDs, Solaris,
   ESXi/vCenter and Synology DSM are deliberately left out, each for a
   stated reason. See `docs/DECISIONS.md` D33.
+- CVE block now read from whichever config the run uses (`--config`,
+  `$ENODIA_CONFIG` or the default search paths), not only an explicit
+  `--config` — previously every auto-located setup silently showed no
+  CVEs. Edition-aware matching extended from GitLab to Vault, Nextcloud
+  and MongoDB, each probe now reporting its server's own edition in
+  `Extra["enterprise"]`; BDU's separately listed Enterprise/Community
+  products carry their edition too. See `docs/DECISIONS.md` D34.
 
 ## Next
 
@@ -1146,11 +1153,10 @@ requested.
   implemented — see Done above). Revisit if a real target becomes
   available, or if unattended-install support lands in this tree for its
   own reasons — see DECISIONS.md D23
-- `cisco-ios-xe` — a documented HTTP API (RESTCONF/NETCONF) would fit
-  this project's existing probe shape better than SSH CLI-scraping, but
-  it's a licensed commercial appliance with no freely obtainable test
-  image. The user now has real hardware for this one too, just not
-  powered on yet — see DECISIONS.md D23/D29
+- `cisco-ios-xe` — dropped, not deferred. Cisco's platform/OS zoo
+  (IOS, IOS-XE, IOS-XR, NX-OS, ASA, each with its own management API and
+  versioning) makes one probe meaningless, and there's no test hardware
+  to verify any of them against — see DECISIONS.md D34
 - `tails` — a live, amnesic OS deliberately designed to resist
   unattended persistent access. Ruled out on principle, not a tooling
   gap — the user confirmed this one stays crossed off entirely, not

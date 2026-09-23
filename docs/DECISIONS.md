@@ -1448,6 +1448,7 @@ doesn't support.
 
 `cisco-ios-xe` remains open — same D23 reasoning, and the user's own
 hardware for it exists but wasn't powered on yet as of this decision.
+(Dropped entirely by D34.)
 
 ---
 
@@ -1940,4 +1941,66 @@ Spot-checked against known data: GitLab 19.2.2 CE/EE as above;
 `dropbear_2022.83` gets no findings because NVD's own Terrapin
 (CVE-2023-48795) range for Dropbear ends *before* 2022.83 — followed
 as data, not second-guessed (D7).
+
+---
+
+## D34 — CVE block from the active config; editions for Vault, Nextcloud, MongoDB; Cisco dropped
+
+**Decided, three unrelated items.**
+
+**The cve block now comes from whichever config the run uses.** D30
+had `loadCVEIndex` require an explicit `--config`, reasoning about
+`check --from` (which otherwise needs no config at all): a file merely
+sitting in the current directory shouldn't silently switch CVE
+correlation on. In practice that reasoning broke the normal case —
+reported directly as "GitLab still shows a dash under CVES". Without
+the flag, `config.Locate` still finds the config (`$ENODIA_CONFIG`,
+`./enodia.yaml`, `~/.config/enodia/`, `/etc/enodia/`) and the run's
+targets come from it, but that same file's `cve:` block was dropped
+without a word. Reproduced against a fake GitLab 19.2.2-ee endpoint:
+0 findings via auto-location and via `$ENODIA_CONFIG`, 9 with an
+explicit `--config`. Every `serve` deployment under systemd or Docker
+would have shown no CVEs at all. Now the same `config.Locate` result
+drives both; no config located anywhere is still fine (nil index, no
+error) for `check --from`, and a missing explicit `--config` is still
+an error.
+
+**Edition-aware matching for Vault, Nextcloud and MongoDB**, the same
+way D33 did it for GitLab. Each probe now records its server's own
+edition as a fact in `Extra["enterprise"]` (`"true"`/`"false"`), only
+when the API actually says so:
+
+- Vault: `/v1/sys/health`'s own `"enterprise"` boolean, present in the
+  real recorded reply (`false` on the community dev server).
+- Nextcloud: `status.php`'s `"edition"` — `""` on the real recorded
+  community server. `"enterprise"` (any case) is what an Enterprise
+  subscription is expected to report but has not been seen on a live
+  instance, so any other non-empty value is left unreported instead of
+  guessed at.
+- MongoDB: `buildInfo`'s `"modules"` array — empty on the real recorded
+  community reply; Enterprise builds list `"enterprise"` there. Reading
+  it meant generalizing the probe's BSON field scanner from one string
+  field to any top-level field, plus string arrays.
+
+A field the API doesn't send (an older release) leaves the key unset,
+which `cve.Subject` treats as an unknown edition — every finding kept.
+On the BDU side, which has no `sw_edition`, the separately listed
+"Vault Enterprise", "Vault Community Edition", "Nextcloud Enterprise
+Server" and "MongoDB Enterprise Server" products now carry their
+edition into `Finding.Edition`, and the cache fingerprint includes it.
+Measured against the real exports: Nextcloud 27.1.3 CE drops from 23
+NVD findings to 11; Vault 1.15.2 and MongoDB 7.0.5 each lose one
+EE-only finding.
+
+Grafana stays unfiltered: its CVE data splits by edition too, but the
+probed `/api/health` doesn't say which edition answered, and the
+endpoint that does (the frontend settings' build info) hasn't been
+checked against a live server — not worth guessing a vendor API shape.
+
+**`cisco-ios-xe` dropped, not deferred.** D23/D29 kept it open pending
+hardware. Decided against it: Cisco's lineup is a zoo of separately
+versioned platforms (IOS, IOS-XE, IOS-XR, NX-OS, ASA …) with different
+management APIs, one probe would cover almost none of it, and there's
+no test hardware to verify any of it against. Treated like `tails` —
+off the list, not waiting.
 

@@ -18,9 +18,10 @@ type Finding struct {
 	MatchedName string // the exact BDU <soft><name>, or NVD CPE criteria, this range matched
 	RangeText   string // the original version-range text, kept for display
 	FixStatus   string
-	// Edition is the product edition this range is restricted to, from
-	// NVD's CPE sw_edition field ("community", "enterprise", ...), or empty
-	// when the source didn't restrict it. See Index.Lookup for how it's
+	// Edition is the product edition this range is restricted to — NVD's
+	// CPE sw_edition field, or for BDU the edition its separately listed
+	// product names ("Vault Enterprise") imply — or empty when the source
+	// didn't restrict it. See Index.Lookup for how it's
 	// matched against an observation's own edition.
 	Edition string `json:",omitempty"`
 

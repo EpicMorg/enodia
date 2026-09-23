@@ -25,6 +25,10 @@ func TestSubject(t *testing.T) {
 		{"gitlab ce via Extra wins over suffix", "gitlab", "19.2.2-ee", map[string]string{"enterprise": "false"}, "gitlab", "19.2.2", "community", true},
 		{"gitlab edition from suffix alone", "gitlab", "19.2.2-ce", nil, "gitlab", "19.2.2", "community", true},
 		{"gitlab edition unknown", "gitlab", "19.2.2", nil, "gitlab", "19.2.2", "", true},
+		{"vault enterprise", "vault", "2.1.0", map[string]string{"enterprise": "true"}, "vault", "2.1.0", "enterprise", true},
+		{"nextcloud community", "nextcloud", "34.0.3", map[string]string{"enterprise": "false"}, "nextcloud", "34.0.3", "community", true},
+		{"mongodb edition unknown (older inventory)", "mongodb", "7.0.40", nil, "mongodb", "7.0.40", "", true},
+		{"grafana reports no edition", "grafana", "13.2.1", map[string]string{"enterprise": "true"}, "grafana", "13.2.1", "", true},
 		{"everything else is identity", "jira", "10.3.2", nil, "jira", "10.3.2", "", true},
 	}
 	for _, c := range cases {

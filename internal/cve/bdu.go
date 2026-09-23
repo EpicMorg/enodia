@@ -60,10 +60,10 @@ func LoadBDU(path string) (*Index, error) {
 	}
 	defer cleanup()
 
-	softToProduct := make(map[bduName]string, len(productSoftNames)*2)
+	softToProduct := make(map[bduKey]bduTarget, len(productSoftNames)*2)
 	for product, names := range productSoftNames {
 		for _, n := range names {
-			softToProduct[n] = product
+			softToProduct[bduKey{n.vendor, n.name}] = bduTarget{product, n.edition}
 		}
 	}
 
@@ -90,7 +90,13 @@ func LoadBDU(path string) (*Index, error) {
 	return idx, nil
 }
 
-func indexVul(idx *Index, v bduVul, softToProduct map[bduName]string) {
+// bduKey is what a <soft> element is looked up by; bduTarget is what it
+// maps to.
+type bduKey struct{ vendor, name string }
+
+type bduTarget struct{ product, edition string }
+
+func indexVul(idx *Index, v bduVul, softToProduct map[bduKey]bduTarget) {
 	var cveIDs []string
 	for _, id := range v.CVEs {
 		if strings.EqualFold(id.Type, "CVE") {
@@ -99,10 +105,11 @@ func indexVul(idx *Index, v bduVul, softToProduct map[bduName]string) {
 	}
 
 	for _, soft := range v.Software {
-		product, ok := softToProduct[bduName{strings.TrimSpace(soft.Vendor), strings.TrimSpace(soft.Name)}]
+		target, ok := softToProduct[bduKey{strings.TrimSpace(soft.Vendor), strings.TrimSpace(soft.Name)}]
 		if !ok {
 			continue
 		}
+		product := target.product
 		rng, ok := parseBDUVersion(soft.Version)
 		if !ok {
 			continue
@@ -116,6 +123,7 @@ func indexVul(idx *Index, v bduVul, softToProduct map[bduName]string) {
 			MatchedName: soft.Name,
 			RangeText:   soft.Version,
 			FixStatus:   v.FixStatus,
+			Edition:     target.edition,
 			rng:         rng,
 		})
 	}

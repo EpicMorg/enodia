@@ -77,7 +77,7 @@ func indexFingerprint() string {
 	fmt.Fprintf(h, "format=%d\n", cacheFormat)
 	for _, product := range slices.Sorted(maps.Keys(productSoftNames)) {
 		for _, n := range productSoftNames[product] {
-			fmt.Fprintf(h, "bdu\x00%s\x00%s\x00%s\n", product, n.vendor, n.name)
+			fmt.Fprintf(h, "bdu\x00%s\x00%s\x00%s\x00%s\n", product, n.vendor, n.name, n.edition)
 		}
 	}
 	for _, product := range slices.Sorted(maps.Keys(productCPENames)) {
