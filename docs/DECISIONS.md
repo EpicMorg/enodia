@@ -2062,3 +2062,12 @@ not a bug.
 
 `cacheFormat` bumps to 3, since cached findings now carry the parsed
 rating.
+
+The rating renders as two Bootstrap badges in one color — the level and
+`CVSS <version> <score>` — requested on top of the text form:
+`text-bg-danger` for CRITICAL and HIGH, `text-bg-warning` for MEDIUM,
+`text-bg-info` otherwise. (Asked for as "danger for HIGH, info for the
+rest"; CRITICAL got danger too rather than info, which would have made
+the most severe level look the calmest.) `text-bg-*`, not `bg-*`: same
+background, but Bootstrap also sets a readable text color. Inline mode
+defines the same classes in its own CSS with Bootstrap's colors.
