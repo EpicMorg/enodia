@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -43,6 +44,10 @@ type nextcloudStatus struct {
 	NeedsDBUpgrade bool   `json:"needsDbUpgrade"`
 	Version        string `json:"version"`
 	VersionString  string `json:"versionstring"`
+	// Edition is "" on a real community server (testdata/
+	// nextcloud_34.0.3.json). A pointer keeps "field absent" (older
+	// releases) apart from that real empty value.
+	Edition *string `json:"edition"`
 }
 
 func (nextcloudProbe) Probe(ctx context.Context, t Target) (Observation, error) {
@@ -84,5 +89,28 @@ func (nextcloudProbe) Probe(ctx context.Context, t Target) (Observation, error) 
 	if info.Version != "" {
 		obs.Extra["buildVersion"] = info.Version
 	}
+	if e, ok := nextcloudEnterprise(info.Edition); ok {
+		obs.Extra["enterprise"] = e
+	}
 	return obs, nil
+}
+
+// nextcloudEnterprise maps status.php's edition field onto the
+// Extra["enterprise"] convention gitlab and vault share. "" is confirmed
+// live to mean the community server; "enterprise" (any case) is what an
+// Enterprise subscription is expected to report but has not been seen on
+// a real instance, so any other non-empty value is left unreported
+// rather than guessed at — an unknown edition keeps every CVE finding,
+// a wrong one would hide real ones.
+func nextcloudEnterprise(edition *string) (string, bool) {
+	switch {
+	case edition == nil:
+		return "", false
+	case *edition == "":
+		return "false", true
+	case strings.EqualFold(*edition, "enterprise"):
+		return "true", true
+	default:
+		return "", false
+	}
 }

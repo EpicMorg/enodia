@@ -193,3 +193,31 @@ func TestLoadBDUMatchesVendorNotJustName(t *testing.T) {
 		t.Fatalf("got %+v, want only the Apache Software Foundation entry", got)
 	}
 }
+
+// testdata/bdu_edition.xml is synthetic, modeled on the real export's
+// three separately listed Vault products ("Vault", "Vault Enterprise",
+// "Vault Community Edition"). The edition-specific names carry their
+// edition into Finding.Edition, so a known edition only sees its own
+// findings plus the unrestricted one.
+func TestLoadBDUEditionFromProductName(t *testing.T) {
+	idx, err := LoadBDU(filepath.Join("testdata", "bdu_edition.xml"))
+	if err != nil {
+		t.Fatalf("LoadBDU: %v", err)
+	}
+	ids := func(edition string) map[string]bool {
+		out := map[string]bool{}
+		for _, f := range idx.Lookup("vault", "1.15.0", edition) {
+			out[f.AdvisoryID] = true
+		}
+		return out
+	}
+	if got := ids("community"); len(got) != 2 || !got["BDU:2099-00020"] || !got["BDU:2099-00022"] {
+		t.Fatalf("community got %v, want the unrestricted and the Community Edition entries", got)
+	}
+	if got := ids("enterprise"); len(got) != 2 || !got["BDU:2099-00020"] || !got["BDU:2099-00021"] {
+		t.Fatalf("enterprise got %v, want the unrestricted and the Enterprise entries", got)
+	}
+	if got := ids(""); len(got) != 3 {
+		t.Fatalf("unknown edition got %v, want all three", got)
+	}
+}
