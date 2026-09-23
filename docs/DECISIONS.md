@@ -1590,7 +1590,8 @@ bump. By this project's own semver convention (PATCH = fixes, MINOR =
 new backward-compatible functionality), this doesn't need one — an
 additive, opt-in config block and additive struct fields — but calling
 it a 2.0 milestone is a legitimate marketing choice to make at release
-time, not a technical requirement decided here.
+time, not a technical requirement decided here. (Decided at release time:
+shipped as 2.0.0+0, as a milestone — nothing in it breaks compatibility.)
 
 **Extended by D31**, which adds NIST NVD as a second, independent
 source alongside BDU, sharing this decision's operator-supplied-file

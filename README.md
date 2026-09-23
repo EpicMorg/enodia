@@ -34,9 +34,10 @@ You describe your services once. Enodia handles the rest.
 > **[docs.enodia.sh](https://docs.enodia.sh)** · full docs, config reference,
 > and per-product probe notes.
 
-> **Status: 1.2.** The full pipeline (collect → inventory → evaluate →
-> render), 89 probes, `settings.yaml`, and the release/packaging pipeline are
-> all implemented and used against real production infrastructure. See
+> **Status: 2.0.** The full pipeline (collect → inventory → evaluate →
+> render), 90 probes, CVE correlation against BDU ФСТЭК and NVD,
+> `settings.yaml`, and the release/packaging pipeline are all implemented
+> and used against real production infrastructure. See
 > [`CHANGELOG.md`](CHANGELOG.md) for release history, or the
 > [latest release](https://github.com/EpicMorg/enodia/releases/latest) for
 > downloads.
@@ -76,10 +77,10 @@ credentials:
 
 ```console
 $ enodia check
-ID           PRODUCT  PATCH   LIFECYCLE  BRANCH     SEVERITY  REASON
-jira-main    jira     behind  active     newer_lts  warn      -
-gitlab-main  gitlab   behind  eol        newer      fail      -
-web01        debian   current active     latest     ok        -
+ID           PRODUCT  PATCH   LIFECYCLE  BRANCH     SEVERITY  REASON  CVES
+jira-main    jira     behind  active     newer_lts  warn      -       -
+gitlab-main  gitlab   behind  eol        newer      fail      -       -
+web01        debian   current active     latest     ok        -       -
 ```
 
 Save this as `enodia.yaml` next to the binary — see "File locations" below
@@ -179,9 +180,9 @@ cycle:
 
 ```console
 $ enodia check --from inventory.jsonl --view drift
-ID           PRODUCT  CURRENT  LATEST   CYCLE  PATCH
-jira-main    jira     10.3.1   10.3.25  10.3   behind
-gitlab-main  gitlab   17.5.0   17.5.5   17.5   behind
+ID           PRODUCT  CURRENT  LATEST   CYCLE  PATCH   CVES
+jira-main    jira     10.3.1   10.3.25  10.3   behind  5
+gitlab-main  gitlab   17.5.0   17.5.5   17.5   behind  255
 ```
 
 **`fleet`** — version spread and reachability across every instance of a
