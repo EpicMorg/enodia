@@ -3,8 +3,11 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"unicode"
 )
 
 func TestBDUPathUnset(t *testing.T) {
@@ -102,5 +105,43 @@ targets: []
 	}
 	if _, ok := c.NVDPath(); ok {
 		t.Fatal("expected ok=false for cve.nvd.path, which was never set")
+	}
+}
+
+// A Windows path written in YAML double quotes has its \t and \n turned
+// into a tab and a newline by the YAML parser itself ("C:\temp\nvd").
+// That must fail loudly at load, not later as a confusing "not found".
+func TestCVEPathWithControlCharacterIsRejected(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "enodia.yaml")
+	if err := os.WriteFile(path, []byte("schemaVersion: 1\ncve:\n  nvd:\n    path: \"C:\\temp\\nvd\"\ntargets: []\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Load(path)
+	if err == nil || !strings.Contains(err.Error(), "cve.nvd.path") || !strings.Contains(err.Error(), "single quotes") {
+		t.Fatalf("got %v, want a cve.nvd.path control-character error with a fix hint", err)
+	}
+}
+
+// Every other way to write a Windows path loads unchanged.
+func TestCVEWindowsPathFormsLoad(t *testing.T) {
+	for _, line := range []string{
+		`path: C:\enodia\cve\nvd`,
+		`path: 'C:\enodia\cve\nvd'`,
+		`path: "C:\\enodia\\cve\\nvd"`,
+		`path: C:/enodia/cve/nvd`,
+		`path: \\fileserver\share\enodia\nvd`,
+	} {
+		path := filepath.Join(t.TempDir(), "enodia.yaml")
+		if err := os.WriteFile(path, []byte("schemaVersion: 1\ncve:\n  nvd:\n    "+line+"\ntargets: []\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		c, err := Load(path)
+		if err != nil {
+			t.Errorf("%s: %v", line, err)
+			continue
+		}
+		if strings.ContainsFunc(c.CVE.NVD.Path, unicode.IsControl) {
+			t.Errorf("%s: got %q", line, c.CVE.NVD.Path)
+		}
 	}
 }
