@@ -572,13 +572,17 @@ func writeCompactSection(ew *errWriter, r Report, useTones bool, tableClass stri
 // mode's own htmlCSS — one markup shape, two stylesheets, the same
 // approach toneClass already uses for table rows.
 //
-// Every link points at nvd.nist.gov's own detail page for a Finding's
-// first CVE ID — the one identifier both BDU and NVD findings share, so
-// it's always correct regardless of which source produced the Finding,
-// rather than guessing at a BDU-specific detail-page URL this project has
-// not verified live. A Finding with no CVE ID at all (BDU's own doc
-// comment notes this can happen) shows its AdvisoryID as plain, unlinked
-// text instead.
+// Every CVE ID a Finding carries links to nvd.nist.gov's own detail page
+// — the one identifier both BDU and NVD findings share, so it's always
+// correct regardless of which source produced the Finding. A "bdu"
+// Finding additionally links its own AdvisoryID to bdu.fstec.ru's real
+// per-entry page — confirmed live at https://bdu.fstec.ru/vul/2023-06364
+// (BDU:2023-06364 with the "BDU:" prefix stripped, see bduAdvisoryURL)
+// after the site turned out to need its own CA trusted rather than being
+// genuinely unreachable, correcting D32's original "not verified live, so
+// not linked" note. A "bdu" Finding with no CVE ID at all (BDU's own doc
+// comment notes this can happen) now links via that BDU URL instead of
+// showing bare unlinked text.
 func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings []cve.Finding) {
 	titleID := anchorID + "-title"
 	fmt.Fprintf(b, `<div id="%s" class="enodia-cve-modal-overlay">`, anchorID)
@@ -589,16 +593,18 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 	fmt.Fprintf(b, `<a href="#" class="btn-close" aria-label="Close"></a></div>`)
 	fmt.Fprintf(b, `<div class="modal-body"><ul class="list-unstyled mb-0">`)
 	for _, f := range findings {
-		label, url := f.AdvisoryID, ""
-		if len(f.CVEIDs) > 0 {
-			label = strings.Join(f.CVEIDs, ", ")
-			url = "https://nvd.nist.gov/vuln/detail/" + f.CVEIDs[0]
-		}
 		fmt.Fprintf(b, `<li class="mb-2"><div>`)
-		if url != "" {
+		if len(f.CVEIDs) > 0 {
+			label := strings.Join(f.CVEIDs, ", ")
+			url := "https://nvd.nist.gov/vuln/detail/" + f.CVEIDs[0]
 			fmt.Fprintf(b, `<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(url), html.EscapeString(label))
+			if bduURL := bduAdvisoryURL(f); bduURL != "" {
+				fmt.Fprintf(b, ` &middot; <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(bduURL), html.EscapeString(f.AdvisoryID))
+			}
+		} else if bduURL := bduAdvisoryURL(f); bduURL != "" {
+			fmt.Fprintf(b, `<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(bduURL), html.EscapeString(f.AdvisoryID))
 		} else {
-			b.WriteString(html.EscapeString(label))
+			b.WriteString(html.EscapeString(f.AdvisoryID))
 		}
 		if f.Severity != "" {
 			fmt.Fprintf(b, " &mdash; %s", html.EscapeString(f.Severity))
@@ -613,6 +619,21 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 		b.WriteString("</li>")
 	}
 	b.WriteString(`</ul></div></div></div></div>` + "\n")
+}
+
+// bduAdvisoryURL returns f's real bdu.fstec.ru detail page, or "" when f
+// isn't a BDU finding or its AdvisoryID doesn't have the expected
+// "BDU:"-prefixed shape. The URL path is the identifier with that prefix
+// stripped (confirmed live: BDU:2023-06364 -> /vul/2023-06364).
+func bduAdvisoryURL(f cve.Finding) string {
+	if f.Source != "bdu" {
+		return ""
+	}
+	id, ok := strings.CutPrefix(f.AdvisoryID, "BDU:")
+	if !ok || id == "" {
+		return ""
+	}
+	return "https://bdu.fstec.ru/vul/" + id
 }
 
 // writeHTMLSection writes one view's table. tones may be nil (inline mode,

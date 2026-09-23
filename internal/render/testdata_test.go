@@ -47,7 +47,7 @@ func sampleReport() Report {
 				MatchedCycle: "9.2", LatestInCycle: "9.2.1",
 				BranchSeverity: evaluate.SeverityWarn,
 				CVEs: []cve.Finding{
-					{AdvisoryID: "BDU:2023-06364", CVEIDs: []string{"CVE-2023-22515"}, Title: "test finding"},
+					{Source: "bdu", AdvisoryID: "BDU:2023-06364", CVEIDs: []string{"CVE-2023-22515"}, Title: "test finding"},
 				},
 			},
 			{

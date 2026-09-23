@@ -1084,11 +1084,15 @@ Not dates. Order of work, and what each step unblocks.
   parse, ~26MB peak RSS. See `docs/DECISIONS.md` D31.
 - CVE detail modal in `check`/`export --format html`'s compact view —
   the CVES column's info icon opens a per-row popup listing each
-  finding, linked to its CVE's `nvd.nist.gov` page. Pure CSS (`:target`
-  pseudo-class), no JavaScript in either Assets mode — an early
-  `<dialog>`+JS version was reverted specifically to keep
-  `TestHTMLIsSelfContained`'s zero-`<script>` guarantee for the default
-  inline report (D19) intact. See `docs/DECISIONS.md` D32.
+  finding, linked to its CVE's `nvd.nist.gov` page and, for a
+  `bdu`-sourced finding, its own real `bdu.fstec.ru/vul/<id>` page too
+  (confirmed live once curl was told to trust FSTEC's own TLS cert with
+  `-k` — the site was never actually unreachable, just presenting a CA
+  a default trust store rejects). Pure CSS (`:target` pseudo-class), no
+  JavaScript in either Assets mode — an early `<dialog>`+JS version was
+  reverted specifically to keep `TestHTMLIsSelfContained`'s
+  zero-`<script>` guarantee for the default inline report (D19) intact.
+  See `docs/DECISIONS.md` D32.
 
 ## Next
 
