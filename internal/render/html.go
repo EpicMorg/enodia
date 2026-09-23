@@ -593,7 +593,14 @@ func writeCVESection(ew *errWriter, s htmlViewSection, r Report, useTones bool, 
 // showing bare unlinked text.
 func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings []cve.Finding) {
 	titleID := anchorID + "-title"
-	fmt.Fprintf(b, `<div id="%s" class="enodia-cve-modal-overlay">`, anchorID)
+	// "modal" is what gives Bootstrap's own modal-dialog/modal-content
+	// classes their look: Bootstrap 5.3 declares every --bs-modal-*
+	// variable (background, width, padding, border) on .modal, so without
+	// it the dialog rendered transparent and full-width in CDN mode
+	// (reported with a screenshot). Its display:none loses to
+	// .enodia-cve-modal-overlay:target on specificity, so :target still
+	// decides visibility; inline mode has no .modal rule at all.
+	fmt.Fprintf(b, `<div id="%s" class="modal enodia-cve-modal-overlay">`, anchorID)
 	fmt.Fprintf(b, `<a href="#" class="enodia-cve-modal-backdrop" aria-label="Close" tabindex="-1"></a>`)
 	fmt.Fprintf(b, `<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="dialog" aria-modal="true" aria-labelledby="%s">`, titleID)
 	fmt.Fprintf(b, `<div class="modal-content"><div class="modal-header">`)
@@ -721,6 +728,9 @@ footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ccc; color:
 .enodia-cve-modal-overlay .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #ccc; }
 .enodia-cve-modal-overlay .modal-title { margin: 0; font-size: 1.1em; }
 .enodia-cve-modal-overlay .modal-body { padding: 1rem; overflow-y: auto; }
+.enodia-cve-modal-overlay .list-unstyled { list-style: none; padding-left: 0; margin: 0; }
+.enodia-cve-modal-overlay .mb-2 { margin-bottom: 0.75rem; }
+.enodia-cve-modal-overlay .small { font-size: 0.875em; }
 .enodia-cve-modal-overlay .btn-close { text-decoration: none; font-size: 1.2em; line-height: 1; color: inherit; }
 .enodia-cve-modal-overlay .btn-close::before { content: "\2715"; }
 .enodia-cve-modal-overlay .text-body-secondary { color: #666; }

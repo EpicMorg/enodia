@@ -1827,6 +1827,18 @@ own `htmlCSS` gives the same class names a minimal bare-bones
 equivalent — one markup shape, two stylesheets, the same approach
 `toneClass` already uses for table row coloring.
 
+**Corrected after a screenshot of the real CDN-mode report:** dropping
+the `.modal` wrapper was wrong. Bootstrap 5.3 declares every
+`--bs-modal-*` custom property (background, width, padding, border) on
+`.modal` itself, so without it `.modal-content` had no background and
+no width — the dialog rendered as transparent text across the whole
+page. The overlay now carries `class="modal enodia-cve-modal-overlay"`;
+Bootstrap's own `.modal { display: none }` loses to
+`.enodia-cve-modal-overlay:target` on specificity, so `:target` still
+decides visibility, and inline mode has no `.modal` rule to interfere.
+Verified this time by rendering both modes in headless Chromium, not
+only by asserting on markup.
+
 **Extended to the drift view** on request: drift now ends in the same
 CVES column (`cveCount`, shared with compact) with the same info link
 and modal. Both views build one row per Assessment in
