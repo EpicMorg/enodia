@@ -8,6 +8,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/EpicMorg/enodia/internal/cve"
 )
 
 // The two HTMLOptions.Assets values.
@@ -191,6 +193,10 @@ func htmlInline(w io.Writer, r Report, sections []htmlViewSection) error {
 		html.EscapeString(r.AsOf.Format(time.RFC3339)))
 
 	for _, s := range sections {
+		if s.view == ViewCompact {
+			writeCompactSection(ew, r, false, "")
+			continue
+		}
 		headers, rows, _, _ := viewRows(s.view, r) // s.view is always one of the known constants
 		writeHTMLSection(ew, s.title, headers, rows, nil, "")
 	}
@@ -270,8 +276,13 @@ func htmlCDN(w io.Writer, r Report, sections []htmlViewSection, theme, cdn strin
 	}
 
 	for _, s := range sections {
+		tableClass := "table table-striped table-hover table-sm align-middle"
+		if s.view == ViewCompact {
+			writeCompactSection(ew, r, true, tableClass)
+			continue
+		}
 		headers, rows, tones, _ := viewRows(s.view, r)
-		writeHTMLSection(ew, s.title, headers, rows, tones, "table table-striped table-hover table-sm align-middle")
+		writeHTMLSection(ew, s.title, headers, rows, tones, tableClass)
 	}
 
 	writeHTMLFooterCDN(ew, r, theme != ThemeNone)
@@ -483,6 +494,127 @@ func toneClass(t RowTone) string {
 	}
 }
 
+// writeCompactSection is compactRows' HTML rendering — split out from the
+// generic writeHTMLSection, which every other view still uses, because the
+// CVES column alone needs live markup (an info link opening a per-row
+// modal overlay), not a plain escaped text cell. useTones is false in
+// inline mode (which has no Bootstrap table-* classes to give a RowTone
+// visual meaning — see toneClass) and true in CDN mode, mirroring how
+// every other section already decides whether to pass tones to
+// writeHTMLSection.
+//
+// The modal itself is pure CSS (the :target pseudo-class — see
+// cveModalCSS), not JavaScript: TestHTMLIsSelfContained enforces that the
+// default inline report never carries a single <script> tag at all (D19),
+// and a CVE detail popup is not worth being the one exception to that.
+// Each row with findings gets its own overlay block, emitted once after
+// the table rather than fighting to share one — real finding counts per
+// row are small, and repeating a short block per row is simpler and more
+// robust than reconstructing it from a data attribute.
+func writeCompactSection(ew *errWriter, r Report, useTones bool, tableClass string) {
+	headers, rows, tones := compactRows(r)
+	ew.printf("<section>\n<h2>Compact</h2>\n")
+	if len(rows) == 0 {
+		ew.printf("<p class=\"empty\">no data</p>\n</section>\n")
+		return
+	}
+	cvesCol := len(headers) - 1 // CVES is compactRows' last column
+
+	if tableClass != "" {
+		ew.printf("<table class=\"%s\">\n<thead><tr>", tableClass)
+	} else {
+		ew.printf("<table>\n<thead><tr>")
+	}
+	for _, h := range headers {
+		ew.printf("<th>%s</th>", html.EscapeString(h))
+	}
+	ew.printf("</tr></thead>\n<tbody>\n")
+	var modals strings.Builder
+	for i, row := range rows {
+		rowClass := ""
+		if useTones && i < len(tones) {
+			rowClass = toneClass(tones[i])
+		}
+		if rowClass != "" {
+			ew.printf("<tr class=\"%s\">", rowClass)
+		} else {
+			ew.printf("<tr>")
+		}
+		for col, cell := range row {
+			if col == cvesCol {
+				a := r.Assessments[i]
+				if len(a.CVEs) == 0 {
+					ew.printf("<td>-</td>")
+					continue
+				}
+				anchor := fmt.Sprintf("enodia-cve-modal-%d", i)
+				ew.printf(
+					`<td>%d <a href="#%s" class="enodia-cve-info" aria-haspopup="dialog" aria-label="CVE details for %s">&#9432;</a></td>`,
+					len(a.CVEs), anchor, html.EscapeString(a.ID),
+				)
+				writeCVEModalOverlay(&modals, anchor, a.ID, a.CVEs)
+				continue
+			}
+			ew.printf("<td>%s</td>", html.EscapeString(cell))
+		}
+		ew.printf("</tr>\n")
+	}
+	ew.printf("</tbody>\n</table>\n")
+	ew.printf("%s", modals.String())
+	ew.printf("</section>\n")
+}
+
+// writeCVEModalOverlay appends one row's CVE detail modal to b: a
+// fixed-position overlay (shown via the CSS :target pseudo-class when the
+// page's URL fragment matches anchorID — see cveModalCSS) containing a
+// Bootstrap-shaped modal-dialog/modal-content/... structure, styled fully
+// by Bootstrap in CDN mode and by a small bare-bones equivalent in inline
+// mode's own htmlCSS — one markup shape, two stylesheets, the same
+// approach toneClass already uses for table rows.
+//
+// Every link points at nvd.nist.gov's own detail page for a Finding's
+// first CVE ID — the one identifier both BDU and NVD findings share, so
+// it's always correct regardless of which source produced the Finding,
+// rather than guessing at a BDU-specific detail-page URL this project has
+// not verified live. A Finding with no CVE ID at all (BDU's own doc
+// comment notes this can happen) shows its AdvisoryID as plain, unlinked
+// text instead.
+func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings []cve.Finding) {
+	titleID := anchorID + "-title"
+	fmt.Fprintf(b, `<div id="%s" class="enodia-cve-modal-overlay">`, anchorID)
+	fmt.Fprintf(b, `<a href="#" class="enodia-cve-modal-backdrop" aria-label="Close" tabindex="-1"></a>`)
+	fmt.Fprintf(b, `<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="dialog" aria-modal="true" aria-labelledby="%s">`, titleID)
+	fmt.Fprintf(b, `<div class="modal-content"><div class="modal-header">`)
+	fmt.Fprintf(b, `<h5 class="modal-title" id="%s">CVEs — %s</h5>`, titleID, html.EscapeString(rowID))
+	fmt.Fprintf(b, `<a href="#" class="btn-close" aria-label="Close"></a></div>`)
+	fmt.Fprintf(b, `<div class="modal-body"><ul class="list-unstyled mb-0">`)
+	for _, f := range findings {
+		label, url := f.AdvisoryID, ""
+		if len(f.CVEIDs) > 0 {
+			label = strings.Join(f.CVEIDs, ", ")
+			url = "https://nvd.nist.gov/vuln/detail/" + f.CVEIDs[0]
+		}
+		fmt.Fprintf(b, `<li class="mb-2"><div>`)
+		if url != "" {
+			fmt.Fprintf(b, `<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(url), html.EscapeString(label))
+		} else {
+			b.WriteString(html.EscapeString(label))
+		}
+		if f.Severity != "" {
+			fmt.Fprintf(b, " &mdash; %s", html.EscapeString(f.Severity))
+		}
+		if f.Source != "" {
+			fmt.Fprintf(b, ` <span class="text-body-secondary">(%s)</span>`, html.EscapeString(f.Source))
+		}
+		b.WriteString("</div>")
+		if f.Title != "" {
+			fmt.Fprintf(b, `<div class="small text-body-secondary">%s</div>`, html.EscapeString(f.Title))
+		}
+		b.WriteString("</li>")
+	}
+	b.WriteString(`</ul></div></div></div></div>` + "\n")
+}
+
 // writeHTMLSection writes one view's table. tones may be nil (inline mode,
 // which has no Bootstrap loaded to give table-* classes any meaning) or
 // aligned one-to-one with rows.
@@ -531,12 +663,34 @@ th, td { text-align: left; padding: 0.35rem 0.75rem; border-bottom: 1px solid #c
 th { border-bottom: 2px solid #888; }
 .empty { color: #888; font-style: italic; }
 footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ccc; color: #666; font-size: 0.85em; }
+.enodia-cve-info { text-decoration: none; font-size: 1.05em; padding: 0 0.2rem; }
+.enodia-cve-modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; align-items: center; justify-content: center; }
+.enodia-cve-modal-overlay:target { display: flex; }
+.enodia-cve-modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); }
+.enodia-cve-modal-overlay .modal-dialog { position: relative; z-index: 1; max-width: 32rem; width: 90vw; max-height: 80vh; margin: 0; }
+.enodia-cve-modal-overlay .modal-content { display: flex; flex-direction: column; max-height: 80vh; background: Canvas; color: CanvasText; border: 1px solid #888; border-radius: 0.4rem; }
+.enodia-cve-modal-overlay .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #ccc; }
+.enodia-cve-modal-overlay .modal-title { margin: 0; font-size: 1.1em; }
+.enodia-cve-modal-overlay .modal-body { padding: 1rem; overflow-y: auto; }
+.enodia-cve-modal-overlay .btn-close { text-decoration: none; font-size: 1.2em; line-height: 1; color: inherit; }
+.enodia-cve-modal-overlay .btn-close::before { content: "\2715"; }
+.enodia-cve-modal-overlay .text-body-secondary { color: #666; }
 `
 
 // htmlCDNExtraCSS is small styling Bootstrap/Bootswatch don't cover on
 // their own — the section spacing and "no data" placeholder look enodia's
-// own inline CSS already gets right.
+// own inline CSS already gets right. The CVE modal overlay's show/hide and
+// backdrop are added here too: Bootstrap's own .modal-dialog/.modal-content
+// classes style the box itself once :target reveals it (its
+// .modal-dialog-centered rule needs .enodia-cve-modal-overlay's own fixed,
+// full-viewport sizing below to compute against, the same way it would
+// against Bootstrap's own .modal wrapper), but Bootstrap has nothing for
+// the show/hide or the backdrop tint on a plain <div> outside its own JS.
 const htmlCDNExtraCSS = `
 section { margin-bottom: 2.5rem; }
 .empty { font-style: italic; }
+.enodia-cve-info { text-decoration: none; }
+.enodia-cve-modal-overlay { display: none; position: fixed; inset: 0; z-index: 1055; }
+.enodia-cve-modal-overlay:target { display: block; }
+.enodia-cve-modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); }
 `
