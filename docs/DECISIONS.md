@@ -1738,3 +1738,74 @@ already got for BDU. `internal/cve/nvd_full_test.go` re-runs the exact
 checks above against it, so a future change to the matching logic gets
 caught against real multi-decade data, not only the small hand-built
 `sample_nvd.json`.
+
+---
+
+## D32 — HTML CVE detail modal is pure CSS, not JavaScript
+
+**Decided.** `check`/`export --format html`'s compact view carried only
+a bare CVE count (D30/D31) with no way to see which CVEs, their
+severity, or a link to read more, without re-running the tool with
+`--format json`. Requested directly: an info icon next to the count
+that opens a modal listing each finding.
+
+**No JavaScript, in either Assets mode.** The obvious implementation —
+a shared `<dialog>`, one click handler reading a `data-cves` JSON
+attribute, `.showModal()` — was built first and then reverted:
+`TestHTMLIsSelfContained` already enforces, and long predates this
+decision, that the **default inline report carries zero `<script>`
+tags at all** (D19: "fully offline single file"). That test is not
+incidental — it is exactly the guarantee an operator on a closed
+network relies on. A CVE detail popup is not worth becoming the one
+exception to it.
+
+Instead, the modal is one CSS pseudo-class: `:target`. Each compact-view
+row with findings gets its own `<div id="enodia-cve-modal-N">` (an
+overlay, `display: none` by default), and its info cell is a plain
+`<a href="#enodia-cve-modal-N">` — clicking it navigates the page's URL
+fragment to that id, which `#enodia-cve-modal-N:target { display: ... }`
+then reveals; a full-viewport `<a href="#">` behind the dialog content
+acts as a click-to-close backdrop, and an explicit close link resets
+the fragment the same way. This works identically in both Assets modes
+and needed no change to the D19 test at all — the honest outcome of
+picking a design that doesn't need one.
+
+**Real trade-off accepted, not overlooked:** no Escape-to-close and no
+focus trap — both need JavaScript to implement, and `cdnModeScript`'s
+own doc comment already made the same call for the alert-dismiss
+feature ("pulling in a JS bundle just for one button's click handler
+isn't worth it"). Click-the-backdrop and an explicit close link cover
+the same need with plain HTML.
+
+**Per-row modal blocks, not one shared dialog.** The JS version could
+share one dialog, populated on click; the CSS version can't (`:target`
+needs a real element per anchor), so every row with findings gets its
+own overlay block emitted once after the table. Real per-row finding
+counts are small (single digits, confirmed against both the hand-built
+fixtures and the 561-record full-scale one), so repeating a short
+block per row is simpler and more robust than trying to force the
+data through a single reused shell.
+
+**Every finding links to `nvd.nist.gov/vuln/detail/<CVE-ID>`, regardless
+of source.** A CVE ID is the one identifier BDU and NVD findings both
+carry, so it's the one link guaranteed correct either way — verified
+live at `nvd.nist.gov` throughout D31's own work. `bdu.fstec.ru`'s own
+per-vulnerability URL was deliberately **not** guessed at: the site was
+unreachable from this environment when checked, and this project does
+not commit to a URL shape it hasn't confirmed live (see CLAUDE.md's
+working-style rule on vendor API shapes). A Finding with no CVE ID at
+all — `Finding.CVEIDs` can be empty, BDU's own doc comment already
+notes this — shows its `AdvisoryID` as plain, unlinked text instead of
+guessing.
+
+Markup reuses Bootstrap's own class names (`modal-dialog`,
+`modal-dialog-centered`, `modal-dialog-scrollable`, `modal-content`,
+`modal-header`, `modal-body`, `btn-close`) as requested, without the
+`.modal` wrapper Bootstrap's real JS-driven markup would use — the
+overlay `<div>` gives `.modal-dialog-centered` the same fixed,
+full-viewport ancestor to center against that `.modal` normally would,
+so its CSS resolves the same way even without the wrapper. CDN mode
+gets Bootstrap's full styling on these classes for free; inline mode's
+own `htmlCSS` gives the same class names a minimal bare-bones
+equivalent — one markup shape, two stylesheets, the same approach
+`toneClass` already uses for table row coloring.

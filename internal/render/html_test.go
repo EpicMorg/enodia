@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/EpicMorg/enodia/internal/cve"
 	"github.com/EpicMorg/enodia/internal/evaluate"
 )
 
@@ -432,5 +433,72 @@ func TestHTMLCDNScriptResetsToBakedTheme(t *testing.T) {
 	out := buf.String()
 	if !strings.Contains(out, `var BAKED = "darkly"`) {
 		t.Fatalf("expected the script's fallback constant to be the baked theme (darkly), got:\n%s", out)
+	}
+}
+
+// The CVE modal must never depend on JavaScript — TestHTMLIsSelfContained
+// already forbids any <script> in inline mode (D19), so the modal has to
+// work as pure CSS (:target) in both modes, not just inline.
+func TestHTMLCVEModalHasNoScriptEvenInCDNMode(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{Assets: AssetsCDN}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "enodia-cve-modal-overlay") {
+		t.Fatal("expected sampleReport's confluence-a CVE finding to produce a modal overlay")
+	}
+	if strings.Contains(out, "JSON.parse") || strings.Contains(out, "showModal") {
+		t.Fatalf("the CVE modal must be pure CSS (:target), not JS-driven, got:\n%s", out)
+	}
+}
+
+func TestHTMLCVEModalLinksToNVDByCVEID(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="https://nvd.nist.gov/vuln/detail/CVE-2023-22515"`) {
+		t.Fatalf("expected a link to nvd.nist.gov for the finding's CVE ID, got:\n%s", out)
+	}
+	if !strings.Contains(out, `<a href="#enodia-cve-modal-`) {
+		t.Fatal("expected an info link opening the modal via its #anchor")
+	}
+}
+
+// A Finding with no CVEIDs at all (BDU's own doc comment notes this can
+// happen) must show its AdvisoryID as plain text, not a guessed link.
+func TestHTMLCVEModalFindingWithoutCVEIDHasNoLink(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "confluence-a")
+	r.Assessments[i].CVEs = []cve.Finding{
+		{Source: "bdu", AdvisoryID: "BDU:2024-99999", Title: "no CVE assigned yet"},
+	}
+	var buf bytes.Buffer
+	if err := HTML(&buf, r, HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "BDU:2024-99999") {
+		t.Fatal("expected the AdvisoryID to appear as plain text")
+	}
+	if strings.Contains(out, "nvd.nist.gov") {
+		t.Fatalf("must not guess a link when the finding carries no CVE ID, got:\n%s", out)
+	}
+}
+
+func TestHTMLCVEModalAbsentWhenNoFindings(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	// jira-b (sampleReport) has no CVEs at all: its CVES cell must stay a
+	// bare "-", not an info link.
+	row := out[strings.Index(out, "jira-b"):]
+	row = row[:strings.Index(row, "</tr>")]
+	if strings.Contains(row, "enodia-cve-info") {
+		t.Fatalf("jira-b has no CVEs, should not get an info link: %s", row)
 	}
 }

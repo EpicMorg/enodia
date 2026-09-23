@@ -1082,6 +1082,13 @@ Not dates. Order of work, and what each step unblocks.
   added or removed, not just changed. Verified live against two full
   real yearly exports (2023+2024, ~40,000 CVEs, ~40MB compressed): ~7s
   parse, ~26MB peak RSS. See `docs/DECISIONS.md` D31.
+- CVE detail modal in `check`/`export --format html`'s compact view —
+  the CVES column's info icon opens a per-row popup listing each
+  finding, linked to its CVE's `nvd.nist.gov` page. Pure CSS (`:target`
+  pseudo-class), no JavaScript in either Assets mode — an early
+  `<dialog>`+JS version was reverted specifically to keep
+  `TestHTMLIsSelfContained`'s zero-`<script>` guarantee for the default
+  inline report (D19) intact. See `docs/DECISIONS.md` D32.
 
 ## Next
 
