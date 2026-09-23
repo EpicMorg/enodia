@@ -317,3 +317,17 @@ func TestViewRowsEmptyDefaultsToCompact(t *testing.T) {
 			len(gotHeaders), len(gotRows), len(wantHeaders), len(wantRows))
 	}
 }
+
+// Drift shows CVES the same way compact does: last column, bare count.
+func TestDriftRowsCVEColumn(t *testing.T) {
+	headers, rows, _ := driftRows(sampleReport())
+	if headers[len(headers)-1] != "CVES" {
+		t.Fatalf("got last header %q, want CVES", headers[len(headers)-1])
+	}
+	if row := findRow(rows, 0, "confluence-a"); row[6] != "1" {
+		t.Fatalf("got %q, want \"1\"", row[6])
+	}
+	if row := findRow(rows, 0, "jira-b"); row[6] != "-" {
+		t.Fatalf("got %q, want \"-\" with no CVE findings", row[6])
+	}
+}

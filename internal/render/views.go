@@ -46,21 +46,16 @@ func severityTone(s evaluate.Severity) RowTone {
 	}
 }
 
-// compactRows' CVES column is a bare count of a.CVEs, "-" when empty
-// (nothing configured, or nothing matched) — it deliberately does not
-// factor into SEVERITY or tone yet: whether a CVE match should escalate
-// OverallSeverity is an open policy question (see docs/DECISIONS.md D30),
-// not decided by omission here.
+// compactRows' CVES column (see cveCount; drift carries the same one)
+// deliberately does not factor into SEVERITY or tone yet: whether a CVE
+// match should escalate OverallSeverity is an open policy question (see
+// docs/DECISIONS.md D30), not decided by omission here.
 func compactRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
 	headers = []string{"ID", "PRODUCT", "PATCH", "LIFECYCLE", "BRANCH", "SEVERITY", "REASON", "CVES"}
 	for _, a := range r.Assessments {
-		cves := "-"
-		if len(a.CVEs) > 0 {
-			cves = strconv.Itoa(len(a.CVEs))
-		}
 		rows = append(rows, []string{
 			a.ID, a.Product, string(a.Patch), string(a.Lifecycle), string(a.Branch),
-			string(a.OverallSeverity()), firstNonEmpty(string(a.Reason), "-"), cves,
+			string(a.OverallSeverity()), firstNonEmpty(string(a.Reason), "-"), cveCount(a),
 		})
 		tone := severityTone(a.OverallSeverity())
 		if isUnreachableAnomaly(a) {
@@ -69,6 +64,16 @@ func compactRows(r Report) (headers []string, rows [][]string, tones []RowTone) 
 		tones = append(tones, tone)
 	}
 	return headers, rows, tones
+}
+
+// cveCount is the CVES cell shared by every view that shows one: a bare
+// count, "-" when there are no findings. Always the last column, so the
+// HTML renderer can find it without a per-view index table.
+func cveCount(a evaluate.Assessment) string {
+	if len(a.CVEs) == 0 {
+		return "-"
+	}
+	return strconv.Itoa(len(a.CVEs))
 }
 
 // isUnreachableAnomaly reports whether a's Reason is a genuine reachability
@@ -135,7 +140,7 @@ func lifecycleRows(r Report) (headers []string, rows [][]string, tones []RowTone
 // actually unreachable target (ToneInfo, current/latest/cycle all dashes
 // too since there was never an observed version to show).
 func driftRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
-	headers = []string{"ID", "PRODUCT", "CURRENT", "LATEST", "CYCLE", "PATCH"}
+	headers = []string{"ID", "PRODUCT", "CURRENT", "LATEST", "CYCLE", "PATCH", "CVES"}
 	obsByID := indexObservations(r.Observations)
 	for _, a := range r.Assessments {
 		current := "-"
@@ -145,6 +150,7 @@ func driftRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
 		rows = append(rows, []string{
 			a.ID, a.Product, current,
 			firstNonEmpty(a.LatestInCycle, "-"), firstNonEmpty(a.MatchedCycle, "-"), string(a.Patch),
+			cveCount(a),
 		})
 		tone := severityTone(a.PatchSeverity)
 		if a.Patch == evaluate.PatchUnknown {
