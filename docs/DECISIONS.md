@@ -972,7 +972,9 @@ a different, confirmed-live reason, not a blanket "too hard":
   a real device to confirm the actual response shape would be precisely
   the "confident-looking guess about vendor API shapes" docs/CLAUDE.md's
   "Working style" section warns against, so both stay unimplemented
-  rather than written blind.
+  rather than written blind. `fortios` was unblocked and shipped once
+  real hardware access existed — see D29. `cisco-ios-xe` is still open;
+  the user has the hardware now but hadn't powered it on yet as of D29.
 - **`tails`** — a live, amnesic, privacy-focused OS that boots fresh from
   read-only media on every start and is deliberately designed to discard
   state and resist exactly the kind of unattended, persistent,
@@ -1410,3 +1412,39 @@ process (`sh -c "sleep 5"`) doesn't also kill an orphaned grandchild,
 so the test's fake binary uses `exec sleep 5` to actually become the
 process being killed, matching what the real (non-shell-wrapped) `p4`
 binary is.
+
+---
+
+## D29 — `fortios` shipped once real hardware access existed
+
+**Decided.** D23 deferred `fortios` specifically for lack of a freely
+obtainable test image — Fortinet's FortiGate VM requires a vendor
+account and an accepted EULA, not obtainable anonymously. The user got
+test credentials to a real FortiGate 601E appliance, closing that gap
+directly rather than through a substitute image.
+
+Confirmed live exactly what D23 predicted: `GET
+/api/v2/monitor/system/status` answers with `Authorization: Bearer
+<token>` — a REST API Admin's own API key, generated once in the GUI
+and shown exactly once — no query-string `access_token`, no
+session/CSRF dance. The same shape `AuthBearer` already sends for
+every other bearer-token probe here, so no new `AuthKind` was needed.
+A missing or wrong token answers HTTP 401 with an Apache-style HTML
+error page, not JSON, but `FetchHTTP` already turns 401/403 into
+`ErrAuth` before `fortiosProbe` ever sees the body, so there was
+nothing HTML-shaped to handle.
+
+`version` comes back as `"v7.4.12"` — stored as-is in
+`Observation.Version` (not stripped here), since `internal/collect`
+already runs every `Version` through `version.Clean` to fill
+`Normalized`, and `Clean`'s own prefix regex already strips a leading
+`v`/`V`. `DefaultResolver: ResolverRef{Type: "endoflife", ID:
+"fortios"}` — confirmed live the page exists and its cycle `"7.4"`
+matches. Confirmed live too: `endoflife.date`'s `fortios` page has no
+`latest` field on any cycle at all (a real data-source limitation, not
+a probe bug) — `check --view drift` correctly shows `LATEST: -` and
+`PATCH: unknown` rather than fabricating a comparison the upstream data
+doesn't support.
+
+`cisco-ios-xe` remains open — same D23 reasoning, and the user's own
+hardware for it exists but wasn't powered on yet as of this decision.

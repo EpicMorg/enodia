@@ -1042,6 +1042,16 @@ Not dates. Order of work, and what each step unblocks.
       actually ran it on their own Windows machine — Claude has no
       Windows environment to run either tool itself. See the
       `feedback_winget_pr_checklist` memory note for the exact rule.
+- `fortios` — unblocked once the user got real test credentials to a
+  live FortiGate 601E appliance, closing D23's "no freely obtainable
+  test image" gap directly. Confirmed live exactly what D23 predicted:
+  `GET /api/v2/monitor/system/status` with a plain `Authorization:
+  Bearer <token>` (a REST API Admin's own API key), no session/CSRF —
+  `AuthBearer` already covers it, no new `AuthKind`. `DefaultResolver`
+  is `endoflife:fortios` (confirmed live to exist); that page has no
+  `latest` field on any cycle at all, so `check --view drift` correctly
+  shows `LATEST: -`/`PATCH: unknown` rather than inventing a
+  comparison. See `docs/DECISIONS.md` D29.
 
 ## Next
 
@@ -1088,11 +1098,11 @@ requested.
   that name); its own installer is ISO-only, the same shape of blocker
   `openbsd`/`netbsd` had before vmactions covered them — see
   DECISIONS.md D23
-- `fortios`, `cisco-ios-xe` — both have a documented HTTP API (FortiGate
-  REST, IOS-XE RESTCONF/NETCONF) that would fit this project's existing
-  probe shape better than SSH CLI-scraping, but both are licensed
-  commercial appliances with no freely obtainable test image, so neither
-  the CLI nor the API shape has been confirmed live — see DECISIONS.md D23
+- `cisco-ios-xe` — a documented HTTP API (RESTCONF/NETCONF) would fit
+  this project's existing probe shape better than SSH CLI-scraping, but
+  it's a licensed commercial appliance with no freely obtainable test
+  image. The user now has real hardware for this one too, just not
+  powered on yet — see DECISIONS.md D23/D29
 - `tails` — a live, amnesic OS deliberately designed to resist
   unattended persistent access. Ruled out on principle, not a tooling
   gap — the user confirmed this one stays crossed off entirely, not

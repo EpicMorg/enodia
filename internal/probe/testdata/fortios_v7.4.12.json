@@ -1,0 +1,1 @@
+{"http_method":"GET","results":{"model_name":"FortiGate","model_number":"601E","model":"FG6H1E","hostname":"example-fortigate","log_disk_status":"available"},"vdom":"root","path":"system","name":"status","status":"success","serial":"FG6H1ETB00000000","version":"v7.4.12","build":2902}
