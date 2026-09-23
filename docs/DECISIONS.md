@@ -1823,3 +1823,15 @@ gets Bootstrap's full styling on these classes for free; inline mode's
 own `htmlCSS` gives the same class names a minimal bare-bones
 equivalent — one markup shape, two stylesheets, the same approach
 `toneClass` already uses for table row coloring.
+
+**Extended to the drift view** on request: drift now ends in the same
+CVES column (`cveCount`, shared with compact) with the same info link
+and modal. Both views build one row per Assessment in
+`r.Assessments` order, which is what lets the shared `writeCVESection`
+map row *i* back to its findings; lifecycle and fleet don't carry the
+column (fleet groups several instances per row, so "this row's CVEs"
+has no single answer there). Overlay anchors include the view name
+(`enodia-cve-modal-compact-N` / `-drift-N`), so the two sections'
+overlays for the same row never collide when all four render on one
+page, and `--view drift` on its own still carries its own overlays
+instead of linking to compact's absent ones.

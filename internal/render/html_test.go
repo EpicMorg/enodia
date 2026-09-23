@@ -536,3 +536,34 @@ func TestHTMLCVEModalAbsentWhenNoFindings(t *testing.T) {
 		t.Fatalf("jira-b has no CVEs, should not get an info link: %s", row)
 	}
 }
+
+// --view drift alone (no compact section at all) must still carry its
+// own modal overlays, not link to compact's anchors that aren't there.
+func TestHTMLDriftViewHasItsOwnCVEModal(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{View: ViewDrift}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="#enodia-cve-modal-drift-`) {
+		t.Fatalf("expected a drift-scoped info link, got:\n%s", out)
+	}
+	if !strings.Contains(out, `id="enodia-cve-modal-drift-`) {
+		t.Fatalf("expected a drift-scoped modal overlay, got:\n%s", out)
+	}
+}
+
+// With all four sections on one page, compact and drift each carry their
+// own overlay per row — ids must never collide.
+func TestHTMLCVEModalAnchorsAreUniqueAcrossViews(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	for _, id := range []string{`<div id="enodia-cve-modal-compact-`, `<div id="enodia-cve-modal-drift-`} {
+		if strings.Count(out, id) != 1 { // sampleReport has exactly one row with findings
+			t.Fatalf("got %d overlays matching %s, want 1", strings.Count(out, id), id)
+		}
+	}
+}

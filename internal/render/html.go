@@ -193,8 +193,8 @@ func htmlInline(w io.Writer, r Report, sections []htmlViewSection) error {
 		html.EscapeString(r.AsOf.Format(time.RFC3339)))
 
 	for _, s := range sections {
-		if s.view == ViewCompact {
-			writeCompactSection(ew, r, false, "")
+		if viewHasCVEColumn(s.view) {
+			writeCVESection(ew, s, r, false, "")
 			continue
 		}
 		headers, rows, _, _ := viewRows(s.view, r) // s.view is always one of the known constants
@@ -277,8 +277,8 @@ func htmlCDN(w io.Writer, r Report, sections []htmlViewSection, theme, cdn strin
 
 	for _, s := range sections {
 		tableClass := "table table-striped table-hover table-sm align-middle"
-		if s.view == ViewCompact {
-			writeCompactSection(ew, r, true, tableClass)
+		if viewHasCVEColumn(s.view) {
+			writeCVESection(ew, s, r, true, tableClass)
 			continue
 		}
 		headers, rows, tones, _ := viewRows(s.view, r)
@@ -494,31 +494,38 @@ func toneClass(t RowTone) string {
 	}
 }
 
-// writeCompactSection is compactRows' HTML rendering — split out from the
-// generic writeHTMLSection, which every other view still uses, because the
-// CVES column alone needs live markup (an info link opening a per-row
-// modal overlay), not a plain escaped text cell. useTones is false in
-// inline mode (which has no Bootstrap table-* classes to give a RowTone
-// visual meaning — see toneClass) and true in CDN mode, mirroring how
-// every other section already decides whether to pass tones to
+// viewHasCVEColumn reports whether v's rows end in a CVES column (see
+// cveCount) — compact and drift, both built one row per Assessment in
+// r.Assessments order, which is what lets writeCVESection map row i back
+// to r.Assessments[i]'s findings.
+func viewHasCVEColumn(v View) bool {
+	return v == ViewCompact || v == ViewDrift
+}
+
+// writeCVESection renders a view whose last column is CVES — split out
+// from the generic writeHTMLSection, which every other view still uses,
+// because that one column needs live markup (an info link opening a
+// per-row modal overlay), not a plain escaped text cell. useTones is
+// false in inline mode (which has no Bootstrap table-* classes to give a
+// RowTone visual meaning — see toneClass) and true in CDN mode, mirroring
+// how every other section already decides whether to pass tones to
 // writeHTMLSection.
 //
-// The modal itself is pure CSS (the :target pseudo-class — see
-// cveModalCSS), not JavaScript: TestHTMLIsSelfContained enforces that the
-// default inline report never carries a single <script> tag at all (D19),
-// and a CVE detail popup is not worth being the one exception to that.
-// Each row with findings gets its own overlay block, emitted once after
-// the table rather than fighting to share one — real finding counts per
-// row are small, and repeating a short block per row is simpler and more
-// robust than reconstructing it from a data attribute.
-func writeCompactSection(ew *errWriter, r Report, useTones bool, tableClass string) {
-	headers, rows, tones := compactRows(r)
-	ew.printf("<section>\n<h2>Compact</h2>\n")
+// The modal itself is pure CSS (the :target pseudo-class), not
+// JavaScript: TestHTMLIsSelfContained enforces that the default inline
+// report never carries a single <script> tag at all (D19), and a CVE
+// detail popup is not worth being the one exception to that. Each row
+// with findings gets its own overlay block, emitted once after the table;
+// anchors carry the view name, so compact's and drift's overlays for the
+// same row never collide when all four sections render on one page.
+func writeCVESection(ew *errWriter, s htmlViewSection, r Report, useTones bool, tableClass string) {
+	headers, rows, tones, _ := viewRows(s.view, r) // s.view is always one of the known constants
+	ew.printf("<section>\n<h2>%s</h2>\n", html.EscapeString(s.title))
 	if len(rows) == 0 {
 		ew.printf("<p class=\"empty\">no data</p>\n</section>\n")
 		return
 	}
-	cvesCol := len(headers) - 1 // CVES is compactRows' last column
+	cvesCol := len(headers) - 1
 
 	if tableClass != "" {
 		ew.printf("<table class=\"%s\">\n<thead><tr>", tableClass)
@@ -547,7 +554,7 @@ func writeCompactSection(ew *errWriter, r Report, useTones bool, tableClass stri
 					ew.printf("<td>-</td>")
 					continue
 				}
-				anchor := fmt.Sprintf("enodia-cve-modal-%d", i)
+				anchor := fmt.Sprintf("enodia-cve-modal-%s-%d", s.view, i)
 				ew.printf(
 					`<td>%d <a href="#%s" class="enodia-cve-info" aria-haspopup="dialog" aria-label="CVE details for %s">&#9432;</a></td>`,
 					len(a.CVEs), anchor, html.EscapeString(a.ID),
