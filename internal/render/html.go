@@ -621,8 +621,8 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 			links = append(links, html.EscapeString(g.key))
 		}
 		b.WriteString(strings.Join(links, " &middot; "))
-		if r := g.ratingText(); r != "" {
-			fmt.Fprintf(b, " &mdash; <strong>%s</strong>", html.EscapeString(r))
+		if r := g.ratingBadges(); r != "" {
+			fmt.Fprintf(b, " &mdash; %s", r)
 		}
 		if tag := strings.Join(nonEmpty(g.tags...), " &middot; "); tag != "" {
 			fmt.Fprintf(b, ` <span class="text-body-secondary">(%s)</span>`, tag)
@@ -731,6 +731,10 @@ footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ccc; color:
 .enodia-cve-modal-overlay .list-unstyled { list-style: none; padding-left: 0; margin: 0; }
 .enodia-cve-modal-overlay .mb-2 { margin-bottom: 0.75rem; }
 .enodia-cve-modal-overlay .small { font-size: 0.875em; }
+.enodia-cve-modal-overlay .badge { display: inline-block; padding: 0.3em 0.55em; font-size: 0.75em; font-weight: 700; line-height: 1; border-radius: 0.375rem; vertical-align: 0.1em; }
+.enodia-cve-modal-overlay .text-bg-danger { background: #dc3545; color: #fff; }
+.enodia-cve-modal-overlay .text-bg-warning { background: #ffc107; color: #000; }
+.enodia-cve-modal-overlay .text-bg-info { background: #0dcaf0; color: #000; }
 .enodia-cve-modal-overlay .btn-close { text-decoration: none; font-size: 1.2em; line-height: 1; color: inherit; }
 .enodia-cve-modal-overlay .btn-close::before { content: "\2715"; }
 .enodia-cve-modal-overlay .text-body-secondary { color: #666; }

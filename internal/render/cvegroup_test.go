@@ -87,22 +87,29 @@ func TestGroupCVEsSortOrder(t *testing.T) {
 	if strings.Join(got, ",") != want {
 		t.Fatalf("got %v, want %s", got, want)
 	}
-	if groups[3].ratingText() != "Данные уточняются" {
-		t.Errorf("unrated group should fall back to the source's own text, got %q", groups[3].ratingText())
+	if groups[3].ratingBadges() != "Данные уточняются" {
+		t.Errorf("unrated group should fall back to the source's own text, unbadged, got %q", groups[3].ratingBadges())
 	}
 }
 
-func TestCVEGroupRatingText(t *testing.T) {
+func TestCVEGroupRatingBadges(t *testing.T) {
 	for _, c := range []struct {
 		r    cve.CVSS
 		want string
 	}{
-		{cve.CVSS{Version: "3.1", Score: 9.8, Severity: "CRITICAL"}, "CRITICAL · CVSS 3.1 9.8"},
-		{cve.CVSS{Version: "2.0", Score: 10, Severity: "HIGH"}, "HIGH · CVSS 2.0 10"},
-		{cve.CVSS{Version: "3.1", Severity: "CRITICAL"}, "CRITICAL"}, // level without a score
+		{cve.CVSS{Version: "3.1", Score: 9.8, Severity: "CRITICAL"},
+			`<span class="badge text-bg-danger">CRITICAL</span> <span class="badge text-bg-danger">CVSS 3.1 9.8</span>`},
+		{cve.CVSS{Version: "3.1", Score: 7.5, Severity: "HIGH"},
+			`<span class="badge text-bg-danger">HIGH</span> <span class="badge text-bg-danger">CVSS 3.1 7.5</span>`},
+		{cve.CVSS{Version: "3.0", Score: 5.3, Severity: "MEDIUM"},
+			`<span class="badge text-bg-warning">MEDIUM</span> <span class="badge text-bg-warning">CVSS 3.0 5.3</span>`},
+		{cve.CVSS{Version: "2.0", Score: 2.1, Severity: "LOW"},
+			`<span class="badge text-bg-info">LOW</span> <span class="badge text-bg-info">CVSS 2.0 2.1</span>`},
+		{cve.CVSS{Version: "3.1", Severity: "CRITICAL"}, // level without a score: no score badge
+			`<span class="badge text-bg-danger">CRITICAL</span>`},
 	} {
-		if got := (cveGroup{rating: c.r}).ratingText(); got != c.want {
-			t.Errorf("%+v: got %q, want %q", c.r, got, c.want)
+		if got := (cveGroup{rating: c.r}).ratingBadges(); got != c.want {
+			t.Errorf("%+v:\n got %s\nwant %s", c.r, got, c.want)
 		}
 	}
 }
@@ -125,7 +132,7 @@ func TestHTMLCVEModalOneLinePerCVE(t *testing.T) {
 		`href="https://nvd.nist.gov/vuln/detail/CVE-2023-22515"`,
 		`href="https://www.cve.org/CVERecord?id=CVE-2023-22515"`,
 		`href="https://bdu.fstec.ru/vul/2023-06364"`,
-		"CRITICAL · CVSS 3.1 10",
+		`<span class="badge text-bg-danger">CVSS 3.1 10</span>`,
 		"Уязвимость веб-сервера Atlassian Confluence Server",
 		`<td>1 <a href="#enodia-cve-modal-compact-`,
 	} {

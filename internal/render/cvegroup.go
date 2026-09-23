@@ -4,6 +4,8 @@ package render
 
 import (
 	"cmp"
+	"fmt"
+	"html"
 	"slices"
 	"strconv"
 	"strings"
@@ -153,16 +155,36 @@ func splitCVEID(id string) (year, num int, ok bool) {
 	return y, n, err1 == nil && err2 == nil
 }
 
-// ratingText is a group's short severity: "CRITICAL · CVSS 3.1 9.8" from a
-// parsed rating, or the source's own text when none parsed.
-func (g cveGroup) ratingText() string {
+// ratingBadges is a group's short severity as HTML: two Bootstrap badges,
+// the level and the "CVSS <version> <score>" rating, in one color keyed
+// to the level (ratingBadgeClass), or the source's own text, escaped and
+// unbadged, when no rating parsed at all.
+func (g cveGroup) ratingBadges() string {
 	r := g.rating
-	switch {
-	case r.Severity != "" && r.Score > 0:
-		return r.Severity + " · CVSS " + r.Version + " " + strconv.FormatFloat(r.Score, 'f', -1, 64)
-	case r.Severity != "":
-		return r.Severity
+	if r.Severity == "" {
+		return html.EscapeString(g.rawText)
+	}
+	class := "badge " + ratingBadgeClass(r.Severity)
+	out := fmt.Sprintf(`<span class="%s">%s</span>`, class, html.EscapeString(r.Severity))
+	if r.Score > 0 {
+		out += fmt.Sprintf(` <span class="%s">CVSS %s %s</span>`, class,
+			html.EscapeString(r.Version), strconv.FormatFloat(r.Score, 'f', -1, 64))
+	}
+	return out
+}
+
+// ratingBadgeClass picks a badge's Bootstrap color: danger for CRITICAL
+// and HIGH, warning for MEDIUM, info for everything else. text-bg-* rather
+// than bg-*: same background, but Bootstrap also sets a readable text
+// color (white on warning's yellow isn't). Inline mode defines the same
+// classes in its own CSS.
+func ratingBadgeClass(severity string) string {
+	switch severity {
+	case "CRITICAL", "HIGH":
+		return "text-bg-danger"
+	case "MEDIUM":
+		return "text-bg-warning"
 	default:
-		return g.rawText
+		return "text-bg-info"
 	}
 }
