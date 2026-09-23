@@ -46,6 +46,7 @@ type Config struct {
 // fetches the underlying data itself.
 type CVESpec struct {
 	BDU BDUSpec `yaml:"bdu,omitempty"`
+	NVD NVDSpec `yaml:"nvd,omitempty"`
 }
 
 // BDUSpec points at a local copy of FSTEC's БДУ export the operator
@@ -57,17 +58,35 @@ type BDUSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
+// NVDSpec points at a local copy of NIST NVD's yearly CVE exports the
+// operator downloaded themselves — enodia has no code path that reaches
+// nvd.nist.gov on its own (see docs/DECISIONS.md D31). Path may be a
+// single file (.json, .json.gz, or .json.zip — NVD's own publication
+// formats) or a directory containing any number of them, and may be
+// relative to the config file, the same convention BDUSpec.Path uses.
+type NVDSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
 // BDUPath returns the configured BDU export path, resolved relative to
 // the config file's own directory if it isn't already absolute — the same
 // rule resolveCredentialsFile applies to CredentialsFile. ok is false when
 // cve.bdu.path was never set, which is the normal case for most installs.
 func (c *Config) BDUPath() (path string, ok bool) {
-	if c.CVE.BDU.Path == "" {
+	return resolvePathRelativeToConfig(c.path, c.CVE.BDU.Path)
+}
+
+// NVDPath is BDUPath's counterpart for cve.nvd.path.
+func (c *Config) NVDPath() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.NVD.Path)
+}
+
+func resolvePathRelativeToConfig(configPath, p string) (path string, ok bool) {
+	if p == "" {
 		return "", false
 	}
-	p := c.CVE.BDU.Path
-	if !filepath.IsAbs(p) && c.path != "" {
-		p = filepath.Join(filepath.Dir(c.path), p)
+	if !filepath.IsAbs(p) && configPath != "" {
+		p = filepath.Join(filepath.Dir(configPath), p)
 	}
 	return p, true
 }

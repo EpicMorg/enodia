@@ -1,26 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Package cve correlates a probed product version against a locally
-// supplied vulnerability database. The only source implemented today is
-// FSTEC's БДУ (Банк данных угроз безопасности информации,
-// bdu.fstec.ru) — a Russian government threat/vulnerability bank that,
-// unlike OSV.dev (see docs/DECISIONS.md D18), keys its affected-software
-// ranges to the product's own version numbering rather than a Linux
-// distro's packaged version, and does carry entries for proprietary
-// products (Atlassian's among them) OSV.dev has none for at all.
+// supplied vulnerability database. Two sources are implemented:
 //
-// enodia never fetches this itself: the file is large (the full export is
-// several hundred MB of XML) and BDU has no documented, stable API to poll
-// politely. The operator downloads it themselves, on whatever schedule
-// they like, and points `cve.bdu.path` at it (see docs/DECISIONS.md D30).
+//   - FSTEC's БДУ (Банк данных угроз безопасности информации,
+//     bdu.fstec.ru) — a Russian government threat/vulnerability bank that,
+//     unlike OSV.dev (see docs/DECISIONS.md D18), keys its affected-software
+//     ranges to the product's own version numbering rather than a Linux
+//     distro's packaged version, and does carry entries for proprietary
+//     products (Atlassian's among them) OSV.dev has none for at all. See
+//     docs/DECISIONS.md D30.
+//   - NIST's NVD (nvd.nist.gov), via its yearly downloadable JSON exports
+//     (not the live API — see docs/DECISIONS.md D31 for why). NVD's own
+//     CPE-match version ranges (versionStart/EndIncluding/Excluding) are
+//     the same product-own-numbering shape BDU's ranges are, cross-checked
+//     against the very same real CVEs D30/D31 already verify.
+//
+// enodia never fetches either of these itself: both are large, and neither
+// has a documented, stable API meant to be polled on every collection
+// cycle. The operator downloads them on whatever schedule they like and
+// points `cve.bdu.path`/`cve.nvd.path` at the result.
 package cve
 
 import (
 	"regexp"
-	"strconv"
 	"strings"
-
-	"github.com/EpicMorg/enodia/internal/version"
 )
 
 // bduBoundedRangePattern matches a range with a stated lower bound: "от X
@@ -37,40 +41,7 @@ var bduBoundedRangePattern = regexp.MustCompile(`(?i)^\s*(?:от\s+)?(.+?)\s+д�
 // different capture-group arities to stay unambiguous.
 var bduOpenLowerPattern = regexp.MustCompile(`(?i)^\s*до\s+(.+?)(\s+включительно)?\s*$`)
 
-// cleanVersionPattern is deliberately stricter than version.Parts: Parts
-// extracts the first numeric-and-dots run it finds *anywhere* in a string,
-// which is right for "2025.03.1 (build 42)" but wrong here — confirmed
-// live that it would silently accept "24.2R2-EVO" as "24.2" and
-// "2015-04-01" (a literal date used as a range bound in real BDU data) as
-// plain "2015". A bound only counts if the *entire* trimmed string is
-// nothing but digits and dots.
-var cleanVersionPattern = regexp.MustCompile(`^\d+(?:\.\d+)*$`)
-
-// cleanVersionParts returns version.Parts(s) only when s, trimmed, is
-// wholly a dotted-number version with nothing else attached.
-func cleanVersionParts(s string) ([]int, bool) {
-	s = strings.TrimSpace(s)
-	if !cleanVersionPattern.MatchString(s) {
-		return nil, false
-	}
-	parts := version.Parts(s)
-	if len(parts) == 0 {
-		return nil, false
-	}
-	return parts, true
-}
-
-// bduRange is one <soft>'s parsed <version> field: the vulnerable range is
-// [Lo, Hi) if HiInclusive is false, [Lo, Hi] if true. A nil Lo means
-// "no stated lower bound" (BDU's bare "до X" shape) — every version up to
-// Hi is treated as vulnerable, not just versions from some unstated floor.
-type bduRange struct {
-	Lo          []int
-	Hi          []int
-	HiInclusive bool
-}
-
-// parseBDUVersion turns one <soft><version> string into a bduRange, or
+// parseBDUVersion turns one <soft><version> string into a versionRange, or
 // reports ok=false for anything that isn't a clean, comparable version —
 // confirmed live that this field is genuinely mixed: clean dotted
 // versions and ranges sit next to vendor build tags ("10.1.0.126
@@ -88,10 +59,10 @@ type bduRange struct {
 // release on that branch. Every "включительно" instance sampled instead
 // describes a last-known-vulnerable build (e.g. a Linux kernel point
 // release), which only makes sense as an inclusive upper bound.
-func parseBDUVersion(raw string) (bduRange, bool) {
+func parseBDUVersion(raw string) (versionRange, bool) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return bduRange{}, false
+		return versionRange{}, false
 	}
 
 	// Tried before bduBoundedRangePattern: "до X" alone has nothing before
@@ -100,21 +71,23 @@ func parseBDUVersion(raw string) (bduRange, bool) {
 	if m := bduOpenLowerPattern.FindStringSubmatch(raw); m != nil {
 		hiParts, ok := cleanVersionParts(m[1])
 		if !ok {
-			return bduRange{}, false
+			return versionRange{}, false
 		}
-		return bduRange{Hi: hiParts, HiInclusive: strings.TrimSpace(m[2]) != ""}, true
+		return versionRange{Hi: hiParts, HiInclusive: strings.TrimSpace(m[2]) != ""}, true
 	}
 
 	if m := bduBoundedRangePattern.FindStringSubmatch(raw); m != nil {
 		loParts, ok := cleanVersionParts(m[1])
 		if !ok {
-			return bduRange{}, false
+			return versionRange{}, false
 		}
 		hiParts, ok := cleanVersionParts(m[2])
 		if !ok {
-			return bduRange{}, false
+			return versionRange{}, false
 		}
-		return bduRange{Lo: loParts, Hi: hiParts, HiInclusive: strings.TrimSpace(m[3]) != ""}, true
+		// BDU's "от X" has no exclusive-lower-bound counterpart anywhere in
+		// the real corpus — only the upper bound's включительно varies.
+		return versionRange{Lo: loParts, LoInclusive: true, Hi: hiParts, HiInclusive: strings.TrimSpace(m[3]) != ""}, true
 	}
 
 	// No "от"/"до" at all: a bare version, e.g. "3.2.2.21". Treated as an
@@ -123,72 +96,7 @@ func parseBDUVersion(raw string) (bduRange, bool) {
 	// this specific build was the one found vulnerable.
 	parts, ok := cleanVersionParts(raw)
 	if !ok {
-		return bduRange{}, false
+		return versionRange{}, false
 	}
-	return bduRange{Lo: parts, Hi: parts, HiInclusive: true}, true
-}
-
-// matches reports whether probed (already a clean version.Parts-able
-// string) falls inside r.
-func (r bduRange) matches(probed []int) bool {
-	if len(probed) == 0 {
-		return false
-	}
-	if r.Lo != nil && comparePartsSlices(probed, r.Lo) < 0 {
-		return false
-	}
-	cmp := comparePartsSlices(probed, r.Hi)
-	if r.HiInclusive {
-		return cmp <= 0
-	}
-	return cmp < 0
-}
-
-// comparePartsSlices compares two already-parsed version.Parts results the
-// same way version.Compare compares two raw strings — shorter slices are
-// treated as zero-padded, so 10.3 == 10.3.0.
-func comparePartsSlices(a, b []int) int {
-	n := max(len(a), len(b))
-	for i := range n {
-		var x, y int
-		if i < len(a) {
-			x = a[i]
-		}
-		if i < len(b) {
-			y = b[i]
-		}
-		switch {
-		case x < y:
-			return -1
-		case x > y:
-			return 1
-		}
-	}
-	return 0
-}
-
-// String renders r as a human-readable range, for diagnostics only —
-// never re-parsed, purely for a person to read in a --view or export
-// field.
-func (r bduRange) String() string {
-	hi := joinParts(r.Hi)
-	if r.Lo == nil {
-		if r.HiInclusive {
-			return "up to and including " + hi
-		}
-		return "before " + hi
-	}
-	lo := joinParts(r.Lo)
-	if r.HiInclusive {
-		return lo + " through " + hi
-	}
-	return lo + " up to (not including) " + hi
-}
-
-func joinParts(parts []int) string {
-	out := make([]string, len(parts))
-	for i, p := range parts {
-		out[i] = strconv.Itoa(p)
-	}
-	return strings.Join(out, ".")
+	return versionRange{Lo: parts, LoInclusive: true, Hi: parts, HiInclusive: true}, true
 }

@@ -28,8 +28,8 @@ func TestLoadBDUFromRawXML(t *testing.T) {
 		t.Fatalf("got %d confluence findings for 8.3.0, want 3 (three overlapping ranges share this version)", len(confluence))
 	}
 	for _, f := range confluence {
-		if f.BDUID != "BDU:2023-06364" {
-			t.Errorf("got BDUID %q", f.BDUID)
+		if f.AdvisoryID != "BDU:2023-06364" {
+			t.Errorf("got AdvisoryID %q", f.AdvisoryID)
 		}
 		if len(f.CVEIDs) != 1 || f.CVEIDs[0] != "CVE-2023-22515" {
 			t.Errorf("got CVEIDs %+v, want [CVE-2023-22515]", f.CVEIDs)

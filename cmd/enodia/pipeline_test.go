@@ -260,6 +260,62 @@ func TestAssessNilCVEIndexLeavesCVEsEmpty(t *testing.T) {
 	}
 }
 
+// TestLoadCVEIndexMergesBDUAndNVD proves loadCVEIndex wires both
+// cve.bdu.path and cve.nvd.path, when both are configured, into one
+// merged Index rather than one silently overriding the other.
+func TestLoadCVEIndexMergesBDUAndNVD(t *testing.T) {
+	bduPath, err := filepath.Abs(filepath.Join("..", "..", "internal", "cve", "testdata", "sample.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	nvdPath, err := filepath.Abs(filepath.Join("..", "..", "internal", "cve", "testdata", "sample_nvd.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+targets: []
+cve:
+  bdu:
+    path: `+bduPath+`
+  nvd:
+    path: `+nvdPath+`
+`)
+	withConfigFlag(t, path)
+
+	cmd, _, _ := testCmd(t)
+	idx, err := loadCVEIndex(cmd)
+	if err != nil {
+		t.Fatalf("loadCVEIndex: %v", err)
+	}
+	got := idx.Lookup("confluence", "8.3.0")
+	sources := map[string]int{}
+	for _, f := range got {
+		sources[f.Source]++
+	}
+	if sources["bdu"] == 0 || sources["nvd"] == 0 {
+		t.Fatalf("got sources %+v, want findings from both bdu and nvd", sources)
+	}
+}
+
+// TestLoadCVEIndexWithoutConfigFlagIsNil proves the opt-in-only-with
+// --config rule (D30/D31): a config file merely existing on disk must
+// never turn CVE correlation on by itself.
+func TestLoadCVEIndexWithoutConfigFlagIsNil(t *testing.T) {
+	withConfigFlag(t, "")
+	cmd, _, _ := testCmd(t)
+	idx, err := loadCVEIndex(cmd)
+	if err != nil {
+		t.Fatalf("loadCVEIndex: %v", err)
+	}
+	if idx != nil {
+		t.Fatalf("got %+v, want nil without --config", idx)
+	}
+}
+
 func TestWorstSeverityIsTheMax(t *testing.T) {
 	assessments := []evaluate.Assessment{
 		{PatchSeverity: evaluate.SeverityNone, LifecycleSeverity: evaluate.SeverityNone, BranchSeverity: evaluate.SeverityNone, ReasonSeverity: evaluate.SeverityNone},

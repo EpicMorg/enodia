@@ -159,13 +159,14 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 	return out
 }
 
-// loadCVEIndex returns the BDU vulnerability index cve.bdu.path in the
-// active config names, or nil if none is configured — the normal case for
-// most installs. Deliberately opt-in only when --config is explicitly
-// passed, even for `check --from` (which otherwise never touches a
-// config file at all, per D4): a config file happening to sit in the
-// current directory silently turning CVE correlation on would be exactly
-// the kind of surprise this project avoids elsewhere.
+// loadCVEIndex returns the merged BDU/NVD vulnerability index the active
+// config's cve.bdu.path/cve.nvd.path name, or nil if neither is
+// configured — the normal case for most installs. Deliberately opt-in
+// only when --config is explicitly passed, even for `check --from` (which
+// otherwise never touches a config file at all, per D4): a config file
+// happening to sit in the current directory silently turning CVE
+// correlation on would be exactly the kind of surprise this project
+// avoids elsewhere.
 func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
 	if configFlag == "" {
 		return nil, nil
@@ -178,22 +179,44 @@ func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
 	if err != nil {
 		return nil, err
 	}
-	bduPath, ok := cfg.BDUPath()
-	if !ok {
-		return nil, nil
-	}
 
 	warn := warnPrinter(cmd)
-	cacheDir, err := cve.DefaultCacheDir()
-	if err != nil {
-		warn(fmt.Sprintf("cve cache disabled: %v", err))
-		idx, err := cve.LoadBDU(bduPath)
+	cacheDir, cacheErr := cve.DefaultCacheDir()
+	if cacheErr != nil {
+		warn(fmt.Sprintf("cve cache disabled: %v", cacheErr))
+	}
+
+	var idx *cve.Index
+	if bduPath, ok := cfg.BDUPath(); ok {
+		bduIdx, err := loadOneCVESource(bduPath, cacheDir, cacheErr, cve.LoadBDU, cve.LoadBDUCached, warn)
 		if err != nil {
 			return nil, err
 		}
-		return idx, nil
+		idx = cve.MergeIndex(idx, bduIdx)
 	}
-	return cve.LoadBDUCached(bduPath, cacheDir, warn)
+	if nvdPath, ok := cfg.NVDPath(); ok {
+		nvdIdx, err := loadOneCVESource(nvdPath, cacheDir, cacheErr, cve.LoadNVD, cve.LoadNVDCached, warn)
+		if err != nil {
+			return nil, err
+		}
+		idx = cve.MergeIndex(idx, nvdIdx)
+	}
+	return idx, nil
+}
+
+// loadOneCVESource loads a single configured source (BDU or NVD), going
+// through its own on-disk cache unless DefaultCacheDir itself failed
+// (cacheErr non-nil, already warned about by the caller).
+func loadOneCVESource(
+	sourcePath, cacheDir string, cacheErr error,
+	load func(string) (*cve.Index, error),
+	loadCached func(string, string, func(string)) (*cve.Index, error),
+	warn func(string),
+) (*cve.Index, error) {
+	if cacheErr != nil {
+		return load(sourcePath)
+	}
+	return loadCached(sourcePath, cacheDir, warn)
 }
 
 // worstSeverity is the max OverallSeverity across every assessment.
