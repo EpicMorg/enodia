@@ -1448,3 +1448,145 @@ doesn't support.
 
 `cisco-ios-xe` remains open — same D23 reasoning, and the user's own
 hardware for it exists but wasn't powered on yet as of this decision.
+
+---
+
+## D30 — CVE correlation via an operator-supplied БДУ ФСТЭК export
+
+**Decided.** D18 deferred CVE correlation over OSV.dev for two reasons:
+zero coverage for proprietary products (Atlassian: CVE-2023-22515 →
+404), and distro-ecosystem entries keyed on packaged versions with
+epochs, which would misjudge every upstream version string enodia's
+probes actually report. `bdu.fstec.ru` — FSTEC's (Russia's) public
+vulnerability database — closes both gaps at once, confirmed against
+the real data rather than assumed:
+
+- `https://bdu.fstec.ru/files/documents/vulxml.zip` is FSTEC's own full
+  export (confirmed live: ~33MB zipped, 615MB uncompressed XML, 92,324
+  `<vul>` entries). Each entry carries real CVE cross-references
+  (`<identifiers><identifier type="CVE">`) and one or more
+  `<vulnerable_software><soft>` ranges keyed to the *product's own*
+  version numbering — not a distro package's. `BDU:2023-06364`, the
+  real entry for CVE-2023-22515 (the same example D18 used to show
+  OSV.dev's gap), lists three ranges for "Confluence Server" (`от 8.0.0
+  до 8.3.3` / `8.4.3` / `8.5.2`, one per maintenance branch, each ending
+  at that branch's real Atlassian-published fix) plus one for "Jira
+  Data Center" — exactly the shape D18 needed and OSV.dev didn't have.
+- A separate per-distro OVAL scanner content package also exists (e.g.
+  `scanovalcontent_redos8.rpm` → package-level vulnerability scanning
+  for RED OS) but was **not** used here: it's built for
+  distro-packaged-version scanning, the same shape D18 already rejected
+  for OSV.dev, whereas the full export's product-version ranges map
+  directly onto enodia's existing "one product, one version" model.
+
+**The operator supplies the file; enodia never polls FSTEC itself.**
+Explicit requirement, not a shortcut: `bdu.fstec.ru`'s main site
+blocks a bare default User-Agent (403; a plain browser UA gets 200 —
+simple bot-blocking, not a geo-block), the export is large enough that
+polling it on every collection cycle would be wasteful even without
+that, and an operator who already has to place the file makes exactly
+one decision (when to refresh it) instead of enodia making a silent
+background one. Config shape (`internal/config`, D19: this is data
+that affects evaluation, so it lives in `enodia.yaml`, not
+`settings.yaml`):
+
+```yaml
+cve:
+  bdu:
+    path: ./bdu-export.zip   # .xml, .zip, or .tar.gz/.tgz; relative to enodia.yaml's own dir
+```
+
+`Config.BDUPath()` resolves a relative path against the config file's
+directory, the same convention resolver/inventory paths already use
+elsewhere. CVE lookup is opt-in twice over: no `cve.bdu.path` set means
+no lookup at all (`loadCVEIndex` returns a nil `*cve.Index`, and
+`Index.Lookup` is nil-safe — the same "fact simply not available" shape
+`ReasonNoResolver` already uses for lifecycle data), and it only
+activates when `--config` is explicitly passed, even for `check --from`
+(which otherwise never touches a config file at all, per D4) — a config
+file merely sitting in the current directory must not silently turn CVE
+correlation on.
+
+**Parsing is streaming, never a full `Unmarshal`:** `internal/cve.LoadBDU`
+walks the XML with `encoding/xml.Decoder` token-by-token, calling
+`DecodeElement` only once it sees a `<vul>` start element, discarding
+everything else immediately. Necessary at this file's real size — a
+full in-memory parse of 615MB of XML would multiply badly through Go's
+DOM-shaped unmarshal. Confirmed live: the real export parses in ~19s
+with ~83MB peak RSS (`/usr/bin/time -v`). Only entries naming a product
+`internal/cve.productSoftNames` maps get kept (confirmed live: the full
+export tracks 90,000+ entries across every vendor FSTEC watches, the
+overwhelming majority irrelevant to any probe this project has).
+
+**Product mapping starts small and deliberately incomplete.**
+`productSoftNames` currently maps `confluence`, `jira`, `keycloak`,
+`postgresql` to their real BDU `<soft><name>` strings — a handful of
+names verified against the live export, not an attempt at exhaustive
+coverage in one pass. Real BDU data has a dozen-plus more Jira name
+variants alone ("Jira Software Data Center and Server", "Jira Service
+Management", ...); expanding this table incrementally as more products
+get verified is the intended shape, the same way `probe/registry.go`
+grows one probe at a time rather than all at once.
+
+**Version-range parsing rules, pinned against two real, independently
+documented CVEs rather than guessed:**
+
+- Bare `"до X"` (no suffix): X is the first **safe** (fixed) version —
+  excluded from the vulnerable range. Confirmed: Confluence's own real
+  fix version `8.3.3` must not match `от 8.0.0 до 8.3.3`.
+- `"до X включительно"`: X is the last **vulnerable** build — included
+  in the range. Confirmed against a kernel-style real entry (`от 4.5 до
+  4.9.192 включительно`), and cross-checked against Log4Shell
+  (CVE-2021-44228): the real first-safe release `2.17.0` must not match
+  a bare `до 2.17.0` entry.
+- `"от"` is optional on a bounded range (`"X до Y"` with the leading
+  word dropped) — found live in 53 of the export's 70,878 distinct
+  `<version>` strings, initially mis-rejected until
+  `bduBoundedRangePattern` stopped requiring it.
+- A bound must be pure digits-and-dots (`cleanVersionParts`, backed by
+  `^\d+(?:\.\d+)*$` against the *entire* trimmed string) — not
+  `version.Parts`/`version.Core` directly, which extract a numeric
+  prefix too permissively and would silently accept garbage bounds as
+  real ones (`"24.2R2-EVO"` → `24.2`; a literal date used as a bound,
+  `"2015-04-01"` → `2015`). Caught by running the parser against the
+  full real 70,878-string corpus before trusting it, not by inspection.
+  Final acceptance: 66.4% parse cleanly; the rest is genuinely
+  non-version vendor firmware text, not a parser bug.
+- A bare single version with no range syntax at all is treated as an
+  exact-point range (`[X, X]`, inclusive both ends).
+
+**Known limitation, accepted rather than fixed:** a single BDU `<vul>`
+can list several `<soft>` ranges for the *same* product name, one per
+maintenance branch. `Index.Lookup`/`Finding.Matches` has no way to tell
+which branch a range belongs to beyond its numbers, so an exact
+branch-fix version can still match a numerically wider *sibling*
+branch's range (confirmed against the real Confluence entry above:
+`8.3.3`, safe on its own branch, still matches the `до 8.5.2` sibling
+range; `8.5.2` itself matches none, correctly). Between silently
+missing a real vulnerability and occasionally asking an operator to
+double-check a version that's actually already safe, this project
+takes the side that doesn't risk the miss.
+
+**Cache mirrors `resolver.Cache`'s convention but not its TTL.**
+`cve.DefaultCacheDir()` uses `os.UserCacheDir()/enodia/cve`, the same
+as `resolver.Cache` — never `/tmp`, an explicit requirement, not the
+obvious default. Unlike `resolver.Cache` (which fronts a live HTTP
+source needing periodic refresh), there's no TTL: the cache key is the
+source file's own `mtime` + size, since the operator alone controls
+when the file changes at all. A stale or corrupt cache falls back to a
+full re-parse; a failed cache *write* only warns, never fails the run.
+
+**CVE severity is not yet wired into `OverallSeverity` or exit codes.**
+`Assessment.CVEs []cve.Finding` (D7: BDU's own free-text `Severity`
+field is carried through as-is, a fact, not a verdict this project
+computed) and `check`'s compact view's new CVES column are both
+count/presence only — whether a CVE match should escalate severity,
+and how, is an open policy question left for a future decision, not
+decided by omission here.
+
+Not addressed by this decision: whether this warrants a MAJOR version
+bump. By this project's own semver convention (PATCH = fixes, MINOR =
+new backward-compatible functionality), this doesn't need one — an
+additive, opt-in config block and additive struct fields — but calling
+it a 2.0 milestone is a legitimate marketing choice to make at release
+time, not a technical requirement decided here.

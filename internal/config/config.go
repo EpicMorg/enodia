@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -31,11 +32,44 @@ type Config struct {
 	Defaults        Defaults                  `yaml:"defaults,omitempty"`
 	Credentials     map[string]CredentialSpec `yaml:"credentials,omitempty"`
 	Targets         []TargetSpec              `yaml:"targets,omitempty"`
+	CVE             CVESpec                   `yaml:"cve,omitempty"`
 
 	// path is where this config was loaded from. Kept so error messages can
-	// name the file and so credentials_file resolves relative to it rather
-	// than to the process's working directory.
+	// name the file and so credentials_file/cve.bdu.path resolve relative to
+	// it rather than to the process's working directory.
 	path string
+}
+
+// CVESpec configures vulnerability correlation. See docs/DECISIONS.md D30
+// for why this lives in enodia.yaml (data that affects evaluation, per D19)
+// rather than settings.yaml (display preferences), and why enodia never
+// fetches the underlying data itself.
+type CVESpec struct {
+	BDU BDUSpec `yaml:"bdu,omitempty"`
+}
+
+// BDUSpec points at a local copy of FSTEC's БДУ export the operator
+// downloaded themselves — enodia has no code path that reaches
+// bdu.fstec.ru on its own. Path may be a raw .xml file, a .zip (BDU's own
+// publication format), or a .tar.gz, and may be relative to the config
+// file, the same convention CredentialsFile already uses.
+type BDUSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
+// BDUPath returns the configured BDU export path, resolved relative to
+// the config file's own directory if it isn't already absolute — the same
+// rule resolveCredentialsFile applies to CredentialsFile. ok is false when
+// cve.bdu.path was never set, which is the normal case for most installs.
+func (c *Config) BDUPath() (path string, ok bool) {
+	if c.CVE.BDU.Path == "" {
+		return "", false
+	}
+	p := c.CVE.BDU.Path
+	if !filepath.IsAbs(p) && c.path != "" {
+		p = filepath.Join(filepath.Dir(c.path), p)
+	}
+	return p, true
 }
 
 // Defaults apply to every target that does not override them.
