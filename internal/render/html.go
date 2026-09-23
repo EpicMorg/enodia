@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"net/url"
 	"strings"
 	"time"
 
@@ -603,8 +604,9 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 		fmt.Fprintf(b, `<li class="mb-2"><div>`)
 		if len(f.CVEIDs) > 0 {
 			label := strings.Join(f.CVEIDs, ", ")
-			url := "https://nvd.nist.gov/vuln/detail/" + f.CVEIDs[0]
-			fmt.Fprintf(b, `<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(url), html.EscapeString(label))
+			nvdURL := "https://nvd.nist.gov/vuln/detail/" + f.CVEIDs[0]
+			fmt.Fprintf(b, `<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(nvdURL), html.EscapeString(label))
+			fmt.Fprintf(b, ` &middot; <a href="%s" target="_blank" rel="noopener noreferrer">CVE.org</a>`, html.EscapeString(cveOrgURL(f.CVEIDs[0])))
 			if bduURL := bduAdvisoryURL(f); bduURL != "" {
 				fmt.Fprintf(b, ` &middot; <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>`, html.EscapeString(bduURL), html.EscapeString(f.AdvisoryID))
 			}
@@ -616,8 +618,8 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 		if f.Severity != "" {
 			fmt.Fprintf(b, " &mdash; %s", html.EscapeString(f.Severity))
 		}
-		if f.Source != "" {
-			fmt.Fprintf(b, ` <span class="text-body-secondary">(%s)</span>`, html.EscapeString(f.Source))
+		if tag := strings.Join(nonEmpty(f.Source, f.Edition), " &middot; "); tag != "" {
+			fmt.Fprintf(b, ` <span class="text-body-secondary">(%s)</span>`, tag)
 		}
 		b.WriteString("</div>")
 		if f.Title != "" {
@@ -626,6 +628,25 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 		b.WriteString("</li>")
 	}
 	b.WriteString(`</ul></div></div></div></div>` + "\n")
+}
+
+// cveOrgURL is a CVE ID's record page on cve.org — the CNA-published
+// record itself, which NVD's own page enriches (CPE ranges, CVSS) but can
+// lag behind or disagree with. Confirmed live against CVE-2026-85706,
+// whose cve.org record is published by GitLab as its own CNA.
+func cveOrgURL(cveID string) string {
+	return "https://www.cve.org/CVERecord?id=" + url.QueryEscape(cveID)
+}
+
+// nonEmpty returns its arguments, HTML-escaped, minus the empty ones.
+func nonEmpty(parts ...string) []string {
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p != "" {
+			out = append(out, html.EscapeString(p))
+		}
+	}
+	return out
 }
 
 // bduAdvisoryURL returns f's real bdu.fstec.ru detail page, or "" when f

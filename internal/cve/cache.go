@@ -6,8 +6,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"time"
 )
@@ -39,6 +41,7 @@ type cachedFinding struct {
 	MatchedName string
 	RangeText   string
 	FixStatus   string
+	Edition     string
 	Rng         versionRange
 }
 
@@ -55,8 +58,34 @@ type fileSignature struct {
 }
 
 type cacheFile struct {
-	Sources   []fileSignature
-	ByProduct map[string][]cachedFinding
+	Sources     []fileSignature
+	Fingerprint string
+	ByProduct   map[string][]cachedFinding
+}
+
+// cacheFormat is bumped whenever what a Finding carries, or how a source
+// is parsed into one, changes in a way an old cache entry can't express.
+const cacheFormat = 2
+
+// indexFingerprint identifies the parser and product tables a cache entry
+// was built with. Without it the cache's own freshness check (source-file
+// mtime+size) says nothing about enodia itself: an upgrade that maps a
+// new product would keep serving the old index, missing that product
+// entirely, for as long as the operator's export files stay untouched.
+func indexFingerprint() string {
+	h := sha256.New()
+	fmt.Fprintf(h, "format=%d\n", cacheFormat)
+	for _, product := range slices.Sorted(maps.Keys(productSoftNames)) {
+		for _, n := range productSoftNames[product] {
+			fmt.Fprintf(h, "bdu\x00%s\x00%s\x00%s\n", product, n.vendor, n.name)
+		}
+	}
+	for _, product := range slices.Sorted(maps.Keys(productCPENames)) {
+		for _, n := range productCPENames[product] {
+			fmt.Fprintf(h, "nvd\x00%s\x00%s\x00%s\n", product, n.vendor, n.product)
+		}
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 // cachePathFor derives a stable, collision-resistant cache filename from
@@ -189,6 +218,9 @@ func tryLoadCache(cachePath string, sigs []fileSignature, warn func(string)) *In
 	if !sameSignatures(cf.Sources, sigs) {
 		return nil // a source file changed, was added, or was removed since this cache was built
 	}
+	if cf.Fingerprint != indexFingerprint() {
+		return nil // built by a different enodia (parser or product tables changed)
+	}
 
 	idx := &Index{byProduct: make(map[string][]Finding, len(cf.ByProduct))}
 	for product, findings := range cf.ByProduct {
@@ -197,7 +229,7 @@ func tryLoadCache(cachePath string, sigs []fileSignature, warn func(string)) *In
 			out = append(out, Finding{
 				Source: cfF.Source, AdvisoryID: cfF.AdvisoryID, CVEIDs: cfF.CVEIDs,
 				Title: cfF.Title, Severity: cfF.Severity, MatchedName: cfF.MatchedName,
-				RangeText: cfF.RangeText, FixStatus: cfF.FixStatus, rng: cfF.Rng,
+				RangeText: cfF.RangeText, FixStatus: cfF.FixStatus, Edition: cfF.Edition, rng: cfF.Rng,
 			})
 		}
 		idx.byProduct[product] = out
@@ -211,8 +243,9 @@ func writeCache(cachePath string, sigs []fileSignature, idx *Index) error {
 	}
 
 	cf := cacheFile{
-		Sources:   sigs,
-		ByProduct: make(map[string][]cachedFinding, len(idx.byProduct)),
+		Sources:     sigs,
+		Fingerprint: indexFingerprint(),
+		ByProduct:   make(map[string][]cachedFinding, len(idx.byProduct)),
 	}
 	for product, findings := range idx.byProduct {
 		out := make([]cachedFinding, len(findings))
@@ -220,7 +253,7 @@ func writeCache(cachePath string, sigs []fileSignature, idx *Index) error {
 			out[i] = cachedFinding{
 				Source: f.Source, AdvisoryID: f.AdvisoryID, CVEIDs: f.CVEIDs,
 				Title: f.Title, Severity: f.Severity, MatchedName: f.MatchedName,
-				RangeText: f.RangeText, FixStatus: f.FixStatus, Rng: f.rng,
+				RangeText: f.RangeText, FixStatus: f.FixStatus, Edition: f.Edition, Rng: f.rng,
 			}
 		}
 		cf.ByProduct[product] = out

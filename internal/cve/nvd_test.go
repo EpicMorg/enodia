@@ -27,10 +27,10 @@ func TestLoadNVDFromRawJSON(t *testing.T) {
 	// Unlike BDU's overlapping-branch ranges, NVD gives each branch its own
 	// lower bound too — 8.3.3 (Atlassian's real fix version) must match
 	// none of the three ranges, not two.
-	if got := idx.Lookup("confluence", "8.3.3"); len(got) != 0 {
+	if got := idx.Lookup("confluence", "8.3.3", ""); len(got) != 0 {
 		t.Fatalf("got %d findings for 8.3.3, want 0 (NVD's ranges don't overlap across branches)", len(got))
 	}
-	got := idx.Lookup("confluence", "8.3.0")
+	got := idx.Lookup("confluence", "8.3.0", "")
 	if len(got) != 2 { // confluence_data_center and confluence_server, same range
 		t.Fatalf("got %d confluence findings for 8.3.0, want 2", len(got))
 	}
@@ -46,7 +46,7 @@ func TestLoadNVDFromRawJSON(t *testing.T) {
 		}
 	}
 
-	if got := idx.Lookup("confluence", "8.5.2"); len(got) != 0 {
+	if got := idx.Lookup("confluence", "8.5.2", ""); len(got) != 0 {
 		t.Fatalf("got %d findings for 8.5.2 (the real fix version), want 0", len(got))
 	}
 }
@@ -56,7 +56,7 @@ func TestLoadNVDFiltersUnmappedProduct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadNVD: %v", err)
 	}
-	if got := idx.Lookup("widget", "1.0.0"); len(got) != 0 {
+	if got := idx.Lookup("widget", "1.0.0", ""); len(got) != 0 {
 		t.Fatalf("got %d findings for an unmapped product, want 0", len(got))
 	}
 }
@@ -66,13 +66,13 @@ func TestLoadNVDOpenEndedRangeHasNoUpperBound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadNVD: %v", err)
 	}
-	if got := idx.Lookup("postgresql", "16.0"); len(got) != 1 {
+	if got := idx.Lookup("postgresql", "16.0", ""); len(got) != 1 {
 		t.Fatalf("got %d findings for postgresql 16.0, want 1 (CVE-2099-00002's lower bound)", len(got))
 	}
-	if got := idx.Lookup("postgresql", "99.0.0"); len(got) != 1 {
+	if got := idx.Lookup("postgresql", "99.0.0", ""); len(got) != 1 {
 		t.Fatalf("got %d findings for postgresql 99.0.0, want 1 (still no known fix)", len(got))
 	}
-	if got := idx.Lookup("postgresql", "15.9"); len(got) != 0 {
+	if got := idx.Lookup("postgresql", "15.9", ""); len(got) != 0 {
 		t.Fatalf("got %d findings for postgresql 15.9 (below the stated lower bound), want 0", len(got))
 	}
 }
@@ -82,12 +82,12 @@ func TestLoadNVDLiteralVersionInCriteriaIsExactPoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadNVD: %v", err)
 	}
-	if got := idx.Lookup("postgresql", "9.6.24"); len(got) != 1 {
+	if got := idx.Lookup("postgresql", "9.6.24", ""); len(got) != 1 {
 		t.Fatalf("got %d findings for postgresql 9.6.24, want 1 (CVE-2099-00003's exact-point match)", len(got))
 	}
 	// 9.6.25 is below CVE-2099-00002's 16.0 lower bound and isn't
 	// CVE-2099-00003's exact 9.6.24 point either.
-	if got := idx.Lookup("postgresql", "9.6.25"); len(got) != 0 {
+	if got := idx.Lookup("postgresql", "9.6.25", ""); len(got) != 0 {
 		t.Fatalf("got %d findings for postgresql 9.6.25, want 0", len(got))
 	}
 }
@@ -99,17 +99,11 @@ func TestLoadNVDGarbageVersionBoundIsDropped(t *testing.T) {
 	}
 	// CVE-2099-00004's only cpeMatch has an unparseable versionEndExcluding
 	// ("1.2.3-beta") — the whole entry must be discarded, not partially
-	// applied with a zero-value bound. keycloak also has CVE-2099-00006
-	// (matches everything), so a lookup here isn't expected to be empty —
-	// only CVE-2099-00004 itself must never appear in it.
-	got := idx.Lookup("keycloak", "0.0.1")
-	if len(got) != 1 {
-		t.Fatalf("got %d findings for keycloak 0.0.1, want 1 (only CVE-2099-00006, the match-everything one)", len(got))
-	}
-	for _, f := range got {
-		if f.AdvisoryID == "CVE-2099-00004" {
-			t.Fatalf("CVE-2099-00004's garbage version bound should have been dropped, not indexed")
-		}
+	// applied with a zero-value bound. (keycloak's other synthetic entry,
+	// CVE-2099-00006, carries no version constraint at all and is dropped
+	// too — see TestLoadNVDNoConstraintIsDropped.)
+	if got := idx.Lookup("keycloak", "0.0.1", ""); len(got) != 0 {
+		t.Fatalf("got %+v, want no keycloak findings at all", got)
 	}
 }
 
@@ -118,27 +112,27 @@ func TestLoadNVDRejectedCVEIsSkipped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadNVD: %v", err)
 	}
-	for _, f := range idx.Lookup("postgresql", "1.0.0") {
+	for _, f := range idx.Lookup("postgresql", "1.0.0", "") {
 		if f.AdvisoryID == "CVE-2099-00005" {
 			t.Fatalf("a Rejected CVE must never be indexed, even with a well-formed configuration")
 		}
 	}
 }
 
-func TestLoadNVDNoConstraintMatchesEveryVersion(t *testing.T) {
+// A cpeMatch with neither bounds nor a version in its CPE string carries
+// no version information at all. Read as "every version", it turned out
+// against the real exports to mostly attach 1999-2016 CVEs to current
+// releases (docs/DECISIONS.md D33), so it is dropped instead.
+func TestLoadNVDNoConstraintIsDropped(t *testing.T) {
 	idx, err := LoadNVD(filepath.Join("testdata", "sample_nvd.json"))
 	if err != nil {
 		t.Fatalf("LoadNVD: %v", err)
 	}
 	for _, probed := range []string{"0.0.1", "999.999.999"} {
-		found := false
-		for _, f := range idx.Lookup("keycloak", probed) {
+		for _, f := range idx.Lookup("keycloak", probed, "") {
 			if f.AdvisoryID == "CVE-2099-00006" {
-				found = true
+				t.Fatalf("CVE-2099-00006 (no version constraint at all) must not match %q", probed)
 			}
-		}
-		if !found {
-			t.Fatalf("CVE-2099-00006 (no version constraint at all) should match probed version %q", probed)
 		}
 	}
 }
@@ -151,7 +145,7 @@ func TestLoadNVDFromDirectoryMergesEveryFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadNVD: %v", err)
 	}
-	if got := idx.Lookup("confluence", "8.3.0"); len(got) != 2 {
+	if got := idx.Lookup("confluence", "8.3.0", ""); len(got) != 2 {
 		t.Fatalf("got %d findings, want the same result as loading the file directly", len(got))
 	}
 }
@@ -182,7 +176,7 @@ func TestLoadNVDFromGzip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadNVD: %v", err)
 	}
-	if got := idx.Lookup("confluence", "8.3.0"); len(got) != 2 {
+	if got := idx.Lookup("confluence", "8.3.0", ""); len(got) != 2 {
 		t.Fatalf("got %d findings, want 2", len(got))
 	}
 }
@@ -217,7 +211,7 @@ func TestLoadNVDFromZip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadNVD: %v", err)
 	}
-	if got := idx.Lookup("confluence", "8.3.0"); len(got) != 2 {
+	if got := idx.Lookup("confluence", "8.3.0", ""); len(got) != 2 {
 		t.Fatalf("got %d findings, want 2", len(got))
 	}
 }

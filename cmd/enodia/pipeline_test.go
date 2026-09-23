@@ -291,7 +291,7 @@ cve:
 	if err != nil {
 		t.Fatalf("loadCVEIndex: %v", err)
 	}
-	got := idx.Lookup("confluence", "8.3.0")
+	got := idx.Lookup("confluence", "8.3.0", "")
 	sources := map[string]int{}
 	for _, f := range got {
 		sources[f.Source]++
@@ -357,5 +357,36 @@ func TestNewLiveResolverWarnsWhenCacheDirUnavailable(t *testing.T) {
 	res := newLiveResolver(cmd)
 	if res == nil || res.Sources["endoflife"] == nil || res.Sources["github"] == nil {
 		t.Fatalf("got %+v, want both sources wired", res)
+	}
+}
+
+// assess must route an observation through cve.Subject: a GitLab CE
+// instance (the probe's own Extra["enterprise"] = "false") sees only the
+// findings that apply to CE, not the EE-only ones in the same real data.
+func TestAssessGitLabEditionFiltersCVEs(t *testing.T) {
+	idx, err := cve.LoadNVD(filepath.Join("..", "..", "internal", "cve", "testdata", "nvd_gitlab.json"))
+	if err != nil {
+		t.Fatalf("LoadNVD: %v", err)
+	}
+	obs := func(id, enterprise string) probe.Observation {
+		return probe.Observation{ID: id, Product: "gitlab", Version: "19.2.2", Normalized: "19.2.2",
+			Extra: map[string]string{"enterprise": enterprise}}
+	}
+	inv := &inventory.File{
+		Header:       inventory.Header{CollectedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		Observations: []probe.Observation{obs("ce", "false"), obs("ee", "true")},
+	}
+	cmd, _, _ := testCmd(t)
+	got := assess(cmd.Context(), inv, evaluate.Policy{}, &resolver.Resolver{}, idx)
+	if len(got) != 2 {
+		t.Fatalf("got %d assessments, want 2", len(got))
+	}
+	for _, f := range got[0].CVEs {
+		if f.Edition == "enterprise" {
+			t.Fatalf("CE instance got an enterprise-only finding: %s", f.AdvisoryID)
+		}
+	}
+	if len(got[0].CVEs) >= len(got[1].CVEs) {
+		t.Fatalf("CE got %d findings, EE got %d — EE should see strictly more", len(got[0].CVEs), len(got[1].CVEs))
 	}
 }

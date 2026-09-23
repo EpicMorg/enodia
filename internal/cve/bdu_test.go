@@ -23,7 +23,7 @@ func TestLoadBDUFromRawXML(t *testing.T) {
 		t.Fatalf("LoadBDU: %v", err)
 	}
 
-	confluence := idx.Lookup("confluence", "8.3.0")
+	confluence := idx.Lookup("confluence", "8.3.0", "")
 	if len(confluence) != 3 {
 		t.Fatalf("got %d confluence findings for 8.3.0, want 3 (three overlapping ranges share this version)", len(confluence))
 	}
@@ -41,17 +41,17 @@ func TestLoadBDUFromRawXML(t *testing.T) {
 	// sibling-branch ranges, so it matches those two. This is the
 	// documented widest-range limitation (see Index's doc comment), not a
 	// bug: erring toward "double-check this" rather than a silent miss.
-	if got := idx.Lookup("confluence", "8.3.3"); len(got) != 2 {
+	if got := idx.Lookup("confluence", "8.3.3", ""); len(got) != 2 {
 		t.Fatalf("got %d findings for 8.3.3, want 2 (matches the two wider sibling-branch ranges)", len(got))
 	}
 	// 8.5.2 is excluded by its own branch's range (exclusive upper bound)
 	// and is not less than the other two branches' own (smaller) bounds,
 	// so it matches none of the three.
-	if got := idx.Lookup("confluence", "8.5.2"); len(got) != 0 {
+	if got := idx.Lookup("confluence", "8.5.2", ""); len(got) != 0 {
 		t.Fatalf("got %d findings for 8.5.2, want 0", len(got))
 	}
 
-	jira := idx.Lookup("jira", "8.1.0")
+	jira := idx.Lookup("jira", "8.1.0", "")
 	if len(jira) != 1 {
 		t.Fatalf("got %d jira findings for 8.1.0, want 1 (Jira Data Center's own range)", len(jira))
 	}
@@ -60,7 +60,7 @@ func TestLoadBDUFromRawXML(t *testing.T) {
 	// entry has an unparseable version ("9.3(7)") — both must be silently
 	// absent, not present with a wrong/empty range, and must not have
 	// broken parsing the rest of the file.
-	if got := idx.Lookup("postgresql", "9.3.7"); len(got) != 0 {
+	if got := idx.Lookup("postgresql", "9.3.7", ""); len(got) != 0 {
 		t.Errorf("got %d postgresql findings, want 0 (the only entry has an unparseable version)", len(got))
 	}
 }
@@ -94,7 +94,7 @@ func TestLoadBDUFromZip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadBDU: %v", err)
 	}
-	if got := idx.Lookup("confluence", "8.3.0"); len(got) != 3 {
+	if got := idx.Lookup("confluence", "8.3.0", ""); len(got) != 3 {
 		t.Fatalf("got %d confluence findings via zip, want 3", len(got))
 	}
 }
@@ -131,7 +131,7 @@ func TestLoadBDUFromTarGz(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadBDU: %v", err)
 	}
-	if got := idx.Lookup("confluence", "8.3.0"); len(got) != 3 {
+	if got := idx.Lookup("confluence", "8.3.0", ""); len(got) != 3 {
 		t.Fatalf("got %d confluence findings via tar.gz, want 3", len(got))
 	}
 }
@@ -173,7 +173,23 @@ func TestLoadBDUZipWithNoXMLMember(t *testing.T) {
 // this at all.
 func TestNilIndexLookupIsSafe(t *testing.T) {
 	var idx *Index
-	if got := idx.Lookup("confluence", "8.3.0"); got != nil {
+	if got := idx.Lookup("confluence", "8.3.0", ""); got != nil {
 		t.Fatalf("got %+v, want nil", got)
+	}
+}
+
+// testdata/bdu_vendor.xml is synthetic, modeled on a real collision in
+// the full export: "HTTP Server" appears under both Apache Software
+// Foundation and Oracle Corp. (Oracle HTTP Server, its own 12.2.1.x
+// numbering). Matching on name alone would hand Oracle's findings to
+// every Apache httpd target whose version happens to fall in range.
+func TestLoadBDUMatchesVendorNotJustName(t *testing.T) {
+	idx, err := LoadBDU(filepath.Join("testdata", "bdu_vendor.xml"))
+	if err != nil {
+		t.Fatalf("LoadBDU: %v", err)
+	}
+	got := idx.Lookup("apache", "2.4.10", "")
+	if len(got) != 1 || got[0].AdvisoryID != "BDU:2099-00010" {
+		t.Fatalf("got %+v, want only the Apache Software Foundation entry", got)
 	}
 }

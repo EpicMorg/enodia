@@ -18,7 +18,6 @@ import (
 	"github.com/EpicMorg/enodia/internal/probe"
 	"github.com/EpicMorg/enodia/internal/render"
 	"github.com/EpicMorg/enodia/internal/resolver"
-	"github.com/EpicMorg/enodia/internal/version"
 )
 
 // warnPrinter adapts the Warn(string) callback shape used across
@@ -143,9 +142,9 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 			}
 		}
 
-		normalized := o.Normalized
-		if normalized == "" {
-			normalized = version.Clean(o.Version)
+		var findings []cve.Finding
+		if cveProduct, cveVersion, edition, ok := cve.Subject(o.Product, o.Version, o.Extra); ok {
+			findings = cveIndex.Lookup(cveProduct, cveVersion, edition)
 		}
 
 		out = append(out, evaluate.Evaluate(evaluate.Input{
@@ -153,7 +152,7 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 			Resolver:    ref,
 			Cycles:      cycles,
 			ResolveErr:  resolveErr,
-			CVEFindings: cveIndex.Lookup(o.Product, normalized),
+			CVEFindings: findings,
 		}, asOf, policy))
 	}
 	return out

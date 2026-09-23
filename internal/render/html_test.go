@@ -567,3 +567,31 @@ func TestHTMLCVEModalAnchorsAreUniqueAcrossViews(t *testing.T) {
 		}
 	}
 }
+
+// Every CVE ID also links to its CNA-published record on cve.org, next
+// to NVD's enriched page.
+func TestHTMLCVEModalLinksToCVEOrg(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if !strings.Contains(buf.String(), `href="https://www.cve.org/CVERecord?id=CVE-2023-22515"`) {
+		t.Fatalf("expected a cve.org link, got:\n%s", buf.String())
+	}
+}
+
+// An edition-restricted finding says so, next to its source.
+func TestHTMLCVEModalShowsEdition(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "confluence-a")
+	r.Assessments[i].CVEs = []cve.Finding{
+		{Source: "nvd", AdvisoryID: "CVE-2026-18252", CVEIDs: []string{"CVE-2026-18252"}, Edition: "enterprise"},
+	}
+	var buf bytes.Buffer
+	if err := HTML(&buf, r, HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if !strings.Contains(buf.String(), "(nvd &middot; enterprise)") {
+		t.Fatalf("expected the edition next to the source, got:\n%s", buf.String())
+	}
+}

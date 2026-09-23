@@ -251,6 +251,7 @@ func indexNVDVuln(idx *Index, v nvdCVE, cpeToProduct map[cpeName]string) {
 					Severity:    severity,
 					MatchedName: m.Criteria,
 					RangeText:   rng.String(),
+					Edition:     cpeSWEdition(m.Criteria),
 					rng:         rng,
 				})
 			}
@@ -281,7 +282,8 @@ func nvdSeverity(m nvdMetrics) string {
 // but other real CVEs carry only a start (still vulnerable in every later
 // release, no fix published yet) or embed an exact version directly in
 // the CPE string's own version field with no bound fields at all (e.g.
-// CVE-2019-14994's "jira_service_desk:4.4.0" entries).
+// CVE-2019-14994's "jira_service_desk:4.4.0" entries). An entry with
+// neither bounds nor a version is rejected — see the comment below.
 func parseNVDRange(m nvdCPEMatch) (versionRange, bool) {
 	var r versionRange
 	switch {
@@ -314,20 +316,26 @@ func parseNVDRange(m nvdCPEMatch) (versionRange, bool) {
 	}
 
 	if r.Lo == nil && r.Hi == nil {
-		if v := cpeVersionField(m.Criteria); v != "" {
-			p, ok := cleanVersionParts(v)
-			if !ok {
-				return versionRange{}, false
-			}
-			r.Lo, r.LoInclusive = p, true
-			r.Hi, r.HiInclusive = p, true
+		// No bound fields and no specific version in the CPE string either
+		// ("*"): dropped, not read as "every version, forever". D31 first
+		// shipped the opposite, as a false-positive-over-a-silent-miss
+		// call; against the real exports it turned out to be almost all
+		// noise — of Apache httpd 2.4.58's eleven such matches, ten were
+		// CVEs from 1999-2008, and 64 of macOS 14.4's 67 were from
+		// 1999-2016. NVD's "*" there meant every version that existed when
+		// the CVE was analyzed, not every version ever released after it.
+		// The cost, accepted: the rare genuinely unfixed-yet CVE recorded
+		// this way isn't reported (see docs/DECISIONS.md D33).
+		v := cpeVersionField(m.Criteria)
+		if v == "" {
+			return versionRange{}, false
 		}
-		// Else: no bound fields and no specific version in the CPE string
-		// either — every version of this product is named vulnerable (most
-		// often because no fixed version has been published yet). Left as
-		// the zero-bound versionRange, which matches everything — see
-		// Index's own doc comment on this project's bias toward a false
-		// positive over a silent miss.
+		p, ok := cleanVersionParts(v)
+		if !ok {
+			return versionRange{}, false
+		}
+		r.Lo, r.LoInclusive = p, true
+		r.Hi, r.HiInclusive = p, true
 	}
 	return r, true
 }
@@ -358,6 +366,25 @@ func cpeVersionField(criteria string) string {
 		return ""
 	}
 	return v
+}
+
+// cpeSWEdition extracts the sw_edition field (the 10th colon-separated
+// component) of a CPE 2.3 formatted string, or "" when it's the
+// wildcard/not-applicable placeholder. GitLab's CVE configurations are
+// where this was confirmed to carry a real restriction ("community" vs
+// "enterprise"); other products use it for release channels ("lts"),
+// which Lookup only ever compares against an edition a probe actually
+// reported, so it never filters them.
+func cpeSWEdition(criteria string) string {
+	fields := splitCPE(criteria)
+	if len(fields) < 10 {
+		return ""
+	}
+	e := fields[9]
+	if e == "*" || e == "-" {
+		return ""
+	}
+	return e
 }
 
 // splitCPE splits a CPE 2.3 formatted string on ':', honoring '\'-escaped
