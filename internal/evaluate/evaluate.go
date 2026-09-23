@@ -14,6 +14,7 @@ package evaluate
 import (
 	"time"
 
+	"github.com/EpicMorg/enodia/internal/cve"
 	"github.com/EpicMorg/enodia/internal/probe"
 	"github.com/EpicMorg/enodia/internal/resolver"
 	"github.com/EpicMorg/enodia/internal/version"
@@ -125,6 +126,14 @@ type Input struct {
 	// presence (as opposed to Resolver.Type == "") is what distinguishes
 	// "no calendar exists" from "fetching the calendar failed".
 	ResolveErr error
+
+	// CVEFindings is what cve.Index.Lookup(product, version) already
+	// returned for this observation — nil when no cve.bdu.path is
+	// configured, or when the product isn't in cve's own name mapping yet.
+	// Computed entirely outside this package (matching how Cycles arrives
+	// already resolved): D30 keeps the actual version-range matching in
+	// package cve, not duplicated here.
+	CVEFindings []cve.Finding
 }
 
 // Assessment is the verdict for one target as of one point in time.
@@ -142,6 +151,13 @@ type Assessment struct {
 	LatestInCycle string     `json:"latestInCycle,omitempty"` // the latest release published in MatchedCycle
 	EOLDate       *time.Time `json:"eolDate,omitempty"`
 	SupportEnds   *time.Time `json:"supportEnds,omitempty"` // when active support ends (security-only begins)
+
+	// CVEs is a fourth, independent axis from patch/lifecycle/branch — a
+	// separate concern (D6), not folded into any of the three. Deliberately
+	// carries no severity of its own yet: a BDU rating turning into
+	// OverallSeverity/the CLI's exit code is a policy question (D30 leaves
+	// it open, not decided by omission).
+	CVEs []cve.Finding `json:"cves,omitempty"`
 
 	PatchSeverity     Severity `json:"patchSeverity"`
 	LifecycleSeverity Severity `json:"lifecycleSeverity"`
@@ -167,6 +183,7 @@ func Evaluate(in Input, asOf time.Time, policy Policy) Assessment {
 		ID:      in.Observation.ID,
 		Name:    in.Observation.Name,
 		Product: in.Observation.Product,
+		CVEs:    in.CVEFindings,
 	}
 
 	switch {

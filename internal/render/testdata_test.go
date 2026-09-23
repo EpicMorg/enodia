@@ -5,6 +5,7 @@ package render
 import (
 	"time"
 
+	"github.com/EpicMorg/enodia/internal/cve"
 	"github.com/EpicMorg/enodia/internal/evaluate"
 	"github.com/EpicMorg/enodia/internal/probe"
 )
@@ -45,6 +46,9 @@ func sampleReport() Report {
 				Patch: evaluate.PatchCurrent, Lifecycle: evaluate.LifecycleActive, Branch: evaluate.BranchNewerLTS,
 				MatchedCycle: "9.2", LatestInCycle: "9.2.1",
 				BranchSeverity: evaluate.SeverityWarn,
+				CVEs: []cve.Finding{
+					{BDUID: "BDU:2023-06364", CVEIDs: []string{"CVE-2023-22515"}, Title: "test finding"},
+				},
 			},
 			{
 				ID: "down", Product: "jira",

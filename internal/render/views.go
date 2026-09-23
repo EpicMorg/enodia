@@ -46,12 +46,21 @@ func severityTone(s evaluate.Severity) RowTone {
 	}
 }
 
+// compactRows' CVES column is a bare count of a.CVEs, "-" when empty
+// (nothing configured, or nothing matched) — it deliberately does not
+// factor into SEVERITY or tone yet: whether a CVE match should escalate
+// OverallSeverity is an open policy question (see docs/DECISIONS.md D30),
+// not decided by omission here.
 func compactRows(r Report) (headers []string, rows [][]string, tones []RowTone) {
-	headers = []string{"ID", "PRODUCT", "PATCH", "LIFECYCLE", "BRANCH", "SEVERITY", "REASON"}
+	headers = []string{"ID", "PRODUCT", "PATCH", "LIFECYCLE", "BRANCH", "SEVERITY", "REASON", "CVES"}
 	for _, a := range r.Assessments {
+		cves := "-"
+		if len(a.CVEs) > 0 {
+			cves = strconv.Itoa(len(a.CVEs))
+		}
 		rows = append(rows, []string{
 			a.ID, a.Product, string(a.Patch), string(a.Lifecycle), string(a.Branch),
-			string(a.OverallSeverity()), firstNonEmpty(string(a.Reason), "-"),
+			string(a.OverallSeverity()), firstNonEmpty(string(a.Reason), "-"), cves,
 		})
 		tone := severityTone(a.OverallSeverity())
 		if isUnreachableAnomaly(a) {

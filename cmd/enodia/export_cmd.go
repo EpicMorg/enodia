@@ -84,7 +84,11 @@ func runExportCmd(cmd *cobra.Command, _ []string) error {
 		return &ExitError{Code: 1, Err: err}
 	}
 	policy := evaluate.Policy{WarnDays: exportWarnDaysFlag, FailOn: exportFailOnFlag}
-	assessments := assess(cmd.Context(), inv, policy, buildResolver(cmd))
+	cveIndex, err := loadCVEIndex(cmd)
+	if err != nil {
+		return &ExitError{Code: 1, Err: err}
+	}
+	assessments := assess(cmd.Context(), inv, policy, buildResolver(cmd), cveIndex)
 	report := buildReport(inv, assessments)
 
 	out := cmd.OutOrStdout()

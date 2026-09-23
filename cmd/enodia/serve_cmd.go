@@ -49,12 +49,19 @@ func runServeCmd(cmd *cobra.Command, _ []string) error {
 
 	collector := func(ctx context.Context) (render.Report, error) {
 		// The config is reloaded fresh every cycle, so editing enodia.yaml
-		// takes effect without restarting the server.
+		// (including cve.bdu.path) takes effect without restarting the
+		// server. loadCVEIndex's own on-disk cache (see cve.LoadBDUCached)
+		// makes this cheap on every cycle but the first, or the first
+		// after the operator actually replaces the BDU export file.
 		inv, err := loadInventory(ctx, cmd, "")
 		if err != nil {
 			return render.Report{}, err
 		}
-		assessments := assess(ctx, inv, policy, res)
+		cveIndex, err := loadCVEIndex(cmd)
+		if err != nil {
+			return render.Report{}, err
+		}
+		assessments := assess(ctx, inv, policy, res, cveIndex)
 		return buildReport(inv, assessments), nil
 	}
 

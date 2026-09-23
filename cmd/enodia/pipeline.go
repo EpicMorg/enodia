@@ -12,11 +12,13 @@ import (
 
 	"github.com/EpicMorg/enodia/internal/collect"
 	"github.com/EpicMorg/enodia/internal/config"
+	"github.com/EpicMorg/enodia/internal/cve"
 	"github.com/EpicMorg/enodia/internal/evaluate"
 	"github.com/EpicMorg/enodia/internal/inventory"
 	"github.com/EpicMorg/enodia/internal/probe"
 	"github.com/EpicMorg/enodia/internal/render"
 	"github.com/EpicMorg/enodia/internal/resolver"
+	"github.com/EpicMorg/enodia/internal/version"
 )
 
 // warnPrinter adapts the Warn(string) callback shape used across
@@ -111,8 +113,12 @@ func newLiveResolver(cmd *cobra.Command) *resolver.Resolver {
 
 // assess evaluates every observation in inv against its product's lifecycle
 // calendar (via res), per policy, as of inv's own collection time — D8
-// forbids reaching for time.Now() here.
-func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, res *resolver.Resolver) []evaluate.Assessment {
+// forbids reaching for time.Now() here. cveIndex may be nil (no
+// cve.bdu.path configured, or --config wasn't passed at all — see
+// loadCVEIndex), in which case every Assessment's CVEs stays empty, the
+// same "fact simply not available" shape ReasonNoResolver already uses for
+// lifecycle data.
+func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, res *resolver.Resolver, cveIndex *cve.Index) []evaluate.Assessment {
 	asOf := inv.Header.CollectedAt
 	out := make([]evaluate.Assessment, 0, len(inv.Observations))
 	for _, o := range inv.Observations {
@@ -137,14 +143,57 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 			}
 		}
 
+		normalized := o.Normalized
+		if normalized == "" {
+			normalized = version.Clean(o.Version)
+		}
+
 		out = append(out, evaluate.Evaluate(evaluate.Input{
 			Observation: o,
 			Resolver:    ref,
 			Cycles:      cycles,
 			ResolveErr:  resolveErr,
+			CVEFindings: cveIndex.Lookup(o.Product, normalized),
 		}, asOf, policy))
 	}
 	return out
+}
+
+// loadCVEIndex returns the BDU vulnerability index cve.bdu.path in the
+// active config names, or nil if none is configured — the normal case for
+// most installs. Deliberately opt-in only when --config is explicitly
+// passed, even for `check --from` (which otherwise never touches a
+// config file at all, per D4): a config file happening to sit in the
+// current directory silently turning CVE correlation on would be exactly
+// the kind of surprise this project avoids elsewhere.
+func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
+	if configFlag == "" {
+		return nil, nil
+	}
+	path, err := config.Locate(configFlag)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		return nil, err
+	}
+	bduPath, ok := cfg.BDUPath()
+	if !ok {
+		return nil, nil
+	}
+
+	warn := warnPrinter(cmd)
+	cacheDir, err := cve.DefaultCacheDir()
+	if err != nil {
+		warn(fmt.Sprintf("cve cache disabled: %v", err))
+		idx, err := cve.LoadBDU(bduPath)
+		if err != nil {
+			return nil, err
+		}
+		return idx, nil
+	}
+	return cve.LoadBDUCached(bduPath, cacheDir, warn)
 }
 
 // worstSeverity is the max OverallSeverity across every assessment.

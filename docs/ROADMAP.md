@@ -1052,6 +1052,22 @@ Not dates. Order of work, and what each step unblocks.
   `latest` field on any cycle at all, so `check --view drift` correctly
   shows `LATEST: -`/`PATCH: unknown` rather than inventing a
   comparison. See `docs/DECISIONS.md` D29.
+- CVE correlation, via an operator-supplied БДУ ФСТЭК export — reopens
+  the "Later" bullet below, but through `bdu.fstec.ru`
+  (`vulxml.zip`, FSTEC's full export) rather than OSV.dev, which stays
+  rejected for the reasons D18 already gives. The operator places the
+  export file themselves and points `cve.bdu.path` at it in
+  `enodia.yaml`; enodia never polls FSTEC on its own. New
+  `internal/cve` package: a streaming XML parser (615MB real export,
+  ~19s/~83MB peak RSS), a version-range parser pinned against two real
+  CVEs (CVE-2023-22515, CVE-2021-44228) for BDU's "до X"/"до X
+  включительно" semantics, and a disk cache keyed by the source file's
+  own mtime+size (no TTL — the operator alone controls when it
+  changes). `check`'s compact view gained a CVES column (a bare count;
+  severity is not yet wired into `OverallSeverity`). Product mapping
+  starts small (confluence/jira/keycloak/postgresql) and grows
+  incrementally like `probe/registry.go` does. See `docs/DECISIONS.md`
+  D30 for the full design and its accepted limitations.
 
 ## Next
 
@@ -1061,9 +1077,11 @@ requested.
 
 ## Later
 
-- CVE correlation via OSV.dev — investigated twice, deferred both times;
-  revisit only if a workable data source appears — see DECISIONS.md D18
-  for exactly what was tried and why it's closed, not just deferred
+- CVE correlation via OSV.dev specifically — investigated twice,
+  deferred both times, and stays closed for the reasons in DECISIONS.md
+  D18 (proprietary-product coverage, distro-package epoch mismatches).
+  CVE correlation itself is no longer blocked: see Done above and
+  DECISIONS.md D30 for the БДУ ФСТЭК-based implementation
 - `kafka` probe — the wire protocol's entire anonymous surface
   (`ApiVersionsRequest`) is a list of per-API version-number ranges, no
   software version string anywhere — confirmed live against a real
@@ -1093,11 +1111,6 @@ requested.
   implemented — see Done above). Revisit if a real target becomes
   available, or if unattended-install support lands in this tree for its
   own reasons — see DECISIONS.md D23
-- `truenas` — no vmactions coverage, and no Docker image runs the actual
-  appliance (only unrelated helper tools turned up on Docker Hub under
-  that name); its own installer is ISO-only, the same shape of blocker
-  `openbsd`/`netbsd` had before vmactions covered them — see
-  DECISIONS.md D23
 - `cisco-ios-xe` — a documented HTTP API (RESTCONF/NETCONF) would fit
   this project's existing probe shape better than SSH CLI-scraping, but
   it's a licensed commercial appliance with no freely obtainable test
