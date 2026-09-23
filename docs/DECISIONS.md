@@ -1786,17 +1786,31 @@ fixtures and the 561-record full-scale one), so repeating a short
 block per row is simpler and more robust than trying to force the
 data through a single reused shell.
 
-**Every finding links to `nvd.nist.gov/vuln/detail/<CVE-ID>`, regardless
+**Every CVE ID links to `nvd.nist.gov/vuln/detail/<CVE-ID>`, regardless
 of source.** A CVE ID is the one identifier BDU and NVD findings both
 carry, so it's the one link guaranteed correct either way — verified
-live at `nvd.nist.gov` throughout D31's own work. `bdu.fstec.ru`'s own
-per-vulnerability URL was deliberately **not** guessed at: the site was
-unreachable from this environment when checked, and this project does
-not commit to a URL shape it hasn't confirmed live (see CLAUDE.md's
-working-style rule on vendor API shapes). A Finding with no CVE ID at
-all — `Finding.CVEIDs` can be empty, BDU's own doc comment already
-notes this — shows its `AdvisoryID` as plain, unlinked text instead of
-guessing.
+live at `nvd.nist.gov` throughout D31's own work.
+
+**Corrected after this decision first shipped:** `bdu.fstec.ru`'s own
+per-vulnerability page was initially left unlinked, believed
+unreachable when checked live from this environment. It wasn't
+actually unreachable — the site presents its own (Russian national/GOST)
+TLS certificate, which curl's default trust store rejects outright, the
+same way a browser without that CA installed would show a hard TLS
+warning rather than a slow timeout; `curl -k` (skip certificate
+verification, appropriate for a one-off manual check of a known public
+URL, not something this project's own code does) got past that and
+confirmed the real shape live: `https://bdu.fstec.ru/vul/<id>`, the
+`BDU:` prefix stripped from the identifier (`BDU:2023-06364` ->
+`/vul/2023-06364`) — confirmed against that exact real entry, whose page
+does carry `CVE-2023-22515`. A `bdu`-sourced Finding now links its
+`AdvisoryID` there via `bduAdvisoryURL`, in addition to its CVE ID's NVD
+link when it has one; a `bdu` Finding with no CVE ID at all (`Finding.
+CVEIDs` can be empty, BDU's own doc comment already notes this) now
+links via that BDU URL too, rather than the plain unlinked text this
+decision originally shipped with. An `nvd`-sourced Finding never gets a
+BDU link, regardless of what its `AdvisoryID` (the CVE ID again, for
+that source) happens to look like.
 
 Markup reuses Bootstrap's own class names (`modal-dialog`,
 `modal-dialog-centered`, `modal-dialog-scrollable`, `modal-content`,

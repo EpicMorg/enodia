@@ -467,9 +467,10 @@ func TestHTMLCVEModalLinksToNVDByCVEID(t *testing.T) {
 	}
 }
 
-// A Finding with no CVEIDs at all (BDU's own doc comment notes this can
-// happen) must show its AdvisoryID as plain text, not a guessed link.
-func TestHTMLCVEModalFindingWithoutCVEIDHasNoLink(t *testing.T) {
+// A BDU Finding with no CVEIDs at all (BDU's own doc comment notes this
+// can happen) links via its own real bdu.fstec.ru page instead — not
+// nvd.nist.gov, which has nothing to show without a CVE ID.
+func TestHTMLCVEModalBDUFindingWithoutCVEIDLinksToBDU(t *testing.T) {
 	r := sampleReport()
 	i := findAssessmentIndex(r.Assessments, "confluence-a")
 	r.Assessments[i].CVEs = []cve.Finding{
@@ -480,11 +481,44 @@ func TestHTMLCVEModalFindingWithoutCVEIDHasNoLink(t *testing.T) {
 		t.Fatalf("HTML: %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "BDU:2024-99999") {
-		t.Fatal("expected the AdvisoryID to appear as plain text")
+	if !strings.Contains(out, `href="https://bdu.fstec.ru/vul/2024-99999"`) {
+		t.Fatalf("expected a link to bdu.fstec.ru's real per-entry page, got:\n%s", out)
 	}
 	if strings.Contains(out, "nvd.nist.gov") {
-		t.Fatalf("must not guess a link when the finding carries no CVE ID, got:\n%s", out)
+		t.Fatalf("nvd.nist.gov has nothing to show without a CVE ID, got:\n%s", out)
+	}
+}
+
+// A "nvd" Finding never gets a BDU link — bduAdvisoryURL only applies to
+// Source == "bdu", regardless of what AdvisoryID happens to contain.
+func TestHTMLCVEModalNVDFindingNeverLinksToBDU(t *testing.T) {
+	r := sampleReport()
+	i := findAssessmentIndex(r.Assessments, "confluence-a")
+	r.Assessments[i].CVEs = []cve.Finding{
+		{Source: "nvd", AdvisoryID: "CVE-2023-22515", CVEIDs: []string{"CVE-2023-22515"}},
+	}
+	var buf bytes.Buffer
+	if err := HTML(&buf, r, HTMLOptions{}); err != nil {
+		t.Fatalf("HTML: %v", err)
+	}
+	if strings.Contains(buf.String(), "bdu.fstec.ru") {
+		t.Fatalf("an nvd-sourced finding must never link to bdu.fstec.ru, got:\n%s", buf.String())
+	}
+}
+
+// A BDU finding that DOES carry a CVE ID gets both links: NVD for the
+// CVE, and BDU's own page for the advisory itself.
+func TestHTMLCVEModalBDUFindingWithCVEIDLinksToBoth(t *testing.T) {
+	var buf bytes.Buffer
+	if err := HTML(&buf, sampleReport(), HTMLOptions{}); err != nil { // confluence-a's fixture finding: bdu, BDU:2023-06364, CVE-2023-22515
+		t.Fatalf("HTML: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `href="https://nvd.nist.gov/vuln/detail/CVE-2023-22515"`) {
+		t.Fatalf("expected the NVD link, got:\n%s", out)
+	}
+	if !strings.Contains(out, `href="https://bdu.fstec.ru/vul/2023-06364"`) {
+		t.Fatalf("expected the BDU link, got:\n%s", out)
 	}
 }
 
