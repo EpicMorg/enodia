@@ -301,18 +301,60 @@ cve:
 	}
 }
 
-// TestLoadCVEIndexWithoutConfigFlagIsNil proves the opt-in-only-with
-// --config rule (D30/D31): a config file merely existing on disk must
-// never turn CVE correlation on by itself.
-func TestLoadCVEIndexWithoutConfigFlagIsNil(t *testing.T) {
+// The cve block must come from whichever config the run actually uses,
+// not only an explicit --config: D30 first required the flag, which
+// silently dropped CVEs for every $ENODIA_CONFIG or auto-located setup
+// (D34). $ENODIA_CONFIG outranks the default search paths, so this is
+// hermetic regardless of what the machine has in /etc/enodia.
+func TestLoadCVEIndexHonorsENODIA_CONFIG(t *testing.T) {
+	nvdPath, err := filepath.Abs(filepath.Join("..", "..", "internal", "cve", "testdata", "nvd_gitlab.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+targets: []
+cve:
+  nvd:
+    path: `+nvdPath+`
+`)
 	withConfigFlag(t, "")
+	t.Setenv("ENODIA_CONFIG", path)
+
+	cmd, _, _ := testCmd(t)
+	idx, err := loadCVEIndex(cmd)
+	if err != nil {
+		t.Fatalf("loadCVEIndex: %v", err)
+	}
+	if got := idx.Lookup("gitlab", "19.2.2", "enterprise"); len(got) == 0 {
+		t.Fatal("got no findings: the cve block of $ENODIA_CONFIG was ignored")
+	}
+}
+
+// A config without a cve block means no CVE correlation, not an error.
+func TestLoadCVEIndexConfigWithoutCVEBlockIsNil(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "enodia.yaml")
+	writeFile(t, path, "schemaVersion: 1\ntargets: []\n")
+	withConfigFlag(t, path)
+
 	cmd, _, _ := testCmd(t)
 	idx, err := loadCVEIndex(cmd)
 	if err != nil {
 		t.Fatalf("loadCVEIndex: %v", err)
 	}
 	if idx != nil {
-		t.Fatalf("got %+v, want nil without --config", idx)
+		t.Fatalf("got %+v, want nil with no cve block", idx)
+	}
+}
+
+// An explicit --config that doesn't exist is still an error — only "no
+// config located anywhere" (a valid state for check --from) is not.
+func TestLoadCVEIndexMissingExplicitConfigErrors(t *testing.T) {
+	withConfigFlag(t, filepath.Join(t.TempDir(), "nope.yaml"))
+	cmd, _, _ := testCmd(t)
+	if _, err := loadCVEIndex(cmd); err == nil {
+		t.Fatal("expected an error for a missing explicit --config")
 	}
 }
 

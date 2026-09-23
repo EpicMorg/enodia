@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -160,17 +161,20 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 
 // loadCVEIndex returns the merged BDU/NVD vulnerability index the active
 // config's cve.bdu.path/cve.nvd.path name, or nil if neither is
-// configured — the normal case for most installs. Deliberately opt-in
-// only when --config is explicitly passed, even for `check --from` (which
-// otherwise never touches a config file at all, per D4): a config file
-// happening to sit in the current directory silently turning CVE
-// correlation on would be exactly the kind of surprise this project
-// avoids elsewhere.
+// configured — the normal case for most installs. "The active config" is
+// the same file collection itself uses (config.Locate: --config,
+// $ENODIA_CONFIG, then the default search paths), not only an explicit
+// --config. D30 first required the flag, and in practice that silently
+// dropped the cve block of the very file the run's targets came from —
+// every auto-located or $ENODIA_CONFIG setup (serve under systemd or
+// Docker, /etc/enodia) showed no CVEs with no hint why (see
+// docs/DECISIONS.md D34). No config found at all is not an error here:
+// `check --from` legitimately runs without one.
 func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
-	if configFlag == "" {
+	path, err := config.Locate(configFlag)
+	if errors.Is(err, config.ErrNotFound) {
 		return nil, nil
 	}
-	path, err := config.Locate(configFlag)
 	if err != nil {
 		return nil, err
 	}
