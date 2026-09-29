@@ -1118,9 +1118,32 @@ Not dates. Order of work, and what each step unblocks.
 
 ## Next
 
-Empty: every product that was tracked here across this project's probe
-build-out has landed in Done above. Add new entries as new probes get
-requested.
+Found running 2.0 against a real ~600-target fleet.
+
+- **Package-level CVE correlation for Linux distributions** (revisits
+  DECISIONS.md D33, which left distros out because a release number
+  can't say which packages are patched). The fix is to stop matching on
+  the release number: the `debian`/`ubuntu` probes already hold an SSH
+  session, so they can also read `dpkg-query -W` (binary + source package,
+  version) and `uname -r` in the same round trip. Debian: match source
+  packages against the Debian Security Tracker JSON export (per package,
+  per CVE, per release: the fixed version — backports included), the same
+  approach `debsecan` uses. Ubuntu: Canonical's OVAL / USN data. Both are
+  plain downloadable files, so they fit the existing offline model next to
+  the NVD feeds and the BDU export (`cve:` block, operator-refreshed).
+  Debian first — it is the bulk of a typical fleet
+- `mariadb` probe — `mysql` correctly rejects a MariaDB handshake
+  ("this server is MariaDB …, not MySQL"), so MariaDB servers currently
+  have no probe at all. Same HandshakeV10 parse, own product id, own
+  endoflife.date calendar (`mariadb`) and CVE mapping
+- `pfsense` probe — only `opnsense` exists today
+- BMC probes — Supermicro IPMI web UI / Redfish and Dell iDRAC (Redfish
+  `/redfish/v1/Managers/...` carries the firmware version)
+- Bug: vCenter/ESXi `8.0.3` is rated `ahead` against the calendar's
+  latest `8.0 U3k` / `8.0 Update 3k` — the two version shapes need
+  normalizing before comparison
+- Bug: GitHub-release resolvers show the tag verbatim in LATEST
+  (`v2026.9.1`, `v1.0.68`) — strip the leading `v` like `normalized` does
 
 ## Later
 
