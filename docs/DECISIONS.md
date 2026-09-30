@@ -2589,11 +2589,8 @@ CVE sets are identical:
 - Astra 1.8: 48 of 48, after downgrading 10 packages from Astra's frozen
   1.8.1/1.8.2 repositories. The fresh image has 1.
 - RED OS 8.0: 60 of 60.
-- RED OS 7.3: enodia finds 53 CVEs in 19 packages on
-  registry.red-soft.ru/ubi7/ubi:7.3.7-260727. The oscap run on the same
-  container (its 82MB file, 68,835 tests, on the el7 build of oscap) had
-  not finished after 15 minutes, so 7.3 is checked only by the unit
-  fixtures and by sharing 8.0's code path.
+- RED OS 7.3: 53 of 53, on registry.red-soft.ru/ubi7/ubi:7.3.7-260727.
+  oscap took about 20 minutes on that 82MB file (68,835 tests).
 
 **Not covered:**
 - Astra's kernel packages are named per series (`linux-image-6.1-generic`)

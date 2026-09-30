@@ -1195,7 +1195,7 @@ Not dates. Order of work, and what each step unblocks.
   7.3/8.0 from the vendors' own OVAL (`cve.oval.path`): their packages
   are rebuilds with their own versions, so Debian's/Red Hat's data can't
   be applied. Validated against `oscap oval eval` (Astra 1.7 205/205 CVEs,
-  1.8 48/48, RED OS 8.0 60/60). See `docs/DECISIONS.md` D46.
+  1.8 48/48, RED OS 7.3 53/53, 8.0 60/60). See `docs/DECISIONS.md` D46.
 
 ## Next
 
