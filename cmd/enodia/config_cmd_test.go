@@ -5,6 +5,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -70,6 +71,95 @@ targets:
 	cmd, _, _ := testCmd(t)
 	if err := runConfigValidateCmd(cmd, nil); err == nil {
 		t.Fatal("expected an error for an unresolvable credential reference")
+	}
+}
+
+// The reported bug: a typo'd or moved cve.bdu.path/cve.nvd.path passed
+// `config validate` clean and only surfaced as a failure deep inside
+// `check`/`serve` (loadCVEIndex). credentials_file already gets an
+// equivalent check for free from LoadCredentials' own os.ReadFile.
+func TestRunConfigValidateCmdMissingBDUPathIsError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+cve:
+  bdu:
+    path: does-not-exist.xml
+targets:
+  - id: a
+    product: generic
+    address: https://a.example.com
+`)
+	withConfigFlag(t, path)
+
+	cmd, _, _ := testCmd(t)
+	err := runConfigValidateCmd(cmd, nil)
+	if err == nil {
+		t.Fatal("expected an error for a nonexistent cve.bdu.path")
+	}
+	if !strings.Contains(err.Error(), "cve.bdu.path") {
+		t.Fatalf("got %v, want it to name cve.bdu.path", err)
+	}
+}
+
+func TestRunConfigValidateCmdMissingNVDPathIsError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+cve:
+  nvd:
+    path: does-not-exist
+targets:
+  - id: a
+    product: generic
+    address: https://a.example.com
+`)
+	withConfigFlag(t, path)
+
+	cmd, _, _ := testCmd(t)
+	err := runConfigValidateCmd(cmd, nil)
+	if err == nil {
+		t.Fatal("expected an error for a nonexistent cve.nvd.path")
+	}
+	if !strings.Contains(err.Error(), "cve.nvd.path") {
+		t.Fatalf("got %v, want it to name cve.nvd.path", err)
+	}
+}
+
+// A real BDU/NVD path (existence is all this checks for — not that it
+// parses) must not block an otherwise-clean config.
+func TestRunConfigValidateCmdRealCVEPathsOK(t *testing.T) {
+	dir := t.TempDir()
+	bduPath := filepath.Join(dir, "vulxml.xml")
+	writeFile(t, bduPath, "<vulns/>")
+	nvdDir := filepath.Join(dir, "nvd")
+	if err := os.Mkdir(nvdDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+cve:
+  bdu:
+    path: vulxml.xml
+  nvd:
+    path: nvd
+targets:
+  - id: a
+    product: generic
+    address: https://a.example.com
+`)
+	withConfigFlag(t, path)
+
+	cmd, stdout, _ := testCmd(t)
+	if err := runConfigValidateCmd(cmd, nil); err != nil {
+		t.Fatalf("runConfigValidateCmd: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "OK") {
+		t.Fatalf("got %q", stdout.String())
 	}
 }
 

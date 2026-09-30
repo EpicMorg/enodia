@@ -2244,3 +2244,21 @@ different product from iDRAC, needing either RACADM or HTML-scraping to
 read anything from, the same heavier shape D22 already rejected for
 Redmine. Left for a future decision if it's ever actually wanted, not
 silently folded into `dell-idrac`.
+
+## D41 — `config validate` checks that `cve.bdu.path`/`cve.nvd.path` exist; `Config.Validate` does not
+
+A typo'd or moved `cve.bdu.path`/`cve.nvd.path` used to pass `config
+validate` clean and only fail later, deep inside `check`/`serve` when
+the CVE index was loaded — exactly the class of mistake `config
+validate` exists to catch ahead of time. `credentials_file` never had
+this gap: `cfg.Build` already reads it through `LoadCredentials`.
+
+The existence check lives in the `config validate` command
+(`validateCVEPaths`), not in `Config.Validate`. `Config.Validate` runs
+on every `Load`, including where the path legitimately doesn't exist
+on the loading machine: a config written on one host for another, or
+tests that only exercise path resolution. Existence is a property of
+the machine the config is used on, so only the command that asks "is
+this config ready to run here?" checks it. It checks existence only.
+Whether the file actually parses is still left to `loadCVEIndex`, which
+already reports that clearly.

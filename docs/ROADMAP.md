@@ -1157,6 +1157,10 @@ Not dates. Order of work, and what each step unblocks.
   scraping. iLO 5 (fully Redfish-compliant, unlike iLO 4) also not
   built: no controller available to confirm its real shape live. See
   `docs/DECISIONS.md` D40.
+- Bug fix: `config validate` did not check that `cve.bdu.path` /
+  `cve.nvd.path` exist, so a typo only surfaced at `check`/`serve`
+  time. It now fails with the offending key named. See
+  `docs/DECISIONS.md` D41.
 
 ## Next
 
