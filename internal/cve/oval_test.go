@@ -251,3 +251,58 @@ func TestOVALCacheRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+// oval_astra17.xml, oval_astra18.xml and oval_redos80.xml are single real
+// definitions cut from Astra's own 1.7 and 1.8 OVAL files and RED
+// OS's 8.0 redos.xml: one class="vulnerability" definition per CVE,
+// holding the fixed package versions.
+func TestOVALAstraAndRedOS(t *testing.T) {
+	idx := loadOVALFixture(t, "oval_astra17.xml", "oval_astra18.xml", "oval_redos80.xml")
+	for _, key := range []string{"astra-linux:1.7", "astra-linux:1.8", "redos:8.0"} {
+		if idx.oval[key] == nil {
+			t.Fatalf("no release %s loaded; have %v", key, slices.Sorted(maps.Keys(idx.oval)))
+		}
+	}
+
+	// Astra 1.8: dpkg versions, the vendor's own bulletin as the advisory.
+	got := idx.LookupPackages(PackageQuery{Product: "astra-linux", Version: "1.8.1",
+		Packages: map[string]string{"libssl3": "3.2.0-2-astra4", "openssl": "3.2.0-2-astra5+ci1"}})
+	if len(got) != 1 || got[0].MatchedName != "libssl3" || got[0].FixedVersion != "0:3.2.0-2-astra5+ci1" ||
+		got[0].AdvisoryID != "2024-0905SE18MD" || got[0].AdvisoryURL != "https://wiki.astralinux.ru/astra-linux-se18-bulletin-2024-0905SE18MD" ||
+		!slices.Equal(got[0].CVEIDs, []string{"CVE-2024-4741"}) {
+		t.Fatalf("astra 1.8: got %+v", got)
+	}
+
+	// Astra 1.7's definitions cite no bulletin: BDU is the advisory.
+	got = idx.LookupPackages(PackageQuery{Product: "astra-linux", Version: "1.7.9",
+		Packages: map[string]string{"libc6": "2.28-10+deb10u1+ci202206011200+astra3"}})
+	if len(got) != 1 || got[0].AdvisoryID != "BDU:2020-04683" || got[0].AdvisoryURL != "https://bdu.fstec.ru/vul/2020-04683" {
+		t.Fatalf("astra 1.7: got %+v", got)
+	}
+
+	// RED OS 8.0: rpm versions, its ROS bulletin, its severity.
+	got = idx.LookupPackages(PackageQuery{Product: "redos", Version: "8.0.3",
+		Packages: map[string]string{"openssl-libs": "1:3.5.4-2.red80"}})
+	if len(got) != 1 || got[0].AdvisoryID != "ROS-20260420-80-0001" || got[0].Severity != "medium" || got[0].FixedVersion != "1:3.5.5-1.red80" {
+		t.Fatalf("redos 8.0: got %+v", got)
+	}
+	if got := idx.LookupPackages(PackageQuery{Product: "redos", Version: "7.3.1", Packages: map[string]string{"openssl-libs": "1:1.1.1g-15.el7"}}); got != nil {
+		t.Fatalf("redos 7.3 against the 8.0 file: got %+v", got)
+	}
+}
+
+// Everyone else's class="vulnerability" definitions aren't read: only the
+// two vendors above use it for fixed versions.
+func TestOVALVulnerabilityClassOnlyForAstraAndRedOS(t *testing.T) {
+	raw, err := os.ReadFile("testdata/oval_rhel9.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "rhel.xml")
+	if err := os.WriteFile(path, []byte(strings.ReplaceAll(string(raw), `class="patch"`, `class="vulnerability"`)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadOVAL(path); err == nil {
+		t.Fatal("expected no usable definitions")
+	}
+}

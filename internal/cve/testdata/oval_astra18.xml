@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:oval-def="http://oval.mitre.org/XMLSchema/oval-definitions-5" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd">
+  <generator>
+    <oval:product_name>The OVAL Astra Linux</oval:product_name>
+    <oval:schema_version>5.11.1</oval:schema_version>
+    <oval:timestamp>2026-09-26T12:24:37.483217+00:00</oval:timestamp>
+  </generator>
+  <definitions>
+<definition class="vulnerability" id="oval:astra:def:3898339921026663004431305758275" version="1">
+      <metadata>
+        <title> Astra Linux - уязвимость в openssl</title>
+        <affected family="unix">
+          <platform>Astra Linux 1.8</platform>
+          <product>openssl</product>
+        </affected>
+        <reference source="VENDOR" ref_url="https://wiki.astralinux.ru/astra-linux-se18-bulletin-2024-0905SE18MD" ref_id="№ 2024-0905SE18MD" />
+        <reference source="FSTEC" ref_url="https://bdu.fstec.ru/vul/2024-05176" ref_id="BDU:2024-05176" />
+        <reference source="CVE" ref_url="https://www.cve.org/CVERecord?id=CVE-2024-4741" ref_id="CVE-2024-4741" />
+        <description>trimmed</description>
+        <description_ru>trimmed</description_ru>
+        <bdu>
+          <cwe>[NistCWE(cwe='CWE-416')]</cwe>
+          <CVSS2.0>None</CVSS2.0>
+          <CVSS3.0>NistCVSS3(cvss='AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H', score=7.5)</CVSS3.0>
+          <mitigations>
+
+openssl0:
+
+- Обеспечить возможность запуска openssl0 только доверенными пользователями ОС
+- Отказаться от использования openssl0 в пользу openssl
+- Рекомендуется с помощью межсетевого экрана (firewall) отключить доступ пользователям к небезопасным сайтам
+- Активировать и настроить профили пользователей для работы в режиме Киоск-2
+
+openssl:
+
+- Обеспечить возможность запуска openssl только доверенными пользователями ОС
+- Активировать и настроить профили пользователей для работы в режиме Киоск-2
+- Рекомендуется с помощью межсетевого экрана (firewall) отключить доступ пользователям к небезопасным сайтам
+
+pyopenssl:
+
+- Использовать ПО pyopenssl только на низком или отдельно выделенном уровне целостности
+- При использовании ПО pyopenssl выполнять обработку файлов, полученных только из доверенных источников
+- Обеспечить возможность запуска py только доверенными пользователями ОС
+- Активировать и настроить профили пользователей для работы в режиме Киоск-2
+- Для непривилегированных пользователей активировать блокировку интерпретаторов
+- Запретить установку бита исполнения для всех пользователей, включая администраторов
+- Включить режим замкнутой программной среды</mitigations>
+        </bdu>
+      </metadata>
+      <criteria operator="OR">
+        <criterion test_ref="oval:astra:tst:75671" comment="libssl3 DPKG is earlier than 3.2.0-2-astra5+ci1" />
+        <criterion test_ref="oval:astra:tst:75672" comment="openssl DPKG is earlier than 3.2.0-2-astra5+ci1" />
+      </criteria>
+    </definition>
+</definitions>
+<tests>
+<dpkginfo_test id="oval:astra:tst:75671" version="1" check="all" check_existence="at_least_one_exists" comment="libssl3 is earlier than 3.2.0-2-astra5+ci1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:75671" />
+      <state state_ref="oval:astra:ste:75671" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:75672" version="1" check="all" check_existence="at_least_one_exists" comment="openssl is earlier than 3.2.0-2-astra5+ci1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:75672" />
+      <state state_ref="oval:astra:ste:75672" />
+    </dpkginfo_test>
+</tests>
+<objects>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:75671" version="1">
+      <name>libssl3</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:75672" version="1">
+      <name>openssl</name>
+    </dpkginfo_object>
+</objects>
+<states>
+<dpkginfo_state id="oval:astra:ste:75671" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:3.2.0-2-astra5+ci1</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:75672" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:3.2.0-2-astra5+ci1</evr>
+    </dpkginfo_state>
+</states>
+</oval_definitions>

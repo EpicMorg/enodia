@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -75,7 +76,21 @@ var ovalPlatforms = []struct{ prefix, product string }{
 	{"AlmaLinux ", "almalinux"},
 	{"Oracle Linux ", "oracle-linux"},
 	{"Rocky Linux ", "rocky-linux"},
+	{"Astra Linux ", "astra-linux"},
+	{"RED OS ", "redos"},
 }
+
+// ovalVulnerabilityClass is the vendors whose OVAL writes one
+// class="vulnerability" definition per CVE, each holding the fixed
+// package versions, instead of one class="patch" definition per advisory
+// — confirmed live: every definition in Astra's own 1.7 and 1.8 files
+// and RED OS's 7.3 and 8.0 redos.xml. Everyone else's
+// "vulnerability" definitions, where they have any, are not read.
+var ovalVulnerabilityClass = map[string]bool{"astra-linux": true, "redos": true}
+
+// ovalDpkgProducts is the OVAL products whose versions are dpkg's; the
+// rest are rpm's.
+var ovalDpkgProducts = map[string]bool{"ubuntu": true, "astra-linux": true}
 
 var (
 	reUbuntuDefID = regexp.MustCompile(`^oval:com\.ubuntu\.([a-z]+):`)
@@ -268,7 +283,7 @@ func loadOVALFile(path string) (string, *ovalRelease, error) {
 				if err := dec.DecodeElement(&d, &t); err != nil {
 					return "", nil, fmt.Errorf("parsing %s: %w", path, err)
 				}
-				if d.Class == "patch" {
+				if d.Class == "patch" || d.Class == "vulnerability" {
 					defs = append(defs, d)
 				}
 			case "tests", "objects", "states", "variables":
@@ -292,13 +307,16 @@ func loadOVALFile(path string) (string, *ovalRelease, error) {
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", path, err)
 	}
+	defs = slices.DeleteFunc(defs, func(d ovalDefinition) bool {
+		return d.Class == "vulnerability" && !ovalVulnerabilityClass[product]
+	})
 	if product == "rocky-linux" {
 		return "", nil, fmt.Errorf("%s: Rocky Linux's own OVAL is not used — measured on a real Rocky 9.3 host it holds 13 of the 130 "+
 			"advisories dnf reports, with fixed versions from unrelated later updates; Rocky hosts are matched against "+
 			"Red Hat's rhel-%s.oval.xml instead (docs/DECISIONS.md D43), put that one in cve.oval.path", path, release)
 	}
 	rel := &ovalRelease{fixes: map[string][]ovalFix{}}
-	x := ovalExtractor{rel: rel, tests: tests, objects: objects, states: states, variables: variables, release: release, rpmFamily: product != "ubuntu"}
+	x := ovalExtractor{rel: rel, tests: tests, objects: objects, states: states, variables: variables, release: release, rpmFamily: !ovalDpkgProducts[product]}
 	for i := range defs {
 		x.definition(&defs[i])
 	}
@@ -421,16 +439,28 @@ func (x *ovalExtractor) definition(d *ovalDefinition) {
 			adv.CVEs = append(adv.CVEs, id)
 		}
 	}
-	// The vendor's own advisory wins over the RHSA it rebuilds: AlmaLinux
-	// cites both, RHSA first (confirmed live).
+	// The vendor's own advisory wins: over the RHSA it rebuilds (AlmaLinux
+	// cites both, RHSA first — confirmed live), and over the BDU entry
+	// Astra and RED OS cite next to it. BDU is the advisory only when
+	// there's nothing else: Astra 1.7's definitions cite no bulletin.
+	advRank := func(source, id string) int {
+		switch {
+		case strings.EqualFold(source, "FSTEC"):
+			return 1
+		case strings.HasPrefix(id, "RHSA-"):
+			return 2
+		}
+		return 3
+	}
+	best := 0
 	for _, ref := range d.Metadata.References {
-		switch strings.ToUpper(ref.Source) {
-		case "CVE":
+		if strings.EqualFold(ref.Source, "CVE") {
 			addCVE(ref.RefID)
-		default:
-			if adv.ID == "" || strings.HasPrefix(adv.ID, "RHSA-") && !strings.HasPrefix(ref.RefID, "RHSA-") {
-				adv.ID, adv.URL = ref.RefID, ref.RefURL
-			}
+			continue
+		}
+		if r := advRank(ref.Source, ref.RefID); r > best {
+			best = r
+			adv.ID, adv.URL = strings.TrimSpace(strings.TrimPrefix(ref.RefID, "№")), ref.RefURL
 		}
 	}
 	for _, c := range d.Metadata.Advisory.CVEs {

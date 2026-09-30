@@ -2540,3 +2540,63 @@ included. NVD's range for BlastRADIUS is only `versionEndExcluding
 3.0.27`, with nothing for the 3.2 branch (fixed in 3.2.5), so a 3.2.3 host
 gets no finding for it. That is followed as data, the same as D33's
 Dropbear case, not patched over.
+
+## D46 — Package-level CVEs for Astra Linux and RED OS from their own OVAL
+
+**Their upstream's data doesn't apply; their own does.** Both are
+rebuilds whose package versions are the vendor's, not upstream's.
+Confirmed live in epicmorg/astralinux:1.7-main and :1.8-main:
+- Astra 1.7 is Debian 10 (buster) underneath (`/etc/debian_version`
+  10.0), with pieces from newer releases: curl `7.88.1-10+deb12u15.astra1`
+  from bookworm, openssl `1.1.1w-0+deb11u2-astra10` from bullseye.
+- Astra 1.8 is bookworm with openssl `3.4.0-2-astra9` from trixie/sid.
+- Nearly every package carries `.astraN` / `-astraN` / `+ciN` rebuild
+  suffixes.
+
+Against the Debian tracker this breaks in both directions:
+- buster isn't in the tracker at all any more.
+- For 1.8, whether `1.2.13.dfsg-1.astra2` sorts before or after Debian's
+  `1.2.13.dfsg-1+deb12u1` is decided by dpkg's character order (`.` after
+  `+`), not by whether the fix is in.
+
+RED OS likewise uses its own releases: `.el7` on 7.3, `.red80` on 8.0.
+
+Both vendors publish OVAL, and it fits D43's extractor almost unchanged:
+
+| | File | Tests | Advisory |
+|---|---|---|---|
+| Astra Linux SE | `https://dl.astralinux.ru/astra/oval/<1.7\|1.8>_x86-64/oval-definitions-alse-<1.7\|1.8>.xml` | `dpkginfo`, binary packages, dpkg versions | the bulletin (1.8; `№ ` stripped), or BDU (1.7 cites none) |
+| RED OS | `https://redos.red-soft.ru/support/secure/<7.3\|8.0>/redos.xml` | `rpminfo`, binary packages, rpm versions | its `ROS-…` bulletin |
+
+**The differences from D43:**
+- Every definition is `class="vulnerability"`, one per CVE, each holding
+  the fixed versions, and not `class="patch"`. Those are read only for
+  these two vendors. RHEL-family files use the class differently.
+- Releases are minor versions ("Astra Linux 1.8", "RED OS 7.3"), matched
+  on the probe's major.minor (Astra's `1.8.6`, RED OS's `7.3.1` or `7.3`).
+- Both also cite BDU (`source="FSTEC"`). A vendor bulletin wins over it,
+  and BDU is the advisory only when there's nothing else.
+- RED OS carries severity; Astra doesn't.
+
+**What the probes collect.** The `astra-linux` probe adds dpkg's binary
+package list to its `/etc/astra_version` read. `redos` now collects rpm
+packages like the RHEL family.
+
+**Validated against `oscap oval eval` on the vendors' own files**, in
+the images above plus registry.red-soft.ru/ubi7/ubi and ubi8/ubi. The
+CVE sets are identical:
+- Astra 1.7: 205 of 205.
+- Astra 1.8: 48 of 48, after downgrading 10 packages from Astra's frozen
+  1.8.1/1.8.2 repositories. The fresh image has 1.
+- RED OS 8.0: 60 of 60.
+- RED OS 7.3: enodia finds 53 CVEs in 19 packages on
+  registry.red-soft.ru/ubi7/ubi:7.3.7-260727. The oscap run on the same
+  container (its 82MB file, 68,835 tests, on the el7 build of oscap) had
+  not finished after 15 minutes, so 7.3 is checked only by the unit
+  fixtures and by sharing 8.0's code path.
+
+**Not covered:**
+- Astra's kernel packages are named per series (`linux-image-6.1-generic`)
+  and compared as installed, not as running.
+- Astra's arm and s390x OVAL files exist (`4.7_arm`, `3.8_s390x`) but
+  weren't tested.

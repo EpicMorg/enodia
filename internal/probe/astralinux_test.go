@@ -32,7 +32,7 @@ func TestAstraLinuxProbeParsesRealFixtures(t *testing.T) {
 	} {
 		t.Run(tc.version, func(t *testing.T) {
 			addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
-				"cat /etc/astra_version": loadAstraFixture(t, tc.fixture),
+				astraProbeCommand: loadAstraFixture(t, tc.fixture),
 			})
 
 			p := astraLinuxProbe{}
@@ -76,7 +76,7 @@ func TestAstraLinuxProbeMissingFileIsErrNotSupported(t *testing.T) {
 
 func TestAstraLinuxProbeGarbageContentIsErrUnparseable(t *testing.T) {
 	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
-		"cat /etc/astra_version": "not-a-version\n",
+		astraProbeCommand: "not-a-version\n",
 	})
 
 	p := astraLinuxProbe{}

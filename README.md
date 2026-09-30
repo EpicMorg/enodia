@@ -396,8 +396,9 @@ findings. The file parses in about a second, so it isn't cached.
 
 `oval.path` is one vendor OVAL file or a directory of them, as published
 (`.xml` or `.xml.bz2`), one per release in your fleet. `ubuntu`,
-`linuxmint`, `rhel`, `rocky-linux`, `almalinux` and `oracle-linux` targets
-are matched per installed package the same way:
+`linuxmint`, `rhel`, `rocky-linux`, `almalinux`, `oracle-linux`,
+`astra-linux` and `redos` targets are matched per installed package the
+same way:
 
 | Targets | File |
 |---|---|
@@ -405,6 +406,8 @@ are matched per installed package the same way:
 | RHEL, **and Rocky Linux** | `https://security.access.redhat.com/data/oval/v2/RHEL<N>/rhel-<N>.oval.xml.bz2` |
 | AlmaLinux | `https://security.almalinux.org/oval/org.almalinux.alsa-<N>.xml.bz2` |
 | Oracle Linux | `https://linux.oracle.com/security/oval/com.oracle.elsa-ol<N>.xml.bz2` |
+| Astra Linux SE | `https://dl.astralinux.ru/astra/oval/<1.7\|1.8>_x86-64/oval-definitions-alse-<1.7\|1.8>.xml` |
+| RED OS | `https://redos.red-soft.ru/support/secure/<7.3\|8.0>/redos.xml` |
 
 Rocky's own OVAL file is refused: it is far from complete, so Rocky hosts
 are matched against Red Hat's. Parsed OVAL is cached like BDU and NVD.
@@ -423,7 +426,7 @@ Alpine findings grouped per package (`linux 6.12.107-1 → 6.12.111-1`, linked t
 the advisory that fixes it, with its CVE list folded).
 `export --format json` carries every finding with its source. Which
 products are matched, and why some deliberately aren't, is in
-`docs/DECISIONS.md` D30–D35 and D42–D44.
+`docs/DECISIONS.md` D30–D35 and D42–D46.
 
 ## File locations
 

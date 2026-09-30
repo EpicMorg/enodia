@@ -33,8 +33,8 @@ type PackageQuery struct {
 // distribution's own security data says is behind a security fix:
 // debian against the Debian Security Tracker (D42); ubuntu (and
 // linuxmint, against its Ubuntu base), rhel, almalinux, oracle-linux and
-// rocky-linux against their vendor's OVAL (D43); alpine-linux against
-// Alpine's secdb (D44). Every other product, or one whose release has no
+// rocky-linux against their vendor's OVAL (D43), as are astra-linux and
+// redos (D46); alpine-linux against Alpine's secdb (D44). Every other product, or one whose release has no
 // data loaded, gets nil.
 //
 // One Finding per package, not per CVE: confirmed live, a trixie host one
@@ -51,7 +51,7 @@ func (idx *Index) LookupPackages(q PackageQuery) []Finding {
 		if idx.debian != nil {
 			return idx.lookupDebian(q)
 		}
-	case "ubuntu", "linuxmint", "rhel", "almalinux", "oracle-linux", "rocky-linux":
+	case "ubuntu", "linuxmint", "rhel", "almalinux", "oracle-linux", "rocky-linux", "astra-linux", "redos":
 		if idx.oval != nil {
 			return idx.lookupOVAL(q)
 		}
@@ -187,6 +187,16 @@ func (idx *Index) lookupOVAL(q PackageQuery) []Finding {
 		// the probe reports its Ubuntu base in Extra["codename"]
 		// (os-release UBUNTU_CODENAME).
 		product = "ubuntu"
+	case "astra-linux", "redos":
+		// Both vendors' OVAL files are per minor release ("Astra Linux 1.8",
+		// "RED OS 7.3"), and so are their probes' versions ("1.8.6", "7.3.1").
+		release = ""
+		if parts := strings.SplitN(q.Version, ".", 3); len(parts) >= 2 {
+			release = parts[0] + "." + parts[1]
+		}
+		if q.Product == "redos" {
+			cmp = version.CompareRPM
+		}
 	case "rocky-linux":
 		// Rocky rebuilds RHEL's packages with the same version-release, and
 		// its own OVAL is unusable (see loadOVALFile). Measured on a real

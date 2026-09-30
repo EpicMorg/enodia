@@ -12,7 +12,7 @@ import (
 
 // ovalCacheFormat is bumped whenever what an ovalRelease carries, or how
 // an OVAL file is read into one, changes.
-const ovalCacheFormat = 1
+const ovalCacheFormat = 2
 
 // ovalCacheFile is one OVAL file's extracted fixes, stored as data: the
 // advisories once, each fix pointing at its own by index.

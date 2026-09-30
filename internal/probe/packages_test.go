@@ -74,7 +74,7 @@ func TestUbuntuProbeReadsPackages(t *testing.T) {
 func TestOSReleaseFamilyPackageRegistrations(t *testing.T) {
 	want := map[string]packageKind{
 		"rhel": packagesRPM, "almalinux": packagesRPM, "oracle-linux": packagesRPM, "rocky-linux": packagesRPM,
-		"linuxmint": packagesDpkgBinary, "alpine-linux": packagesAPK, "fedora": packagesNone, "centos-stream": packagesNone,
+		"linuxmint": packagesDpkgBinary, "alpine-linux": packagesAPK, "redos": packagesRPM, "fedora": packagesNone, "centos-stream": packagesNone,
 	}
 	for product, kind := range want {
 		p, err := Get(product)
@@ -166,5 +166,36 @@ func TestParseAPKPackages(t *testing.T) {
 		"P:noorigin\nV:1.0-r0\n")
 	if len(got) != 2 || got["openssl"] != "3.3.0-r2" || got["noorigin"] != "1.0-r0" {
 		t.Fatalf("got %v", got)
+	}
+}
+
+// astra-linux_1.7.9_packages.txt and redos_8.0_packages.txt are each
+// probe's full output captured live in epicmorg/astralinux:1.7-main and
+// registry.red-soft.ru/ubi8/ubi:8.0.3-260811.
+func TestAstraAndRedOSReadPackages(t *testing.T) {
+	run := func(p Probe, product, cmd, fixture string) Observation {
+		t.Helper()
+		addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{cmd: loadOSReleaseFixture(t, fixture)})
+		obs, err := p.Probe(context.Background(), Target{ID: "x", Product: product, Address: addr,
+			Creds: Credentials{Username: "probeuser", Password: "probepass"},
+			TLS:   TLSSettings{PinSHA256: []string{fp}}, Timeout: 2 * time.Second})
+		if err != nil {
+			t.Fatalf("%s: %v", product, err)
+		}
+		return obs
+	}
+
+	astra := run(astraLinuxProbe{}, "astra-linux", astraProbeCommand, "astra-linux_1.7.9_packages.txt")
+	if astra.Version != "1.7.9" || len(astra.Packages) != 602 || astra.Packages["libssl1.1"] != "1.1.1w-0+deb11u2-astra10" {
+		t.Errorf("astra: version %q, %d packages, libssl1.1 %q", astra.Version, len(astra.Packages), astra.Packages["libssl1.1"])
+	}
+
+	p, err := Get("redos")
+	if err != nil {
+		t.Fatal(err)
+	}
+	redos := run(p, "redos", "cat /etc/os-release 2>/dev/null"+packagesCommand(packagesRPM), "redos_8.0_packages.txt")
+	if redos.Version != "8.0.3" || len(redos.Packages) != 225 || redos.Packages["openssl-libs"] != "1:3.5.5-1.red80" {
+		t.Errorf("redos: version %q, %d packages, openssl-libs %q", redos.Version, len(redos.Packages), redos.Packages["openssl-libs"])
 	}
 }

@@ -159,7 +159,7 @@ var builtin = []Probe{
 	redisProbe{},
 	// alrdockerhub/redos:7.3.1 (real RED OS content: HOME_URL/BUG_REPORT_URL
 	// point at red-soft.ru): ID="redos", VERSION_ID="7.3.1".
-	osReleaseFamilyProbe{product: "redos", summary: "RED OS", match: osReleaseIDEquals("redos")},
+	osReleaseFamilyProbe{product: "redos", summary: "RED OS", match: osReleaseIDEquals("redos"), packages: packagesRPM},
 	// registry.redhat.io/ubi9 (Red Hat's own free Universal Base Image):
 	// ID=rhel, VERSION_ID="9.8".
 	osReleaseFamilyProbe{product: "rhel", summary: "Red Hat Enterprise Linux", resolver: ResolverRef{Type: "endoflife", ID: "rhel"}, match: osReleaseIDEquals("rhel"), packages: packagesRPM},

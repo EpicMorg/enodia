@@ -1191,15 +1191,16 @@ Not dates. Order of work, and what each step unblocks.
   3.2.10 in Docker). Lifecycle from a new `github-tag-branches` resolver
   (one cycle per major.minor from GitHub tags, since 3.0.x and 3.2.x ship
   side by side); CVEs from NVD and BDU. See `docs/DECISIONS.md` D45.
+- Package-level CVE correlation for Astra Linux SE 1.7/1.8 and RED OS
+  7.3/8.0 from the vendors' own OVAL (`cve.oval.path`): their packages
+  are rebuilds with their own versions, so Debian's/Red Hat's data can't
+  be applied. Validated against `oscap oval eval` (Astra 1.7 205/205 CVEs,
+  1.8 48/48, RED OS 8.0 60/60). See `docs/DECISIONS.md` D46.
 
 ## Next
 
-Found running 2.0 against a real ~600-target fleet.
-
-- **Astra Linux and RED OS package-level CVEs**: Debian 11/12 and RHEL
-  8/9 rebuilds with their own package versions. Check against real hosts
-  what their vendors publish (bulletins, OVAL?) and whether the upstream
-  data can be applied at all.
+Everything found running 2.0 against a real ~600-target fleet is done
+(see above).
 
 ## Later
 
