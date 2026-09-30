@@ -90,6 +90,7 @@ func validateCVEPaths(cfg *config.Config) error {
 		"cve.nvd.path":    cfg.NVDPath,
 		"cve.debian.path": cfg.DebianPath,
 		"cve.oval.path":   cfg.OVALPath,
+		"cve.alpine.path": cfg.AlpinePath,
 	} {
 		path, ok := resolve()
 		if !ok {

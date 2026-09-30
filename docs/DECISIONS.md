@@ -2458,3 +2458,44 @@ minus the Proxmox-built packages, which have no public feed.
 - Ubuntu's `oci.*` OVAL variant, which checks the dpkg status file with
   regexes instead of packages. It is refused with a pointer to the right
   file.
+
+## D44 — Package-level CVEs for Alpine from secdb
+
+**Same model as D42/D43.** Alpine publishes one JSON file per branch
+and repository: `https://secdb.alpinelinux.org/<branch>/main.json` and
+`community.json`. The operator downloads them into `cve.alpine.path`,
+which is one file or a directory. Each file names its own branch in
+`distroversion`, and `main` and `community` merge per branch. A host's
+branch is its `VERSION_ID` major.minor (3.20.3 → v3.20). Edge has no
+numbered branch and gets no findings.
+
+**What the probe collects.** The `alpine-linux` probe reads
+`/lib/apk/db/installed`'s `P:`/`V:`/`o:` lines. It keys packages by
+**origin**, because secdb is keyed by aport and not by binary package:
+`libcrypto3` and `libssl3` are both `openssl`. alpine:3.20.0's 14 binary
+packages come from 9 origins. When several binaries of one origin sit at
+different versions mid-upgrade, the oldest is kept.
+
+**How the data is read:**
+- `secfixes` maps a fixed version to the CVEs it fixes.
+- A `"0"` key means "never affected" and is skipped.
+- Only CVE ids are kept from each entry: `"CVE-2021-27219 GHSL-2021-045"`
+  keeps its CVE.
+- The 61 entries (of 17,859 across v3.20 and v3.22) that cite no CVE at
+  all, such as `ALPINE-13661` or `DW202402-001`, are dropped.
+
+**Version comparison is apk-tools 2.x's own** (`version.CompareAPK`).
+It was checked against `apk version -t` on about 5300 pairs of real
+secdb versions, committed as testdata. apk's quirks are kept on purpose:
+a second trailing letter ends the comparison, so apk itself calls
+`0.9.8zh` and `0.9.8zg` equal.
+
+**Validated on alpine:3.20.0.** All secdb candidates were compared with
+the real `apk version -t` inside the container. This gave 4 origins
+(busybox, musl, openssl, zlib) and 34 CVEs, and enodia finds exactly the
+same. The fixed versions (musl 1.2.5-r3, busybox 1.36.1-r31) are the ones
+`apk upgrade` moves them to.
+
+One Finding per origin, `Source` "alpine", linked to the origin's page
+on security.alpinelinux.org. secdb carries no severity. There is no
+cache: the files are a few hundred KB.

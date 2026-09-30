@@ -362,6 +362,8 @@ cve:
     path: /var/lib/enodia/cve/debian.json      # https://security-tracker.debian.org/tracker/data/json
   oval:
     path: /var/lib/enodia/cve/oval             # vendor OVAL files, one per release (see below)
+  alpine:
+    path: /var/lib/enodia/cve/alpine           # https://secdb.alpinelinux.org/<branch>/{main,community}.json
 ```
 
 Each block works alone. `bdu.path` is the export as published (`.zip`),
@@ -407,16 +409,21 @@ are matched per installed package the same way:
 Rocky's own OVAL file is refused: it is far from complete, so Rocky hosts
 are matched against Red Hat's. Parsed OVAL is cached like BDU and NVD.
 
+`alpine.path` is Alpine's secdb, a file or a directory of the `main.json`
+and `community.json` files of each branch in your fleet (download them
+under distinct names, e.g. `v3.20-main.json`). `alpine-linux` targets
+are matched per origin package.
+
 A Proxmox VE host gets package findings as a second, SSH `debian` target
 alongside its API `proxmox` one.
 
 Findings show up as a CVES count in `check`'s compact and drift views and
-as a per-CVE list in `export --format html`, with Debian and OVAL
-findings grouped per package (`linux 6.12.107-1 → 6.12.111-1`, linked to
+as a per-CVE list in `export --format html`, with Debian, OVAL and
+Alpine findings grouped per package (`linux 6.12.107-1 → 6.12.111-1`, linked to
 the advisory that fixes it, with its CVE list folded).
 `export --format json` carries every finding with its source. Which
 products are matched, and why some deliberately aren't, is in
-`docs/DECISIONS.md` D30–D35, D42 and D43.
+`docs/DECISIONS.md` D30–D35 and D42–D44.
 
 ## File locations
 

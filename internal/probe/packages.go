@@ -21,6 +21,8 @@ const (
 	// packagesRPM lists binary packages with their AppStream module
 	// stream: what RHEL-family OVAL names.
 	packagesRPM
+	// packagesAPK lists origin (aport) packages: what Alpine's secdb names.
+	packagesAPK
 )
 
 // Section markers for the package-collecting half of an OS probe's one
@@ -50,6 +52,10 @@ func packagesCommand(kind packageKind) string {
 	case packagesRPM:
 		const qf = `%{NAME}\t%{EPOCH}:%{VERSION}-%{RELEASE}`
 		return uname + "; echo '" + packagesMarker + "'; rpm -qa --qf '" + qf + `\t%{MODULARITYLABEL}\n' 2>/dev/null || rpm -qa --qf '` + qf + `\n' 2>/dev/null || true`
+	case packagesAPK:
+		// apk's own database, not `apk info`: it has each package's origin
+		// (o:) next to its name (P:) and version (V:), in one read.
+		return uname + "; echo '" + packagesMarker + "'; grep -E '^[PVo]:' /lib/apk/db/installed 2>/dev/null || true"
 	}
 	return ""
 }
@@ -81,6 +87,8 @@ func parsePackagesOutput(kind packageKind, out string) hostPackages {
 		h.packages = parseDpkgPackages(pkgOut)
 	case packagesRPM:
 		h.packages, h.modules = parseRPMPackages(pkgOut, h.kernelRelease, h.arch)
+	case packagesAPK:
+		h.packages = parseAPKPackages(pkgOut)
 	}
 	return h
 }
@@ -152,4 +160,46 @@ func parseRPMPackages(out, kernelRelease, arch string) (pkgs, modules map[string
 		}
 	}
 	return pkgs, modules
+}
+
+// parseAPKPackages reads /lib/apk/db/installed's P:/V:/o: lines (one
+// record per package, P: first) into origin -> version. The origin is the
+// aport a binary package was built from ("openssl" for libcrypto3 and
+// libssl3), which is what secdb is keyed on; a record without one is its
+// own origin. Several binaries of one origin can sit at different
+// versions mid-upgrade: the oldest wins.
+func parseAPKPackages(out string) map[string]string {
+	var pkgs map[string]string
+	var name, ver, origin string
+	flush := func() {
+		if name == "" || ver == "" {
+			return
+		}
+		if origin == "" {
+			origin = name
+		}
+		if pkgs == nil {
+			pkgs = map[string]string{}
+		}
+		if have, ok := pkgs[origin]; !ok || version.CompareAPK(ver, have) < 0 {
+			pkgs[origin] = ver
+		}
+	}
+	for line := range strings.Lines(out) {
+		key, val, ok := strings.Cut(strings.TrimRight(line, "\r\n"), ":")
+		if !ok {
+			continue
+		}
+		switch key {
+		case "P":
+			flush()
+			name, ver, origin = val, "", ""
+		case "V":
+			ver = val
+		case "o":
+			origin = val
+		}
+	}
+	flush()
+	return pkgs
 }

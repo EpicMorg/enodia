@@ -221,6 +221,13 @@ func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
 		}
 		idx = cve.MergeIndex(idx, ovalIdx)
 	}
+	if alpinePath, ok := cfg.AlpinePath(); ok {
+		alpineIdx, err := cve.LoadAlpineSecdb(alpinePath)
+		if err != nil {
+			return nil, err
+		}
+		idx = cve.MergeIndex(idx, alpineIdx)
+	}
 	return idx, nil
 }
 

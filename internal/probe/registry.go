@@ -17,7 +17,7 @@ var builtin = []Probe{
 	// almalinux 9 (docker.io/almalinux:9): ID="almalinux", VERSION_ID="9.8".
 	osReleaseFamilyProbe{product: "almalinux", summary: "AlmaLinux", resolver: ResolverRef{Type: "endoflife", ID: "almalinux"}, match: osReleaseIDEquals("almalinux"), packages: packagesRPM},
 	// alpine:latest: ID=alpine, VERSION_ID=3.24.1.
-	osReleaseFamilyProbe{product: "alpine-linux", summary: "Alpine Linux", resolver: ResolverRef{Type: "endoflife", ID: "alpine-linux"}, match: osReleaseIDEquals("alpine")},
+	osReleaseFamilyProbe{product: "alpine-linux", summary: "Alpine Linux", resolver: ResolverRef{Type: "endoflife", ID: "alpine-linux"}, match: osReleaseIDEquals("alpine"), packages: packagesAPK},
 	// amazonlinux:2023: ID="amzn", VERSION_ID="2023".
 	osReleaseFamilyProbe{product: "amazon-linux", summary: "Amazon Linux", resolver: ResolverRef{Type: "endoflife", ID: "amazon-linux"}, match: osReleaseIDEquals("amzn")},
 	apacheProbe{},

@@ -51,6 +51,7 @@ type CVESpec struct {
 	NVD    NVDSpec    `yaml:"nvd,omitempty"`
 	Debian DebianSpec `yaml:"debian,omitempty"`
 	OVAL   OVALSpec   `yaml:"oval,omitempty"`
+	Alpine AlpineSpec `yaml:"alpine,omitempty"`
 }
 
 // BDUSpec points at a local copy of FSTEC's БДУ export the operator
@@ -90,6 +91,15 @@ type OVALSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
+// AlpineSpec points at Alpine's secdb JSON files the operator downloaded
+// themselves (https://secdb.alpinelinux.org/<branch>/main.json and
+// community.json) — package-level CVE matching for alpine-linux targets,
+// see docs/DECISIONS.md D44. Path is one file or a directory of them,
+// relative to the config file like BDUSpec.Path.
+type AlpineSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
 // BDUPath returns the configured BDU export path, resolved relative to
 // the config file's own directory if it isn't already absolute — the same
 // rule resolveCredentialsFile applies to CredentialsFile. ok is false when
@@ -111,6 +121,11 @@ func (c *Config) DebianPath() (path string, ok bool) {
 // OVALPath is BDUPath's counterpart for cve.oval.path.
 func (c *Config) OVALPath() (path string, ok bool) {
 	return resolvePathRelativeToConfig(c.path, c.CVE.OVAL.Path)
+}
+
+// AlpinePath is BDUPath's counterpart for cve.alpine.path.
+func (c *Config) AlpinePath() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.Alpine.Path)
 }
 
 func resolvePathRelativeToConfig(configPath, p string) (path string, ok bool) {
@@ -230,6 +245,7 @@ func (c *Config) Validate() error {
 		"cve.nvd.path":    c.CVE.NVD.Path,
 		"cve.debian.path": c.CVE.Debian.Path,
 		"cve.oval.path":   c.CVE.OVAL.Path,
+		"cve.alpine.path": c.CVE.Alpine.Path,
 	} {
 		if strings.ContainsFunc(p, unicode.IsControl) {
 			return fmt.Errorf("%s: %s %q contains a control character — a Windows path in double quotes "+

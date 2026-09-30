@@ -74,7 +74,7 @@ func TestUbuntuProbeReadsPackages(t *testing.T) {
 func TestOSReleaseFamilyPackageRegistrations(t *testing.T) {
 	want := map[string]packageKind{
 		"rhel": packagesRPM, "almalinux": packagesRPM, "oracle-linux": packagesRPM, "rocky-linux": packagesRPM,
-		"linuxmint": packagesDpkgBinary, "fedora": packagesNone, "centos-stream": packagesNone,
+		"linuxmint": packagesDpkgBinary, "alpine-linux": packagesAPK, "fedora": packagesNone, "centos-stream": packagesNone,
 	}
 	for product, kind := range want {
 		p, err := Get(product)
@@ -133,5 +133,38 @@ func TestParseRPMPackagesWithoutModularityLabel(t *testing.T) {
 	pkgs, modules := parseRPMPackages("bash\t(none):4.2.46-35.el7_9\nopenssl-libs\t1:1.0.2k-26.el7_9\n", "", "")
 	if pkgs["openssl-libs"] != "1:1.0.2k-26.el7_9" || len(pkgs) != 2 || modules != nil {
 		t.Fatalf("got %v, %v", pkgs, modules)
+	}
+}
+
+// alpine-linux_3.20.0_packages.txt is the probe command's output from
+// alpine:3.20.0: 14 binary packages from 9 origins (libcrypto3 and
+// libssl3 are both openssl's).
+func TestOSReleaseFamilyReadsAPKPackages(t *testing.T) {
+	p := osReleaseFamilyProbe{product: "alpine-linux", match: osReleaseIDEquals("alpine"), packages: packagesAPK}
+	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
+		"cat /etc/os-release 2>/dev/null" + packagesCommand(packagesAPK): loadOSReleaseFixture(t, "alpine-linux_3.20.0_packages.txt"),
+	})
+	obs, err := p.Probe(context.Background(), Target{
+		ID: "x", Product: "alpine-linux", Address: addr,
+		Creds: Credentials{Username: "probeuser", Password: "probepass"},
+		TLS:   TLSSettings{PinSHA256: []string{fp}}, Timeout: 2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	if obs.Version != "3.20.0" || len(obs.Packages) != 9 || obs.Packages["openssl"] != "3.3.0-r2" || obs.Packages["musl"] != "1.2.5-r0" {
+		t.Fatalf("got version %q, packages %v", obs.Version, obs.Packages)
+	}
+	if _, ok := obs.Packages["libcrypto3"]; ok {
+		t.Error("binary package names must fold into their origin")
+	}
+}
+
+func TestParseAPKPackages(t *testing.T) {
+	got := parseAPKPackages("P:libcrypto3\nV:3.3.0-r3\no:openssl\n" +
+		"P:libssl3\nV:3.3.0-r2\no:openssl\n" + // mid-upgrade: the oldest wins
+		"P:noorigin\nV:1.0-r0\n")
+	if len(got) != 2 || got["openssl"] != "3.3.0-r2" || got["noorigin"] != "1.0-r0" {
+		t.Fatalf("got %v", got)
 	}
 }

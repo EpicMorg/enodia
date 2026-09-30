@@ -29,7 +29,8 @@ type Finding struct {
 	// could parse. Severity itself stays the source's own text.
 	CVSS CVSS `json:",omitzero"`
 	// InstalledVersion and FixedVersion are set only on package-level
-	// findings (Source "debian" or "oval", see Index.LookupPackages): the
+	// findings (Source "debian", "oval" or "alpine", see
+	// Index.LookupPackages): the
 	// package version on the host, and the version that fixes every CVE in
 	// CVEIDs. MatchedName is then the package. AdvisoryID/AdvisoryURL name
 	// the advisory that carries FixedVersion (USN-, RHSA-, ALSA-, ELSA-,
@@ -96,6 +97,7 @@ type Index struct {
 	byProduct map[string][]Finding
 	debian    debianTracker           // nil unless cve.debian.path is configured
 	oval      map[string]*ovalRelease // by ovalReleaseKey; nil unless cve.oval.path is configured
+	alpine    alpineSecdb             // nil unless cve.alpine.path is configured
 }
 
 // Lookup returns every finding for product whose range contains probed
@@ -141,6 +143,9 @@ func MergeIndex(a, b *Index) *Index {
 	}
 	if a.oval == nil {
 		a.oval = b.oval
+	}
+	if a.alpine == nil {
+		a.alpine = b.alpine
 	}
 	return a
 }

@@ -1181,14 +1181,16 @@ Not dates. Order of work, and what each step unblocks.
   unusable (13 of 130 advisories), so Rocky hosts are matched against
   RHEL's. Also: Debian's `linux` is now matched only against a running
   Debian kernel (Proxmox VE runs its own). See `docs/DECISIONS.md` D43.
+- Package-level CVE correlation for Alpine from secdb (`cve.alpine.path`),
+  keyed by origin package, with apk-tools' own version comparison
+  (checked against `apk version -t` on ~5300 pairs). On alpine:3.20.0 it
+  gives the same 4 packages and 34 CVEs as a reference run of
+  `apk version -t` over secdb. See `docs/DECISIONS.md` D44.
 
 ## Next
 
 Found running 2.0 against a real ~600-target fleet.
 
-- **Package-level CVEs for Alpine** from its secdb JSON
-  (`secdb.alpinelinux.org/<branch>/main.json`), with apk's own version
-  comparison.
 - **Astra Linux and RED OS package-level CVEs**: Debian 11/12 and RHEL
   8/9 rebuilds with their own package versions. Check against real hosts
   what their vendors publish (bulletins, OVAL?) and whether the upstream

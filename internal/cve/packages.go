@@ -33,8 +33,9 @@ type PackageQuery struct {
 // distribution's own security data says is behind a security fix:
 // debian against the Debian Security Tracker (D42); ubuntu (and
 // linuxmint, against its Ubuntu base), rhel, almalinux, oracle-linux and
-// rocky-linux against their vendor's OVAL (D43). Every other product, or one whose release has no data loaded,
-// gets nil.
+// rocky-linux against their vendor's OVAL (D43); alpine-linux against
+// Alpine's secdb (D44). Every other product, or one whose release has no
+// data loaded, gets nil.
 //
 // One Finding per package, not per CVE: confirmed live, a trixie host one
 // kernel update behind has 1314 fixed-but-not-installed kernel CVEs, and
@@ -53,6 +54,10 @@ func (idx *Index) LookupPackages(q PackageQuery) []Finding {
 	case "ubuntu", "linuxmint", "rhel", "almalinux", "oracle-linux", "rocky-linux":
 		if idx.oval != nil {
 			return idx.lookupOVAL(q)
+		}
+	case "alpine-linux":
+		if idx.alpine != nil {
+			return idx.lookupAlpine(q)
 		}
 	}
 	return nil
