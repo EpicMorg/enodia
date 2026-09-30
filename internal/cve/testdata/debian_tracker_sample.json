@@ -1,0 +1,240 @@
+{
+ "linux": {
+  "CVE-2004-0230": {
+   "description": "TCP, when using a large Window Size, makes it easier for remote attackers to gue",
+   "releases": {
+    "bookworm": {
+     "repositories": {
+      "bookworm": "6.1.176-1",
+      "bookworm-security": "6.1.187-1"
+     },
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "repositories": {
+      "trixie": "6.12.107-1",
+      "trixie-security": "6.12.111-1"
+     },
+     "status": "open",
+     "urgency": "unimportant"
+    }
+   },
+   "scope": "local"
+  },
+  "CVE-2005-3660": {
+   "description": "Linux kernel 2.4 and 2.6 allows attackers to cause a denial of service (memory e",
+   "releases": {
+    "bookworm": {
+     "repositories": {
+      "bookworm": "6.1.176-1",
+      "bookworm-security": "6.1.187-1"
+     },
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "repositories": {
+      "trixie": "6.12.107-1",
+      "trixie-security": "6.12.111-1"
+     },
+     "status": "open",
+     "urgency": "unimportant"
+    }
+   },
+   "scope": "local"
+  },
+  "CVE-2024-14027": {
+   "description": "In the Linux kernel, the following vulnerability has been resolved:  fs/xattr: m",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "0",
+     "repositories": {
+      "bookworm": "6.1.176-1",
+      "bookworm-security": "6.1.187-1"
+     },
+     "status": "resolved",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "fixed_version": "6.12.85-1",
+     "repositories": {
+      "trixie": "6.12.107-1",
+      "trixie-security": "6.12.111-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "local"
+  },
+  "CVE-2024-52560": {
+   "description": "In the Linux kernel, the following vulnerability has been resolved:  fs/ntfs3: M",
+   "releases": {
+    "bookworm": {
+     "repositories": {
+      "bookworm": "6.1.176-1",
+      "bookworm-security": "6.1.187-1"
+     },
+     "status": "open",
+     "urgency": "not yet assigned"
+    },
+    "trixie": {
+     "fixed_version": "6.12.111-1",
+     "repositories": {
+      "trixie": "6.12.107-1",
+      "trixie-security": "6.12.111-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "local"
+  },
+  "CVE-2024-58094": {
+   "description": "In the Linux kernel, the following vulnerability has been resolved:  jfs: add ch",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "6.1.187-1",
+     "repositories": {
+      "bookworm": "6.1.176-1",
+      "bookworm-security": "6.1.187-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    },
+    "trixie": {
+     "fixed_version": "6.12.111-1",
+     "repositories": {
+      "trixie": "6.12.107-1",
+      "trixie-security": "6.12.111-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "local"
+  },
+  "CVE-2025-21709": {
+   "description": "In the Linux kernel, the following vulnerability has been resolved:  kernel: be ",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "0",
+     "repositories": {
+      "bookworm": "6.1.176-1",
+      "bookworm-security": "6.1.187-1"
+     },
+     "status": "resolved",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "fixed_version": "6.12.85-1",
+     "repositories": {
+      "trixie": "6.12.107-1",
+      "trixie-security": "6.12.111-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "local"
+  }
+ },
+ "openssl": {
+  "CVE-2009-0591": {
+   "description": "The CMS_verify function in OpenSSL 0.9.8h through 0.9.8j, when CMS is enabled, d",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "0",
+     "repositories": {
+      "bookworm": "3.0.20-1~deb12u2",
+      "bookworm-security": "3.0.22-1~deb12u1"
+     },
+     "status": "resolved",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "fixed_version": "0",
+     "repositories": {
+      "trixie": "3.5.7-1~deb13u2",
+      "trixie-security": "3.5.7-1~deb13u3"
+     },
+     "status": "resolved",
+     "urgency": "unimportant"
+    }
+   },
+   "scope": "local"
+  },
+  "CVE-2009-0789": {
+   "description": "OpenSSL before 0.9.8k on WIN64 and certain other platforms does not properly han",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "0",
+     "repositories": {
+      "bookworm": "3.0.20-1~deb12u2",
+      "bookworm-security": "3.0.22-1~deb12u1"
+     },
+     "status": "resolved",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "fixed_version": "0",
+     "repositories": {
+      "trixie": "3.5.7-1~deb13u2",
+      "trixie-security": "3.5.7-1~deb13u3"
+     },
+     "status": "resolved",
+     "urgency": "unimportant"
+    }
+   },
+   "scope": "local"
+  },
+  "CVE-2026-35189": {
+   "description": "Issue summary: A certificate with many nameRelativeToCRLIssuer CRL distribution ",
+   "releases": {
+    "bookworm": {
+     "repositories": {
+      "bookworm": "3.0.20-1~deb12u2",
+      "bookworm-security": "3.0.22-1~deb12u1"
+     },
+     "status": "open",
+     "urgency": "not yet assigned"
+    },
+    "trixie": {
+     "fixed_version": "3.5.7-1~deb13u3",
+     "repositories": {
+      "trixie": "3.5.7-1~deb13u2",
+      "trixie-security": "3.5.7-1~deb13u3"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "local"
+  },
+  "CVE-2026-35191": {
+   "description": "Issue summary: The OpenSSL QUIC server, when configured to not preform address v",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "0",
+     "repositories": {
+      "bookworm": "3.0.20-1~deb12u2",
+      "bookworm-security": "3.0.22-1~deb12u1"
+     },
+     "status": "resolved",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "fixed_version": "3.5.7-1~deb13u3",
+     "repositories": {
+      "trixie": "3.5.7-1~deb13u2",
+      "trixie-security": "3.5.7-1~deb13u3"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "local"
+  }
+ }
+}

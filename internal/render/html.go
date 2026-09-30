@@ -602,6 +602,10 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 	fmt.Fprintf(b, `<a href="#" class="btn-close" aria-label="Close"></a></div>`)
 	fmt.Fprintf(b, `<div class="modal-body"><ul class="list-unstyled mb-0">`)
 	for _, g := range groupCVEs(findings) {
+		if g.pkg != nil {
+			writePackageCVEGroup(b, g)
+			continue
+		}
 		fmt.Fprintf(b, `<li class="mb-2"><div>`)
 		var links []string
 		for _, id := range g.cveIDs {
@@ -634,6 +638,25 @@ func writeCVEModalOverlay(b *strings.Builder, anchorID, rowID string, findings [
 		b.WriteString("</li>")
 	}
 	b.WriteString(`</ul></div></div></div></div>` + "\n")
+}
+
+// writePackageCVEGroup is one package-level group's line: the source
+// package, installed -> fixed version, a link to its Debian Security
+// Tracker page, and its CVEs folded into a <details> — plain text, not a
+// link each: a kernel one update behind carries 1314 of them, and 1314
+// anchors per host would dominate a fleet report's size. The tracker page
+// links every one of them already.
+func writePackageCVEGroup(b *strings.Builder, g cveGroup) {
+	f := g.pkg
+	fmt.Fprintf(b, `<li class="mb-2"><div><strong>%s</strong> %s &rarr; %s &mdash; %s`,
+		html.EscapeString(f.AdvisoryID), html.EscapeString(f.InstalledVersion), html.EscapeString(f.FixedVersion),
+		externalLink("https://security-tracker.debian.org/tracker/source-package/"+url.PathEscape(f.AdvisoryID), "security-tracker"))
+	if f.Severity != "" {
+		fmt.Fprintf(b, " &mdash; %s", html.EscapeString(f.Severity))
+	}
+	fmt.Fprintf(b, ` <span class="text-body-secondary">(%s)</span></div>`, html.EscapeString(f.Source))
+	fmt.Fprintf(b, `<details class="small text-body-secondary"><summary>%d CVE</summary>%s</details></li>`,
+		len(f.CVEIDs), html.EscapeString(strings.Join(f.CVEIDs, " ")))
 }
 
 // cveOrgURL is a CVE ID's record page on cve.org — the CNA-published

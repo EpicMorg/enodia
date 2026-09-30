@@ -2262,3 +2262,83 @@ the machine the config is used on, so only the command that asks "is
 this config ready to run here?" checks it. It checks existence only.
 Whether the file actually parses is still left to `loadCVEIndex`, which
 already reports that clearly.
+
+## D42 — Package-level CVEs for Debian from the Debian Security Tracker
+
+**Revisits D33,** which left the distributions unmatched because a
+release number can't tell which packages have been patched since. The fix
+is to stop matching on the release. The `debian` probe already holds an
+SSH session, so it now reads the installed packages and the running
+kernel in the same round trip. Findings come from the Debian Security
+Tracker's JSON export (`cve.debian.path`), the same approach `debsecan`
+uses. The operator downloads the file the same way as BDU and NVD.
+
+**What the probe collects.**
+- `dpkg-query`'s `source:Package` / `source:Version` into the new optional
+  `Observation.Packages` (source package → version). The tracker is
+  indexed by source package, and its fixed versions are source versions.
+  Confirmed live: binary `acl 2.3.2-2+b1` is source `acl 2.3.2-2`.
+- Only installed packages are kept (dpkg state `i`, `W`, `t`). `rc`
+  packages (removed, config files left behind) are dropped: 51 of 1970 on
+  the test host.
+- A source package installed at several versions keeps its oldest one.
+- `Extra["codename"]` (os-release `VERSION_CODENAME`) picks the tracker
+  release.
+- `Extra["kernel"]` is the running kernel's Debian version, taken from
+  `uname -v`. `uname -r` is the ABI name.
+
+The field is additive, so there is no inventory SchemaVersion bump. The
+payload is about 28KB per host (1074 source packages on the test host).
+
+**The running kernel replaces the installed `linux` version.** Confirmed
+live on the test host:
+- `linux-headers` 6.12.74-2 were still installed next to a running
+  6.12.107-1. Matching the oldest installed version would have flagged
+  CVEs the host no longer runs.
+- A fixed kernel that is installed but not booted is still the vulnerable
+  one, so the rule catches that case too.
+
+**Only fixed-but-not-installed CVEs are reported.** A CVE is reported
+when its status is `resolved` and its `fixed_version` is newer than the
+installed version. A `fixed_version` of `0` means "never affected".
+`open` and `undetermined` are dropped. Measured on the same
+trixie host:
+- 1327 CVEs are fixed but not installed: 1314 in the kernel (a reboot or
+  upgrade to 6.12.111-1) and 13 in openssl (one pending upgrade). This is
+  exactly what `apt list --upgradable` said was pending.
+- About 2000 CVEs are open, 813 of them in the kernel. They are the same
+  on every trixie host and nobody can act on them, so reporting them
+  would bury the actionable ones under a permanent constant.
+
+The count was cross-checked against a separate python3-apt script on the
+real 78MB export, and the two matched exactly.
+
+**One Finding per source package, not per CVE.** Its fields:
+- `CVEIDs` lists every missing fix.
+- `FixedVersion` is the newest fixed version among them, the version that
+  closes all of them.
+- `InstalledVersion` is what the host has.
+- `Severity` is the tracker's own most urgent word. "not yet assigned"
+  (about 80% of entries) is treated as no rating.
+
+A per-CVE report would put 1314 lines, each with its description, in
+every lagging host's modal, and a few hundred MB into a fleet HTML report.
+Per package, the modal line is `linux 6.12.107-1 → 6.12.111-1`, with a
+link to the tracker's source-package page and the CVE list as plain text
+inside a `<details>`. The CVES column still counts CVEs (1327), not
+packages.
+
+**Version comparison is dpkg's own algorithm** (`version.CompareDebian`).
+It was checked against python3-apt's `apt_pkg.version_compare` on about
+4000 pairs of real tracker versions, committed as testdata.
+
+**No on-disk cache.** The whole export parses in about 0.9s, with 60MB of
+heap. A cache would only add a way to go stale.
+
+**Known limits:**
+- The tracker only carries releases the security team still supports.
+  Today those are bookworm, trixie, forky and sid. Bullseye and older get
+  no package findings, and the lifecycle axis already marks them EOL.
+- Ubuntu (Canonical OVAL / USN) is a separate source with its own
+  versioning and is not done yet.
+- Astra Linux is Debian-derived but not covered by Debian's tracker.

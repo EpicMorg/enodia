@@ -28,6 +28,12 @@ type Finding struct {
 	// short display; the zero value when the source gave none this package
 	// could parse. Severity itself stays the source's own text.
 	CVSS CVSS `json:",omitzero"`
+	// InstalledVersion and FixedVersion are set only on package-level
+	// findings (Source "debian", see Index.LookupPackages): the source
+	// package version on the host, and the version that fixes every CVE in
+	// CVEIDs.
+	InstalledVersion string `json:",omitempty"`
+	FixedVersion     string `json:",omitempty"`
 
 	rng versionRange
 }
@@ -83,6 +89,7 @@ func (f Finding) Matches(probed string) bool {
 // docs/DECISIONS.md D31.
 type Index struct {
 	byProduct map[string][]Finding
+	debian    debianTracker // nil unless cve.debian.path is configured
 }
 
 // Lookup returns every finding for product whose range contains probed
@@ -122,6 +129,9 @@ func MergeIndex(a, b *Index) *Index {
 	}
 	for product, findings := range b.byProduct {
 		a.byProduct[product] = append(a.byProduct[product], findings...)
+	}
+	if a.debian == nil {
+		a.debian = b.debian
 	}
 	return a
 }

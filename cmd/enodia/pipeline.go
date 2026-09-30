@@ -147,6 +147,7 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 		if cveProduct, cveVersion, edition, ok := cve.Subject(o.Product, o.Version, o.Extra); ok {
 			findings = cveIndex.Lookup(cveProduct, cveVersion, edition)
 		}
+		findings = append(findings, cveIndex.LookupPackages(o.Product, o.Packages, o.Extra)...)
 
 		out = append(out, evaluate.Evaluate(evaluate.Input{
 			Observation: o,
@@ -159,12 +160,12 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 	return out
 }
 
-// loadCVEIndex returns the merged BDU/NVD vulnerability index the active
-// config's cve.bdu.path/cve.nvd.path name, or nil if neither is
-// configured — the normal case for most installs. "The active config" is
-// the same file collection itself uses (config.Locate: --config,
-// $ENODIA_CONFIG, then the default search paths), not only an explicit
-// --config. D30 first required the flag, and in practice that silently
+// loadCVEIndex returns the merged BDU/NVD/Debian vulnerability index the
+// active config's cve.bdu.path/cve.nvd.path/cve.debian.path name, or nil
+// if none is configured — the normal case for most installs. "The active
+// config" is the same file collection itself uses (config.Locate:
+// --config, $ENODIA_CONFIG, then the default search paths), not only an
+// explicit --config. D30 first required the flag, and in practice that silently
 // dropped the cve block of the very file the run's targets came from —
 // every auto-located or $ENODIA_CONFIG setup (serve under systemd or
 // Docker, /etc/enodia) showed no CVEs with no hint why (see
@@ -203,6 +204,13 @@ func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
 			return nil, err
 		}
 		idx = cve.MergeIndex(idx, nvdIdx)
+	}
+	if debianPath, ok := cfg.DebianPath(); ok {
+		debianIdx, err := cve.LoadDebianTracker(debianPath)
+		if err != nil {
+			return nil, err
+		}
+		idx = cve.MergeIndex(idx, debianIdx)
 	}
 	return idx, nil
 }

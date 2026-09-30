@@ -20,7 +20,7 @@ func loadDebianFixture(t *testing.T, name string) string {
 	return string(raw)
 }
 
-const debianProbeCmd = "cat /etc/os-release; echo '" + debianVersionMarker + "'; cat /etc/debian_version 2>/dev/null || true"
+const debianProbeCmd = debianProbeCommand
 
 func debianTestTarget(addr, fp string) Target {
 	return Target{
@@ -131,5 +131,82 @@ func TestDebianProbeMeta(t *testing.T) {
 	}
 	if m.DefaultResolver.Type != "endoflife" || m.DefaultResolver.ID != "debian" {
 		t.Fatalf("got resolver %+v", m.DefaultResolver)
+	}
+}
+
+// debian_{bookworm,trixie}_packages.txt are debianProbeCommand's full
+// output captured live from docker.io/library/debian:bookworm and :trixie
+// (uname -v is the container host's own Debian kernel). The older
+// fixtures above stop after /etc/debian_version — what a host without
+// uname or dpkg-query would give — and must still parse, just with no
+// packages.
+func TestDebianProbeReadsPackagesAndKernel(t *testing.T) {
+	for _, tc := range []struct {
+		fixture, codename string
+		sources           int // distinct source packages behind the image's ~90 binary ones
+		wantPkgs          map[string]string
+	}{
+		{"debian_bookworm_packages.txt", "bookworm", 63, map[string]string{"bash": "5.2.15-2", "apt": "2.6.1"}},
+		{"debian_trixie_packages.txt", "trixie", 55, map[string]string{"bash": "5.2.37-2", "util-linux": "2.41.5-0+deb13u1"}},
+	} {
+		t.Run(tc.codename, func(t *testing.T) {
+			addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
+				debianProbeCmd: loadDebianFixture(t, tc.fixture),
+			})
+			obs, err := debianProbe{}.Probe(context.Background(), debianTestTarget(addr, fp))
+			if err != nil {
+				t.Fatalf("Probe: %v", err)
+			}
+			if obs.Extra["codename"] != tc.codename {
+				t.Errorf("codename = %q, want %q", obs.Extra["codename"], tc.codename)
+			}
+			if obs.Extra["kernel"] != "6.12.107-1" {
+				t.Errorf("kernel = %q, want 6.12.107-1", obs.Extra["kernel"])
+			}
+			if len(obs.Packages) != tc.sources {
+				t.Errorf("got %d source packages, want %d", len(obs.Packages), tc.sources)
+			}
+			for name, want := range tc.wantPkgs {
+				if got := obs.Packages[name]; got != want {
+					t.Errorf("Packages[%q] = %q, want %q", name, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestDebianProbeOldFixtureHasNoPackages(t *testing.T) {
+	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
+		debianProbeCmd: loadDebianFixture(t, "debian_13.6.txt"),
+	})
+	obs, err := debianProbe{}.Probe(context.Background(), debianTestTarget(addr, fp))
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	if obs.Version != "13.6" || obs.Packages != nil || obs.Extra["kernel"] != "" {
+		t.Fatalf("got version %q, packages %v, kernel %q", obs.Version, obs.Packages, obs.Extra["kernel"])
+	}
+}
+
+func TestParseDpkgSourcePackages(t *testing.T) {
+	got := parseDpkgSourcePackages("" +
+		"ii \tacl\t2.3.2-2\n" +
+		"rc \tfoo\t1.0-1\n" + // removed, config files left: not installed
+		"ii \tlinux\t6.12.111-1\n" +
+		"ii \tlinux\t6.12.74-2\n" + // old headers still installed: the oldest wins
+		"hi \theld\t2.0\n" + // on hold, still installed
+		"iU \tunpacked\t3.0\n" + // unpacked, not configured
+		"garbage line\n")
+	want := map[string]string{"acl": "2.3.2-2", "linux": "6.12.74-2", "held": "2.0"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+	}
+	if parseDpkgSourcePackages("") != nil {
+		t.Fatal("empty output must give nil")
 	}
 }

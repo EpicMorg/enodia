@@ -358,9 +358,11 @@ cve:
     path: /var/lib/enodia/cve/bdu/vulxml.zip   # https://bdu.fstec.ru/files/documents/vulxml.zip
   nvd:
     path: /var/lib/enodia/cve/nvd              # a directory of nvdcve-2.0-<year>.json.gz
+  debian:
+    path: /var/lib/enodia/cve/debian.json      # https://security-tracker.debian.org/tracker/data/json
 ```
 
-Either block works alone. `bdu.path` is the export as published (`.zip`),
+Each block works alone. `bdu.path` is the export as published (`.zip`),
 or the `.xml` inside it, or a `.tar.gz`. `nvd.path` is one file or a
 directory of NVD's yearly files (`.json`, `.json.gz` or `.json.zip`, from
 https://nvd.nist.gov/feeds/json/cve/2.0/). Relative paths resolve against
@@ -377,11 +379,23 @@ minute for all of NVD plus BDU — and caches the result in the OS cache
 directory (`~/.cache/enodia/cve`, `%LocalAppData%\enodia\cve`). Every later
 run reads the cache in under a second.
 
+`debian.path` is the Debian Security Tracker's JSON export (`.json`,
+`.json.gz` or `.json.zip`). It is matched per installed package, not per
+release: the `debian` probe also reads the host's source packages
+(`dpkg-query`) and running kernel (`uname -v`) in the same SSH round trip.
+A package is flagged when Debian has already fixed a CVE in a newer version
+than the one installed, so each finding is something `apt upgrade` (and,
+for the kernel, a reboot) would close. CVEs Debian hasn't fixed yet are
+left out. The tracker only covers releases its security team still
+supports (bookworm, trixie, testing, sid), so older hosts get no package
+findings. The file parses in about a second, so it isn't cached.
+
 Findings show up as a CVES count in `check`'s compact and drift views and
-as a per-CVE list in `export --format html`; `export --format json` carries
-every finding with its source. Which products are matched, and why some
-(general-purpose Linux distributions among them) deliberately aren't, is
-in `docs/DECISIONS.md` D30–D35.
+as a per-CVE list in `export --format html`, with Debian findings grouped
+per package (`linux 6.12.107-1 → 6.12.111-1`, with its CVE list folded).
+`export --format json` carries every finding with its source. Which
+products are matched, and why some deliberately aren't, is in
+`docs/DECISIONS.md` D30–D35 and D42.
 
 ## File locations
 

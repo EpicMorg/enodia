@@ -141,3 +141,50 @@ func TestHTMLCVEModalOneLinePerCVE(t *testing.T) {
 		}
 	}
 }
+
+func debianPackageFindings() []cve.Finding {
+	return []cve.Finding{
+		{Source: "debian", AdvisoryID: "openssl", MatchedName: "openssl", CVEIDs: []string{"CVE-2026-35189", "CVE-2026-35191"},
+			InstalledVersion: "3.5.7-1~deb13u2", FixedVersion: "3.5.7-1~deb13u3", RangeText: "< 3.5.7-1~deb13u3"},
+		{Source: "debian", AdvisoryID: "linux", MatchedName: "linux", CVEIDs: []string{"CVE-2024-14027", "CVE-2024-52560", "CVE-2025-21709"},
+			InstalledVersion: "6.12.74-2", FixedVersion: "6.12.111-1", RangeText: "< 6.12.111-1", Severity: "medium"},
+	}
+}
+
+// A package-level finding is one group per package — never split per CVE
+// or merged with another package sharing a CVE — sorted by how many fixes
+// it's missing, while the CVES count still counts CVEs.
+func TestGroupCVEsPackageFindings(t *testing.T) {
+	groups := groupCVEs(debianPackageFindings())
+	if len(groups) != 2 || groups[0].key != "debian:linux" || groups[1].key != "debian:openssl" {
+		t.Fatalf("got %+v", groups)
+	}
+	if groups[0].pkg == nil || len(groups[0].cveIDs) != 3 {
+		t.Fatalf("got %+v", groups[0])
+	}
+	if got := distinctCVECount(debianPackageFindings()); got != 5 {
+		t.Errorf("distinctCVECount = %d, want 5 CVEs across two packages", got)
+	}
+}
+
+func TestPackageCVEGroupHTML(t *testing.T) {
+	var b strings.Builder
+	writeCVEModalOverlay(&b, "enodia-cve-modal-x", "host-a", debianPackageFindings())
+	out := b.String()
+	for _, want := range []string{
+		`<strong>linux</strong> 6.12.74-2 &rarr; 6.12.111-1`,
+		`href="https://security-tracker.debian.org/tracker/source-package/linux"`,
+		`<summary>3 CVE</summary>CVE-2024-14027 CVE-2024-52560 CVE-2025-21709</details>`,
+		`&mdash; medium`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "nvd.nist.gov") {
+		t.Error("package groups list CVEs as plain text, not one NVD link each")
+	}
+	if strings.Index(out, "linux") > strings.Index(out, "openssl") {
+		t.Error("linux (3 CVEs) must come before openssl (2)")
+	}
+}

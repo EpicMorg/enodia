@@ -128,6 +128,25 @@ targets:
 	}
 }
 
+func TestRunConfigValidateCmdMissingDebianPathIsError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+cve:
+  debian:
+    path: does-not-exist.json
+targets: []
+`)
+	withConfigFlag(t, path)
+
+	cmd, _, _ := testCmd(t)
+	err := runConfigValidateCmd(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "cve.debian.path") {
+		t.Fatalf("got %v, want an error naming cve.debian.path", err)
+	}
+}
+
 // A real BDU/NVD path (existence is all this checks for — not that it
 // parses) must not block an otherwise-clean config.
 func TestRunConfigValidateCmdRealCVEPathsOK(t *testing.T) {

@@ -1161,23 +1161,26 @@ Not dates. Order of work, and what each step unblocks.
   `cve.nvd.path` exist, so a typo only surfaced at `check`/`serve`
   time. It now fails with the offending key named. See
   `docs/DECISIONS.md` D41.
+- Package-level CVE correlation for Debian (revisits D33). The `debian`
+  probe now also reads the installed source packages (`dpkg-query`) and
+  the running kernel (`uname -v`) in its one SSH round trip. They are
+  matched against the Debian Security Tracker's JSON export
+  (`cve.debian.path`, operator-downloaded), and only CVEs Debian has
+  already fixed in a newer version than the installed one are reported,
+  one finding per source package. Confirmed on a live trixie host: 1327
+  CVEs (1314 kernel, pending reboot or upgrade to 6.12.111-1; 13 openssl),
+  matching a separate python3-apt check exactly. See `docs/DECISIONS.md`
+  D42.
 
 ## Next
 
 Found running 2.0 against a real ~600-target fleet.
 
-- **Package-level CVE correlation for Linux distributions** (revisits
-  DECISIONS.md D33, which left distros out because a release number
-  can't say which packages are patched). The fix is to stop matching on
-  the release number: the `debian`/`ubuntu` probes already hold an SSH
-  session, so they can also read `dpkg-query -W` (binary + source package,
-  version) and `uname -r` in the same round trip. Debian: match source
-  packages against the Debian Security Tracker JSON export (per package,
-  per CVE, per release: the fixed version — backports included), the same
-  approach `debsecan` uses. Ubuntu: Canonical's OVAL / USN data. Both are
-  plain downloadable files, so they fit the existing offline model next to
-  the NVD feeds and the BDU export (`cve:` block, operator-refreshed).
-  Debian first — it is the bulk of a typical fleet
+- **Package-level CVE correlation for Ubuntu**, the second half of what
+  Debian got in D42. Match `dpkg-query` source packages against
+  Canonical's OVAL / USN data, a plain downloadable file like the
+  tracker. The `ubuntu` probe needs the same `Packages`/kernel collection
+  the `debian` probe now has.
 
 ## Later
 

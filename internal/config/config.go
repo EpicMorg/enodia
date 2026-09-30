@@ -47,8 +47,9 @@ type Config struct {
 // rather than settings.yaml (display preferences), and why enodia never
 // fetches the underlying data itself.
 type CVESpec struct {
-	BDU BDUSpec `yaml:"bdu,omitempty"`
-	NVD NVDSpec `yaml:"nvd,omitempty"`
+	BDU    BDUSpec    `yaml:"bdu,omitempty"`
+	NVD    NVDSpec    `yaml:"nvd,omitempty"`
+	Debian DebianSpec `yaml:"debian,omitempty"`
 }
 
 // BDUSpec points at a local copy of FSTEC's БДУ export the operator
@@ -70,6 +71,15 @@ type NVDSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
+// DebianSpec points at a local copy of the Debian Security Tracker's JSON
+// export (https://security-tracker.debian.org/tracker/data/json) the
+// operator downloaded themselves — package-level CVE matching for debian
+// targets, see docs/DECISIONS.md D42. Path may be .json, .json.gz or
+// .json.zip, and may be relative to the config file, like BDUSpec.Path.
+type DebianSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
 // BDUPath returns the configured BDU export path, resolved relative to
 // the config file's own directory if it isn't already absolute — the same
 // rule resolveCredentialsFile applies to CredentialsFile. ok is false when
@@ -81,6 +91,11 @@ func (c *Config) BDUPath() (path string, ok bool) {
 // NVDPath is BDUPath's counterpart for cve.nvd.path.
 func (c *Config) NVDPath() (path string, ok bool) {
 	return resolvePathRelativeToConfig(c.path, c.CVE.NVD.Path)
+}
+
+// DebianPath is BDUPath's counterpart for cve.debian.path.
+func (c *Config) DebianPath() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.Debian.Path)
 }
 
 func resolvePathRelativeToConfig(configPath, p string) (path string, ok bool) {
@@ -195,7 +210,11 @@ func (c *Config) Validate() error {
 			c.path, c.SchemaVersion, SchemaVersion)
 	}
 
-	for key, p := range map[string]string{"cve.bdu.path": c.CVE.BDU.Path, "cve.nvd.path": c.CVE.NVD.Path} {
+	for key, p := range map[string]string{
+		"cve.bdu.path":    c.CVE.BDU.Path,
+		"cve.nvd.path":    c.CVE.NVD.Path,
+		"cve.debian.path": c.CVE.Debian.Path,
+	} {
 		if strings.ContainsFunc(p, unicode.IsControl) {
 			return fmt.Errorf("%s: %s %q contains a control character — a Windows path in double quotes "+
 				"turns \\t, \\n into a tab and a newline; write it unquoted, in single quotes, or with forward slashes",

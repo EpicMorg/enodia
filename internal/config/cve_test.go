@@ -145,3 +145,21 @@ func TestCVEWindowsPathFormsLoad(t *testing.T) {
 		}
 	}
 }
+
+func TestDebianPathRelativeToConfigDir(t *testing.T) {
+	dir := t.TempDir()
+	c := loadConfig(t, dir, `
+schemaVersion: 1
+cve:
+  debian:
+    path: data/debian.json
+targets: []
+`)
+	path, ok := c.DebianPath()
+	if !ok || path != filepath.Join(dir, "data", "debian.json") {
+		t.Fatalf("got %q, %v", path, ok)
+	}
+	if _, ok := c.NVDPath(); ok {
+		t.Fatal("cve.debian.path must not imply cve.nvd.path")
+	}
+}
