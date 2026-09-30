@@ -2156,3 +2156,25 @@ already-EOL cycles use different, unhandled VMware shorthands
 neither is what was reported, and guessing at either's real shape
 without a live host to confirm against would be exactly the kind of
 invention D9/CLAUDE.md's working style warns off.
+
+---
+
+## D39 — LATEST/CYCLE in the report show the cleaned version, not the raw tag
+
+**Decided.** Reported from a real fleet: GitHub-release-resolved
+products showed the raw tag verbatim in the report's LATEST column
+(`v2026.9.1`, `v1.0.68`) instead of a plain version — inconsistent
+with every `endoflife`-resolved product's own cycle names, which are
+already clean, and inconsistent with the *comparison* itself, since
+`evaluatePatch` already calls `version.Clean` on its own copy of
+`matched.Latest` before comparing — only the copy stored for *display*
+(`Assessment.MatchedCycle`/`LatestInCycle`) was left raw.
+
+Fixed at the one place both fields get set (`Evaluate`, right before
+`evaluatePatch` runs): `version.Clean` applied to `matched.Cycle` and
+`matched.Latest` before storing them into the `Assessment`, not a
+GitHub-specific special case — an already-clean `endoflife` cycle name
+like `"10.3"` round-trips through `Clean` unchanged, so this costs
+those products nothing. Comparison logic in `evaluatePatch` and branch
+detection in `evaluateBranch` still receive the original `matched`
+struct untouched; only what gets displayed changed.

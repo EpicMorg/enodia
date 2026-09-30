@@ -1139,6 +1139,13 @@ Not dates. Order of work, and what each step unblocks.
   own version string has nothing to compare it against either way. Two
   older, already-EOL cycles use different, unhandled VMware shorthands
   and are deliberately left alone. See `docs/DECISIONS.md` D38.
+- Bug fix: GitHub-release resolvers showed the raw tag verbatim in the
+  report's LATEST/CYCLE columns (`v2026.9.1`, `v1.0.68`), inconsistent
+  with every `endoflife`-resolved product's already-clean cycle names.
+  `Evaluate` now applies `version.Clean` before storing
+  `MatchedCycle`/`LatestInCycle`, the same cleaning `evaluatePatch`
+  already did internally just for comparison. See `docs/DECISIONS.md`
+  D39.
 
 ## Next
 
@@ -1158,8 +1165,6 @@ Found running 2.0 against a real ~600-target fleet.
   Debian first — it is the bulk of a typical fleet
 - BMC probes — Supermicro IPMI web UI / Redfish and Dell iDRAC (Redfish
   `/redfish/v1/Managers/...` carries the firmware version)
-- Bug: GitHub-release resolvers show the tag verbatim in LATEST
-  (`v2026.9.1`, `v1.0.68`) — strip the leading `v` like `normalized` does
 
 ## Later
 

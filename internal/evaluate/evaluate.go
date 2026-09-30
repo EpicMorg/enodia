@@ -219,8 +219,13 @@ func Evaluate(in Input, asOf time.Time, policy Policy) Assessment {
 		return a
 	}
 
-	a.MatchedCycle = matched.Cycle
-	a.LatestInCycle = matched.Latest
+	// Cleaned for display, same as normalized already is: the GitHub
+	// Releases fallback's Cycle/Latest are raw tags ("v2026.9.1"), and
+	// evaluatePatch below already Cleans its own copy internally for
+	// comparison — storing the raw string here would make LATEST/CYCLE in
+	// the report show the "v" a viewer never asked to compare against.
+	a.MatchedCycle = version.Clean(matched.Cycle)
+	a.LatestInCycle = version.Clean(matched.Latest)
 	a.Patch = evaluatePatch(normalized, matched.Latest)
 	a.Lifecycle, a.EOLDate, a.SupportEnds = evaluateLifecycle(matched, asOf)
 	a.Branch = evaluateBranch(matched.Cycle, in.Cycles)
