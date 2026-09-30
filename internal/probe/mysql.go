@@ -61,8 +61,29 @@ func (mysqlProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	return obs, nil
 }
 
-// readMySQLHandshakeVersion reads one MySQL packet and extracts the version
-// string from a Protocol::HandshakeV10 payload:
+// readMySQLHandshakeVersion reads one MySQL packet and returns its version,
+// rejecting a MariaDB server's masked reply. mariadbProbe (mariadb.go)
+// calls the shared readMySQLProtocolVersion directly instead, and accepts
+// exactly the shape this rejects.
+func readMySQLHandshakeVersion(r io.Reader) (string, error) {
+	version, err := readMySQLProtocolVersion(r)
+	if err != nil {
+		return "", err
+	}
+
+	// MariaDB masks its real version behind "5.5.5-" for MySQL clients that
+	// predate MariaDB's own version scheme (confirmed still true on a
+	// current MariaDB 10.11 image, not assumed from older documentation).
+	// product: mysql pointed at a MariaDB server is exactly the kind of
+	// mismatch D9 wants caught, not silently recorded as a MySQL fact.
+	if unmasked, ok := strings.CutPrefix(version, "5.5.5-"); ok {
+		return "", fmt.Errorf("%w: this server is MariaDB (%s), not MySQL", ErrNotSupported, unmasked)
+	}
+	return version, nil
+}
+
+// readMySQLProtocolVersion reads one MySQL packet and extracts the raw
+// version string from a Protocol::HandshakeV10 payload:
 //
 //	1 byte   protocol version (0x0a)
 //	string   server version, NUL-terminated   <- this is all we need
@@ -71,8 +92,10 @@ func (mysqlProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 //
 // verified against a live MySQL 8.0 server's real handshake packet (see
 // testdata/mysql_8.0.46.bin) rather than assumed from the protocol docs
-// alone.
-func readMySQLHandshakeVersion(r io.Reader) (string, error) {
+// alone. Shared by mysqlProbe and mariadbProbe (mariadb.go): both speak
+// this identical wire format and only differ in how they interpret
+// MariaDB's own "5.5.5-" compatibility mask on the version string.
+func readMySQLProtocolVersion(r io.Reader) (string, error) {
 	header := make([]byte, 4)
 	if _, err := io.ReadFull(r, header); err != nil {
 		return "", fmt.Errorf("%w: reading handshake header: %w", ErrUnreachable, err)
@@ -106,15 +129,5 @@ func readMySQLHandshakeVersion(r io.Reader) (string, error) {
 	if end < 0 {
 		return "", fmt.Errorf("%w: handshake version string is not NUL-terminated", ErrUnparseable)
 	}
-	version := string(payload[1 : 1+end])
-
-	// MariaDB masks its real version behind "5.5.5-" for MySQL clients that
-	// predate MariaDB's own version scheme (confirmed still true on a
-	// current MariaDB 10.11 image, not assumed from older documentation).
-	// product: mysql pointed at a MariaDB server is exactly the kind of
-	// mismatch D9 wants caught, not silently recorded as a MySQL fact.
-	if unmasked, ok := strings.CutPrefix(version, "5.5.5-"); ok {
-		return "", fmt.Errorf("%w: this server is MariaDB (%s), not MySQL", ErrNotSupported, unmasked)
-	}
-	return version, nil
+	return string(payload[1 : 1+end]), nil
 }

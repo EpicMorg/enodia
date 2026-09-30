@@ -2072,3 +2072,30 @@ rest"; CRITICAL got danger too rather than info, which would have made
 the most severe level look the calmest.) `text-bg-*`, not `bg-*`: same
 background, but Bootstrap also sets a readable text color. Inline mode
 defines the same classes in its own CSS with Bootstrap's colors.
+
+---
+
+## D36 — `mariadb` is a separate probe, not a mysqlProbe flag
+
+**Decided.** Found running 2.0 against a real fleet: `mysqlProbe` has
+always rejected a MariaDB server's handshake outright ("this server is
+MariaDB, not MySQL") rather than parse it — correct per D9, but it left
+MariaDB with no probe of its own at all.
+
+Both speak the identical wire format (`Protocol::HandshakeV10`); they
+differ only in whether the version string carries MariaDB's own
+"5.5.5-" compatibility mask, confirmed live (again) against a fresh
+`mariadb:10.11` container to still be true today, byte-for-byte
+identical to the fixture already captured for `mysqlProbe`'s own
+rejection test. The shared packet-framing/NUL-termination logic moved
+into `readMySQLProtocolVersion` (`mysql.go`), returning the *raw*
+version with no MariaDB-specific interpretation at all;
+`readMySQLHandshakeVersion` (mysqlProbe's own wrapper, kept under its
+original name so its existing tests needed no changes) rejects the
+masked shape same as before, and the new `mariadbProbe` (`mariadb.go`)
+requires it — stripping the mask, then extracting the numeric spine and
+keeping the vendor tag (`MariaDB-ubu2204`) in `Extra` rather than
+discarding it, since `internal/version.Clean` doesn't recognize
+`-MariaDB-<os tag>` as a suffix to strip. `endoflife.date` already has
+a `mariadb` calendar (confirmed live), so this gets a real
+`DefaultResolver` from day one, unlike several other recent additions.

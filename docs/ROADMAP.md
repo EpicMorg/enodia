@@ -1115,6 +1115,15 @@ Not dates. Order of work, and what each step unblocks.
   `CRITICAL · CVSS 3.1 9.8` rating parsed from both sources, most
   severe first; the CVES count now counts CVEs. See `docs/DECISIONS.md`
   D35.
+- `mariadb` probe — `mysql` has always correctly rejected a MariaDB
+  handshake ("this server is MariaDB …, not MySQL"), so MariaDB servers
+  had no probe of their own at all. Same `Protocol::HandshakeV10` the
+  two share (the packet-framing logic is now a shared
+  `readMySQLProtocolVersion`, confirmed live again against a fresh
+  `mariadb:10.11` container), own product id, own endoflife.date
+  calendar (`mariadb`, confirmed live). CVE mapping deliberately not
+  done yet — that's the later, dedicated CVE pass, not an oversight.
+  See `docs/DECISIONS.md` D36.
 
 ## Next
 
@@ -1132,10 +1141,6 @@ Found running 2.0 against a real ~600-target fleet.
   plain downloadable files, so they fit the existing offline model next to
   the NVD feeds and the BDU export (`cve:` block, operator-refreshed).
   Debian first — it is the bulk of a typical fleet
-- `mariadb` probe — `mysql` correctly rejects a MariaDB handshake
-  ("this server is MariaDB …, not MySQL"), so MariaDB servers currently
-  have no probe at all. Same HandshakeV10 parse, own product id, own
-  endoflife.date calendar (`mariadb`) and CVE mapping
 - `pfsense` probe — only `opnsense` exists today
 - BMC probes — Supermicro IPMI web UI / Redfish and Dell iDRAC (Redfish
   `/redfish/v1/Managers/...` carries the firmware version)

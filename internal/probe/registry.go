@@ -86,6 +86,9 @@ var builtin = []Probe{
 	logstashProbe{},
 	// Verified live via sw_vers over SSH against a real Mac (macOS 15.4).
 	macosProbe{},
+	// Same wire format mysqlProbe reads, minus the mask: readMySQLProtocolVersion
+	// is shared, see mariadb.go for exactly what differs (mysql.go).
+	mariadbProbe{},
 	mattermostProbe{},
 	mongodbProbe{},
 	mysqlProbe{},
