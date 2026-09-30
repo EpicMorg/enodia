@@ -1186,6 +1186,11 @@ Not dates. Order of work, and what each step unblocks.
   (checked against `apk version -t` on ~5300 pairs). On alpine:3.20.0 it
   gives the same 4 packages and 34 CVEs as a reference run of
   `apk version -t` over secdb. See `docs/DECISIONS.md` D44.
+- `freeradius` — SSH probe running the server's own `-v`, with
+  `options.container` for a FreeRADIUS in Docker/Podman (confirmed live:
+  3.2.10 in Docker). Lifecycle from a new `github-tag-branches` resolver
+  (one cycle per major.minor from GitHub tags, since 3.0.x and 3.2.x ship
+  side by side); CVEs from NVD and BDU. See `docs/DECISIONS.md` D45.
 
 ## Next
 

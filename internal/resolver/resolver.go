@@ -145,9 +145,10 @@ func New(cache *Cache, githubToken string) *Resolver {
 	return &Resolver{
 		Cache: cache,
 		Sources: map[string]Source{
-			"endoflife":   &endoflifeSource{Client: http.DefaultClient},
-			"github":      &githubSource{Client: http.DefaultClient, Token: githubToken},
-			"github-tags": &githubTagsSource{Client: http.DefaultClient, Token: githubToken},
+			"endoflife":           &endoflifeSource{Client: http.DefaultClient},
+			"github":              &githubSource{Client: http.DefaultClient, Token: githubToken},
+			"github-tags":         &githubTagsSource{Client: http.DefaultClient, Token: githubToken},
+			"github-tag-branches": &githubTagsSource{Client: http.DefaultClient, Token: githubToken, Branches: true},
 		},
 	}
 }

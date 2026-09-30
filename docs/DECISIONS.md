@@ -2499,3 +2499,44 @@ same. The fixed versions (musl 1.2.5-r3, busybox 1.36.1-r31) are the ones
 One Finding per origin, `Source` "alpine", linked to the origin's page
 on security.alpinelinux.org. secdb carries no severity. There is no
 cache: the files are a few hundred KB.
+
+## D45 — `freeradius` is an SSH probe; its lifecycle is read per branch from GitHub tags
+
+**The version can't come from the network.** RADIUS has no version
+exchange. FreeRADIUS's Status-Server reply carries statistics counters
+only: 3.2.10's `dictionary.freeradius*` define no version attribute at
+all. The probe SSHes in and runs the server's own `-v`. It tries
+`freeradius` (Debian/Ubuntu) and `radiusd` (RHEL-family, source builds),
+first by name and then by `/usr/sbin` path, because a non-login SSH
+session's PATH often lacks `/usr/sbin`. Confirmed live against the
+production host it was built for:
+- `radiusd: FreeRADIUS Version 3.2.10 (git #9071ea041), …` gives
+  `3.2.10`, and the git hash goes to `Extra["git"]`.
+- That host runs FreeRADIUS in Docker and has no binary on the host at
+  all. `options.container: <name>` runs the same command through
+  `docker exec` (`options.container_runtime: podman` for Podman). The
+  SSH user needs to be allowed to use the runtime.
+- The container name is checked against Docker's own name pattern before
+  it goes into the remote command.
+
+**`github-tag-branches` resolver.** endoflife.date has no FreeRADIUS page
+(404), and FreeRADIUS publishes tags like `release_3_2_10`. It maintains
+3.0.x and 3.2.x side by side: `release_3_2_10` and `release_3_0_28` are
+both among its newest tags. A single "latest tag" cycle would call a
+fully patched 3.0.28 "behind 3.2.10". The new resolver type is the
+existing `github-tags` source with one Cycle per major.minor branch, each
+branch's highest tag as its Latest, read from GitHub's maximum page of
+100 tags (back to 0.9.x). Confirmed live:
+- 3.2.10 reads as current and latest.
+- A 3.0.19 observation reads as behind 3.0.28, with a newer branch.
+
+pgAdmin keeps plain `github-tags`, because its minor numbers are
+releases, not branches.
+
+**CVEs: NVD `freeradius:freeradius`, BDU "FreeRADIUS Development Team" /
+"FreeRADIUS",** both verified verbatim in the full exports (459 NVD
+matches). A 3.0.19 observation gets 6 CVEs, BlastRADIUS (CVE-2024-3596)
+included. NVD's range for BlastRADIUS is only `versionEndExcluding
+3.0.27`, with nothing for the 3.2 branch (fixed in 3.2.5), so a 3.2.3 host
+gets no finding for it. That is followed as data, the same as D33's
+Dropbear case, not patched over.
