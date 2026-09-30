@@ -2342,3 +2342,119 @@ heap. A cache would only add a way to go stale.
 - Ubuntu (Canonical OVAL / USN) is a separate source with its own
   versioning and is not done yet.
 - Astra Linux is Debian-derived but not covered by Debian's tracker.
+
+## D43 — Package-level CVEs for Ubuntu, Linux Mint and the RHEL family from vendor OVAL
+
+**Extends D42 to five more probes.** One source format covers them:
+each vendor's own OVAL file, which is a plain download like the Debian
+tracker. The config key is `cve.oval.path`: one file or a directory,
+`.xml` or the vendors' `.xml.bz2`. Which release a file is for is read
+from its content, never from its name:
+- Ubuntu: from the definition ids.
+- RHEL, Oracle: from `<platform>`.
+- AlmaLinux: from its "AlmaLinux 9 is installed" criterion, because its
+  definitions carry no platform element at all.
+
+| Probe | File | Matched on |
+|---|---|---|
+| ubuntu | `com.ubuntu.<codename>.usn.oval.xml` | binary packages, running kernel |
+| linuxmint | the same file, for its `UBUNTU_CODENAME` | binary packages |
+| rhel | `rhel-<N>.oval.xml` (OVAL v2) | binary packages, module streams |
+| rocky-linux | **`rhel-<N>.oval.xml`**, see below | same |
+| almalinux | `org.almalinux.alsa-<N>.xml` | same |
+| oracle-linux | `com.oracle.elsa-ol<N>.xml` | same, plus arch, FIPS and Ksplice variants |
+
+**Not a full OVAL interpreter.** Every patch definition is reduced to its
+"package NAME older than VERSION" checks (the approach Trivy and vuls
+use), with the conditions that scope them. The rest of the criteria logic
+is not evaluated:
+- The OS-is-installed checks: the file is already per release.
+- Package signing keys: the probe doesn't read signatures, so a
+  third-party package with a distribution package's name is compared as
+  if it were the distribution's.
+- kpatch state.
+
+The scoping conditions each come from a real case:
+- **Module streams.** RHEL, Alma and Oracle fix nodejs:18, nodejs:20 and
+  non-modular nodejs 16 separately. The rpm probe reads each package's
+  `MODULARITYLABEL` into `Observation.Modules`, and a package is only
+  matched against its own stream's fixes.
+- **Architecture.** Oracle writes separate x86_64 and aarch64 branches,
+  matched against `uname -m`.
+- **Oracle's FIPS and Ksplice rebuilds.** "openssl is fips patched" marks
+  epoch-10 `_fips` packages. Before this rule, 11 of 12 advisories on a
+  real Oracle 9.8 container were false positives. A variant fix applies
+  only to a package whose release carries that marker, and the reverse.
+- **Neighbouring releases.** A fix tagged `.elN` for a different major
+  release than the file's is dropped. Oracle's ol9 file carries some OL8
+  and OL10 definitions.
+
+**Ubuntu's kernel check is corrected, not copied.** Canonical's OVAL
+compares the running kernel's ABI alone (`6.8.0-35`) against the fixed
+package version (`6.8.0-35.35`). The ABI alone sorts before that version,
+so the kernel that carries the fix would read as still missing it. The
+probe also reads `uname -v`, and the upload number from it (`#35-Ubuntu`,
+or `#36~22.04.1-Ubuntu` for HWE) completes the version.
+
+**Running kernels on rpm distributions.** dnf keeps three installonly
+kernels. For a name installed at several versions, the one matching
+`uname -r` wins, and otherwise the oldest.
+
+**Validated against the reference tools, in containers of old images**
+(RHEL UBI 9.4, AlmaLinux 9.0, Rocky 9.3, Ubuntu noble 2024-06, Oracle 9
+with packages downgraded):
+- **Ubuntu:** 56 of 56 advisories match `oscap oval eval` on the same
+  file. That required removing oscap's own "unix family" applicability
+  test, which reports "unknown" in a container.
+- **RHEL:** 128 of 128 match oscap.
+- **AlmaLinux:** 197 of 197 match oscap. At package level, 71 of the 73
+  packages `dnf updateinfo list --security` names are found. The missing
+  two, p11-kit and p11-kit-trust, are ALSAs absent from Alma's own OVAL
+  file (they are in RHEL's), which is a gap in the vendor's data.
+- **Oracle:** 22 of 22 match oscap, and 16 of 16 packages match dnf.
+
+**Rocky's own OVAL is refused; Rocky hosts use RHEL's.** Measured on the
+Rocky 9.3 container:
+- `org.rockylinux.rlsa-9.xml` holds 13 of the 130 advisories dnf reports.
+- It fails OVAL schema validation (`tst:unk` references), and oscap
+  segfaults on it with validation skipped.
+- It mixes el8 and el9 fixes in one definition.
+- Its definitions carry fixed versions from unrelated later updates:
+  RLSA-2022:5250 flags libxml2 below 2.9.13-6.el9_4.
+- It carries CVE ids only in description text.
+
+Rocky rebuilds RHEL's packages with the same version-release. Against
+`rhel-9.oval.xml`, the same host flags all 52 packages dnf names, plus 7
+more (rpm*, gawk, ca-certificates) whose CVE fixes Red Hat shipped as
+RHBAs, which `--security` filters out. Loading a Rocky file is an error
+naming the file to use instead.
+
+**One Finding per package, as in D42.** `Source` is "oval".
+- `AdvisoryID` / `AdvisoryURL` name the advisory that carries the newest
+  fix. For AlmaLinux that is its ALSA, not the RHSA it cites first.
+- `Advisories` lists every advisory the package is missing.
+- `Severity` is the vendor's own word.
+- Ubuntu kernel findings are named `kernel <flavour> (<uname -r>)`.
+
+**Cached per file.** Parsing Ubuntu noble's, RHEL 9's, Alma 9's and
+Oracle 9's files takes about 11s together, most of it bzip2. From the
+cache, the whole `check` takes 1.3s. Invalidation is by mtime and size,
+like D30/D31.
+
+**Also fixed in D42's Debian matching:** source package `linux` is now
+matched only against a running Debian kernel. A Proxmox VE host runs its
+own kernel (`uname -v` says PMX, not Debian) but has Debian's
+`linux-libc-dev`. Matching the headers package would have reported
+hundreds of kernel CVEs against it. Proxmox itself gets no code: its
+probe talks to the HTTPS API with a token. A `debian` target over SSH
+to the same host (its os-release is Debian's) gets its package CVEs,
+minus the Proxmox-built packages, which have no public feed.
+
+**Not covered:**
+- The OVAL-free rpm distributions: CentOS Stream, Fedora, Amazon Linux
+  and openSUSE (SUSE has OVAL; not done yet).
+- Astra Linux and RED OS: Debian and RHEL rebuilds with their own
+  versions, to be looked at against real hosts.
+- Ubuntu's `oci.*` OVAL variant, which checks the dpkg status file with
+  regexes instead of packages. It is refused with a pointer to the right
+  file.

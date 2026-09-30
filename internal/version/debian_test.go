@@ -40,7 +40,13 @@ func TestCompareDebian(t *testing.T) {
 // Debian Security Tracker's own JSON, each with the order python3-apt's
 // apt_pkg.version_compare (libapt's implementation of dpkg's rule) gave.
 func TestCompareDebianMatchesAptPkg(t *testing.T) {
-	f, err := os.Open("testdata/debian_compare.txt")
+	checkVectors(t, "testdata/debian_compare.txt", CompareDebian, 4000)
+}
+
+// checkVectors runs cmp over a "a b want" file, one pair per line.
+func checkVectors(t *testing.T, path string, cmp func(a, b string) int, atLeast int) {
+	t.Helper()
+	f, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,15 +66,15 @@ func TestCompareDebianMatchesAptPkg(t *testing.T) {
 		if err != nil {
 			t.Fatalf("bad line %q", line)
 		}
-		if got := CompareDebian(fields[0], fields[1]); got != want {
-			t.Errorf("CompareDebian(%q, %q) = %d, apt_pkg says %d", fields[0], fields[1], got, want)
+		if got := cmp(fields[0], fields[1]); got != want {
+			t.Errorf("compare(%q, %q) = %d, reference says %d", fields[0], fields[1], got, want)
 		}
 		n++
 	}
 	if err := sc.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if n < 4000 {
+	if n < atLeast {
 		t.Fatalf("only %d vectors read", n)
 	}
 }

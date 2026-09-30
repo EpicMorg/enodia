@@ -74,8 +74,8 @@ func runConfigValidateCmd(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// validateCVEPaths confirms cve.bdu.path/cve.nvd.path/cve.debian.path, if set, actually
-// exist. credentials_file gets this same check for free from
+// validateCVEPaths confirms every cve.*.path that is set actually
+// exists. credentials_file gets this same check for free from
 // LoadCredentials' own os.ReadFile (already run by cfg.Build above) — the
 // CVE paths had nothing equivalent, so a typo'd or moved path passed
 // `config validate` clean and only surfaced as a failure deep inside
@@ -89,6 +89,7 @@ func validateCVEPaths(cfg *config.Config) error {
 		"cve.bdu.path":    cfg.BDUPath,
 		"cve.nvd.path":    cfg.NVDPath,
 		"cve.debian.path": cfg.DebianPath,
+		"cve.oval.path":   cfg.OVALPath,
 	} {
 		path, ok := resolve()
 		if !ok {

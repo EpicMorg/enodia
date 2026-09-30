@@ -360,6 +360,8 @@ cve:
     path: /var/lib/enodia/cve/nvd              # a directory of nvdcve-2.0-<year>.json.gz
   debian:
     path: /var/lib/enodia/cve/debian.json      # https://security-tracker.debian.org/tracker/data/json
+  oval:
+    path: /var/lib/enodia/cve/oval             # vendor OVAL files, one per release (see below)
 ```
 
 Each block works alone. `bdu.path` is the export as published (`.zip`),
@@ -390,12 +392,31 @@ left out. The tracker only covers releases its security team still
 supports (bookworm, trixie, testing, sid), so older hosts get no package
 findings. The file parses in about a second, so it isn't cached.
 
+`oval.path` is one vendor OVAL file or a directory of them, as published
+(`.xml` or `.xml.bz2`), one per release in your fleet. `ubuntu`,
+`linuxmint`, `rhel`, `rocky-linux`, `almalinux` and `oracle-linux` targets
+are matched per installed package the same way:
+
+| Targets | File |
+|---|---|
+| Ubuntu, Linux Mint (its Ubuntu base) | `https://security-metadata.canonical.com/oval/com.ubuntu.<codename>.usn.oval.xml.bz2` (not the `oci.` variant) |
+| RHEL, **and Rocky Linux** | `https://security.access.redhat.com/data/oval/v2/RHEL<N>/rhel-<N>.oval.xml.bz2` |
+| AlmaLinux | `https://security.almalinux.org/oval/org.almalinux.alsa-<N>.xml.bz2` |
+| Oracle Linux | `https://linux.oracle.com/security/oval/com.oracle.elsa-ol<N>.xml.bz2` |
+
+Rocky's own OVAL file is refused: it is far from complete, so Rocky hosts
+are matched against Red Hat's. Parsed OVAL is cached like BDU and NVD.
+
+A Proxmox VE host gets package findings as a second, SSH `debian` target
+alongside its API `proxmox` one.
+
 Findings show up as a CVES count in `check`'s compact and drift views and
-as a per-CVE list in `export --format html`, with Debian findings grouped
-per package (`linux 6.12.107-1 → 6.12.111-1`, with its CVE list folded).
+as a per-CVE list in `export --format html`, with Debian and OVAL
+findings grouped per package (`linux 6.12.107-1 → 6.12.111-1`, linked to
+the advisory that fixes it, with its CVE list folded).
 `export --format json` carries every finding with its source. Which
 products are matched, and why some deliberately aren't, is in
-`docs/DECISIONS.md` D30–D35 and D42.
+`docs/DECISIONS.md` D30–D35, D42 and D43.
 
 ## File locations
 

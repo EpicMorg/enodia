@@ -15,7 +15,7 @@ import (
 // visible here. Ordering is alphabetical by product.
 var builtin = []Probe{
 	// almalinux 9 (docker.io/almalinux:9): ID="almalinux", VERSION_ID="9.8".
-	osReleaseFamilyProbe{product: "almalinux", summary: "AlmaLinux", resolver: ResolverRef{Type: "endoflife", ID: "almalinux"}, match: osReleaseIDEquals("almalinux")},
+	osReleaseFamilyProbe{product: "almalinux", summary: "AlmaLinux", resolver: ResolverRef{Type: "endoflife", ID: "almalinux"}, match: osReleaseIDEquals("almalinux"), packages: packagesRPM},
 	// alpine:latest: ID=alpine, VERSION_ID=3.24.1.
 	osReleaseFamilyProbe{product: "alpine-linux", summary: "Alpine Linux", resolver: ResolverRef{Type: "endoflife", ID: "alpine-linux"}, match: osReleaseIDEquals("alpine")},
 	// amazonlinux:2023: ID="amzn", VERSION_ID="2023".
@@ -88,7 +88,7 @@ var builtin = []Probe{
 	// only Docker Hub image found earlier (linuxmintd/mint22-amd64, Mint's
 	// own CI build chroot, which reports the underlying Ubuntu instead),
 	// this is genuinely Mint's own identity.
-	osReleaseFamilyProbe{product: "linuxmint", summary: "Linux Mint", resolver: ResolverRef{Type: "endoflife", ID: "linuxmint"}, match: osReleaseIDEquals("linuxmint")},
+	osReleaseFamilyProbe{product: "linuxmint", summary: "Linux Mint", resolver: ResolverRef{Type: "endoflife", ID: "linuxmint"}, match: osReleaseIDEquals("linuxmint"), packages: packagesDpkgBinary},
 	logstashProbe{},
 	// Verified live via sw_vers over SSH against a real Mac (macOS 15.4).
 	macosProbe{},
@@ -127,7 +127,7 @@ var builtin = []Probe{
 	// -> "OPNsense 26.7 (amd64)".
 	opnsenseProbe{},
 	// oraclelinux:9: ID="ol", VERSION_ID="9.8".
-	osReleaseFamilyProbe{product: "oracle-linux", summary: "Oracle Linux", resolver: ResolverRef{Type: "endoflife", ID: "oracle-linux"}, match: osReleaseIDEquals("ol")},
+	osReleaseFamilyProbe{product: "oracle-linux", summary: "Oracle Linux", resolver: ResolverRef{Type: "endoflife", ID: "oracle-linux"}, match: osReleaseIDEquals("ol"), packages: packagesRPM},
 	// Captured via vmactions/solaris-vm (see solaris.go): /etc/release's
 	// "Oracle Solaris 11.4 X86" line.
 	oracleSolarisProbe{},
@@ -161,9 +161,9 @@ var builtin = []Probe{
 	osReleaseFamilyProbe{product: "redos", summary: "RED OS", match: osReleaseIDEquals("redos")},
 	// registry.redhat.io/ubi9 (Red Hat's own free Universal Base Image):
 	// ID=rhel, VERSION_ID="9.8".
-	osReleaseFamilyProbe{product: "rhel", summary: "Red Hat Enterprise Linux", resolver: ResolverRef{Type: "endoflife", ID: "rhel"}, match: osReleaseIDEquals("rhel")},
+	osReleaseFamilyProbe{product: "rhel", summary: "Red Hat Enterprise Linux", resolver: ResolverRef{Type: "endoflife", ID: "rhel"}, match: osReleaseIDEquals("rhel"), packages: packagesRPM},
 	// rockylinux:9: ID="rocky", VERSION_ID="9.3".
-	osReleaseFamilyProbe{product: "rocky-linux", summary: "Rocky Linux", resolver: ResolverRef{Type: "endoflife", ID: "rocky-linux"}, match: osReleaseIDEquals("rocky")},
+	osReleaseFamilyProbe{product: "rocky-linux", summary: "Rocky Linux", resolver: ResolverRef{Type: "endoflife", ID: "rocky-linux"}, match: osReleaseIDEquals("rocky"), packages: packagesRPM},
 	routerosProbe{},
 	// vbatts/slackware:14.2: ID=slackware, VERSION_ID=14.2 — it does ship
 	// /etc/os-release, despite historical docs saying it doesn't.

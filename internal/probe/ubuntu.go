@@ -34,6 +34,10 @@ var ubuntuVersionPattern = regexp.MustCompile(`^(\d+\.\d+(?:\.\d+)?)`)
 // field in the same file instead of a second one.
 type ubuntuProbe struct{}
 
+// ubuntuProbeCommand also lists the binary packages and running kernel
+// Canonical's OVAL is matched on (D43), in the same round trip.
+var ubuntuProbeCommand = "cat /etc/os-release 2>/dev/null" + packagesCommand(packagesDpkgBinary)
+
 func (ubuntuProbe) Meta() Meta {
 	return Meta{
 		Product: "ubuntu",
@@ -48,7 +52,9 @@ func (ubuntuProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	start := time.Now()
 	obs := Observation{Kind: "observation", ID: t.ID, Name: t.Name, Product: t.Product, CollectedAt: start.UTC()}
 
-	const cmd = "cat /etc/os-release"
+	// packagesCommand's `|| true`s keep the exit status 0 even without an
+	// os-release; that case still fails the ID check below.
+	cmd := ubuntuProbeCommand
 	out, verified, err := sshRunCommand(ctx, t, cmd)
 	if err != nil {
 		if isSSHExitError(err) {
@@ -57,7 +63,8 @@ func (ubuntuProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 		return obs, err
 	}
 
-	fields := parseOSRelease(out)
+	osRelease, _, _ := strings.Cut(out, unameMarker)
+	fields := parseOSRelease(osRelease)
 	if fields["ID"] != "ubuntu" {
 		return obs, fmt.Errorf("%w: /etc/os-release reports ID=%q, not ubuntu", ErrNotSupported, fields["ID"])
 	}
@@ -74,6 +81,12 @@ func (ubuntuProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	obs.Version = version
 	obs.Endpoint = "/etc/os-release"
 	obs.Extra = map[string]string{"hostKeyVerified": strconv.FormatBool(verified)}
+	if c := fields["VERSION_CODENAME"]; c != "" {
+		obs.Extra["codename"] = c
+	}
+	h := parsePackagesOutput(packagesDpkgBinary, out)
+	h.extra(obs.Extra)
+	obs.Packages = h.packages
 	obs.DurationMS = time.Since(start).Milliseconds()
 	return obs, nil
 }

@@ -145,9 +145,11 @@ func TestHTMLCVEModalOneLinePerCVE(t *testing.T) {
 func debianPackageFindings() []cve.Finding {
 	return []cve.Finding{
 		{Source: "debian", AdvisoryID: "openssl", MatchedName: "openssl", CVEIDs: []string{"CVE-2026-35189", "CVE-2026-35191"},
-			InstalledVersion: "3.5.7-1~deb13u2", FixedVersion: "3.5.7-1~deb13u3", RangeText: "< 3.5.7-1~deb13u3"},
+			InstalledVersion: "3.5.7-1~deb13u2", FixedVersion: "3.5.7-1~deb13u3", RangeText: "< 3.5.7-1~deb13u3",
+			AdvisoryURL: "https://security-tracker.debian.org/tracker/source-package/openssl"},
 		{Source: "debian", AdvisoryID: "linux", MatchedName: "linux", CVEIDs: []string{"CVE-2024-14027", "CVE-2024-52560", "CVE-2025-21709"},
-			InstalledVersion: "6.12.74-2", FixedVersion: "6.12.111-1", RangeText: "< 6.12.111-1", Severity: "medium"},
+			InstalledVersion: "6.12.74-2", FixedVersion: "6.12.111-1", RangeText: "< 6.12.111-1", Severity: "medium",
+			AdvisoryURL: "https://security-tracker.debian.org/tracker/source-package/linux"},
 	}
 }
 
@@ -156,7 +158,7 @@ func debianPackageFindings() []cve.Finding {
 // it's missing, while the CVES count still counts CVEs.
 func TestGroupCVEsPackageFindings(t *testing.T) {
 	groups := groupCVEs(debianPackageFindings())
-	if len(groups) != 2 || groups[0].key != "debian:linux" || groups[1].key != "debian:openssl" {
+	if len(groups) != 2 || groups[0].key != "pkg:debian:linux" || groups[1].key != "pkg:debian:openssl" {
 		t.Fatalf("got %+v", groups)
 	}
 	if groups[0].pkg == nil || len(groups[0].cveIDs) != 3 {
@@ -186,5 +188,28 @@ func TestPackageCVEGroupHTML(t *testing.T) {
 	}
 	if strings.Index(out, "linux") > strings.Index(out, "openssl") {
 		t.Error("linux (3 CVEs) must come before openssl (2)")
+	}
+}
+
+// An OVAL finding links the advisory carrying its fix and lists every
+// advisory the package is missing.
+func TestPackageCVEGroupHTMLOVAL(t *testing.T) {
+	var b strings.Builder
+	writeCVEModalOverlay(&b, "enodia-cve-modal-y", "host-b", []cve.Finding{{
+		Source: "oval", MatchedName: "openssl-libs", CVEIDs: []string{"CVE-2024-6119"},
+		InstalledVersion: "1:3.0.7-24.el9", FixedVersion: "1:3.0.7-28.el9_4", Severity: "moderate",
+		AdvisoryID: "RHSA-2024:6783", AdvisoryURL: "https://access.redhat.com/errata/RHSA-2024:6783",
+		Advisories: []string{"RHSA-2024:2447", "RHSA-2024:6783"},
+	}})
+	out := b.String()
+	for _, want := range []string{
+		`<strong>openssl-libs</strong> 1:3.0.7-24.el9 &rarr; 1:3.0.7-28.el9_4`,
+		`<a href="https://access.redhat.com/errata/RHSA-2024:6783" target="_blank" rel="noopener noreferrer">RHSA-2024:6783</a>`,
+		`<div>RHSA-2024:2447 RHSA-2024:6783</div>CVE-2024-6119</details>`,
+		`(oval)`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
 	}
 }

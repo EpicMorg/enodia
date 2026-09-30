@@ -24,9 +24,7 @@ func loadTrackerSample(t *testing.T) *Index {
 
 func TestLookupPackagesFixedButNotInstalled(t *testing.T) {
 	idx := loadTrackerSample(t)
-	got := idx.LookupPackages("debian",
-		map[string]string{"openssl": "3.5.7-1~deb13u2", "linux": "6.12.74-2", "bash": "5.2.37-2"},
-		map[string]string{"codename": "trixie"})
+	got := idx.LookupPackages(PackageQuery{Product: "debian", Packages: map[string]string{"openssl": "3.5.7-1~deb13u2", "linux": "6.12.111-1", "bash": "5.2.37-2"}, Extra: map[string]string{"codename": "trixie", "kernel": "6.12.74-2"}})
 	if len(got) != 2 {
 		t.Fatalf("got %d findings, want linux and openssl: %+v", len(got), got)
 	}
@@ -53,9 +51,7 @@ func TestLookupPackagesFixedButNotInstalled(t *testing.T) {
 
 func TestLookupPackagesUpToDateHasNoFindings(t *testing.T) {
 	idx := loadTrackerSample(t)
-	got := idx.LookupPackages("debian",
-		map[string]string{"openssl": "3.5.7-1~deb13u3", "linux": "6.12.111-1"},
-		map[string]string{"codename": "trixie"})
+	got := idx.LookupPackages(PackageQuery{Product: "debian", Packages: map[string]string{"openssl": "3.5.7-1~deb13u3", "linux": "6.12.111-1"}, Extra: map[string]string{"codename": "trixie"}})
 	if len(got) != 0 {
 		t.Fatalf("got %+v, want none", got)
 	}
@@ -65,9 +61,7 @@ func TestLookupPackagesUpToDateHasNoFindings(t *testing.T) {
 // CVE-2024-58094 fix is 6.1.187-1, and its CVE-2024-52560 is still open.
 func TestLookupPackagesUsesTheHostsRelease(t *testing.T) {
 	idx := loadTrackerSample(t)
-	got := idx.LookupPackages("debian",
-		map[string]string{"linux": "6.1.180-1"},
-		map[string]string{"codename": "bookworm"})
+	got := idx.LookupPackages(PackageQuery{Product: "debian", Packages: map[string]string{"linux": "6.1.180-1"}, Extra: map[string]string{"codename": "bookworm", "kernel": "6.1.180-1"}})
 	if len(got) != 1 || !slices.Equal(got[0].CVEIDs, []string{"CVE-2024-58094"}) || got[0].FixedVersion != "6.1.187-1" {
 		t.Fatalf("got %+v", got)
 	}
@@ -80,7 +74,7 @@ func TestLookupPackagesRunningKernelWins(t *testing.T) {
 	idx := loadTrackerSample(t)
 	pkgs := map[string]string{"linux": "6.12.74-2"}
 
-	got := idx.LookupPackages("debian", pkgs, map[string]string{"codename": "trixie", "kernel": "6.12.111-1"})
+	got := idx.LookupPackages(PackageQuery{Product: "debian", Packages: pkgs, Extra: map[string]string{"codename": "trixie", "kernel": "6.12.111-1"}})
 	if len(got) != 0 {
 		t.Fatalf("running 6.12.111-1: got %+v, want none", got)
 	}
@@ -88,7 +82,7 @@ func TestLookupPackagesRunningKernelWins(t *testing.T) {
 		t.Fatal("LookupPackages must not modify the observation's own Packages")
 	}
 
-	got = idx.LookupPackages("debian", map[string]string{"linux": "6.12.111-1"}, map[string]string{"codename": "trixie", "kernel": "6.12.85-1"})
+	got = idx.LookupPackages(PackageQuery{Product: "debian", Packages: map[string]string{"linux": "6.12.111-1"}, Extra: map[string]string{"codename": "trixie", "kernel": "6.12.85-1"}})
 	if len(got) != 1 || got[0].InstalledVersion != "6.12.85-1" || len(got[0].CVEIDs) != 2 {
 		t.Fatalf("running 6.12.85-1: got %+v, want the two CVEs fixed in 6.12.111-1", got)
 	}
@@ -98,11 +92,11 @@ func TestLookupPackagesNoDataIsNil(t *testing.T) {
 	idx := loadTrackerSample(t)
 	pkgs := map[string]string{"linux": "6.12.74-2"}
 	for name, got := range map[string][]Finding{
-		"not debian":       idx.LookupPackages("ubuntu", pkgs, map[string]string{"codename": "trixie"}),
-		"unknown codename": idx.LookupPackages("debian", pkgs, map[string]string{"codename": "bullseye"}),
-		"no packages":      idx.LookupPackages("debian", nil, map[string]string{"codename": "trixie"}),
-		"nil index":        (*Index)(nil).LookupPackages("debian", pkgs, map[string]string{"codename": "trixie"}),
-		"no tracker":       (&Index{}).LookupPackages("debian", pkgs, map[string]string{"codename": "trixie"}),
+		"not debian":       idx.LookupPackages(PackageQuery{Product: "ubuntu", Packages: pkgs, Extra: map[string]string{"codename": "trixie"}}),
+		"unknown codename": idx.LookupPackages(PackageQuery{Product: "debian", Packages: pkgs, Extra: map[string]string{"codename": "bullseye"}}),
+		"no packages":      idx.LookupPackages(PackageQuery{Product: "debian", Packages: nil, Extra: map[string]string{"codename": "trixie"}}),
+		"nil index":        (*Index)(nil).LookupPackages(PackageQuery{Product: "debian", Packages: pkgs, Extra: map[string]string{"codename": "trixie"}}),
+		"no tracker":       (&Index{}).LookupPackages(PackageQuery{Product: "debian", Packages: pkgs, Extra: map[string]string{"codename": "trixie"}}),
 	} {
 		if got != nil {
 			t.Errorf("%s: got %+v", name, got)
@@ -125,7 +119,7 @@ func TestLookupPackagesSeverityIsMostUrgent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := idx.LookupPackages("debian", map[string]string{"curl": "8.14.1-2"}, map[string]string{"codename": "trixie"})
+	got := idx.LookupPackages(PackageQuery{Product: "debian", Packages: map[string]string{"curl": "8.14.1-2"}, Extra: map[string]string{"codename": "trixie"}})
 	if len(got) != 1 || got[0].Severity != "medium" || len(got[0].CVEIDs) != 3 {
 		t.Fatalf("got %+v", got)
 	}
@@ -149,8 +143,20 @@ func TestLoadDebianTrackerRejectsWrongFile(t *testing.T) {
 func TestMergeIndexKeepsDebianTracker(t *testing.T) {
 	deb := loadTrackerSample(t)
 	merged := MergeIndex(&Index{byProduct: map[string][]Finding{}}, deb)
-	got := merged.LookupPackages("debian", map[string]string{"linux": "6.12.74-2"}, map[string]string{"codename": "trixie"})
+	got := merged.LookupPackages(PackageQuery{Product: "debian", Packages: map[string]string{"linux": "6.12.74-2"}, Extra: map[string]string{"codename": "trixie", "kernel": "6.12.74-2"}})
 	if len(got) != 1 {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+// A Proxmox VE host is Debian with its own kernel: `uname -v` says "PMX",
+// not "Debian", so there's no kernel fact — and Debian's linux source is
+// only there as linux-libc-dev headers. That must not turn into hundreds
+// of kernel CVEs.
+func TestLookupPackagesNoDebianKernelMeansNoLinuxFindings(t *testing.T) {
+	idx := loadTrackerSample(t)
+	got := idx.LookupPackages(PackageQuery{Product: "debian", Packages: map[string]string{"linux": "6.12.74-2"}, Extra: map[string]string{"codename": "trixie"}})
+	if len(got) != 0 {
+		t.Fatalf("got %+v, want none", got)
 	}
 }

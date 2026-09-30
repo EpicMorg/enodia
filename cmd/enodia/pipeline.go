@@ -147,7 +147,9 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 		if cveProduct, cveVersion, edition, ok := cve.Subject(o.Product, o.Version, o.Extra); ok {
 			findings = cveIndex.Lookup(cveProduct, cveVersion, edition)
 		}
-		findings = append(findings, cveIndex.LookupPackages(o.Product, o.Packages, o.Extra)...)
+		findings = append(findings, cveIndex.LookupPackages(cve.PackageQuery{
+			Product: o.Product, Version: o.Version, Packages: o.Packages, Modules: o.Modules, Extra: o.Extra,
+		})...)
 
 		out = append(out, evaluate.Evaluate(evaluate.Input{
 			Observation: o,
@@ -160,9 +162,9 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 	return out
 }
 
-// loadCVEIndex returns the merged BDU/NVD/Debian vulnerability index the
-// active config's cve.bdu.path/cve.nvd.path/cve.debian.path name, or nil
-// if none is configured — the normal case for most installs. "The active
+// loadCVEIndex returns the merged BDU/NVD/Debian/OVAL vulnerability index
+// the active config's cve.*.path entries name, or nil if none is
+// configured — the normal case for most installs. "The active
 // config" is the same file collection itself uses (config.Locate:
 // --config, $ENODIA_CONFIG, then the default search paths), not only an
 // explicit --config. D30 first required the flag, and in practice that silently
@@ -211,6 +213,13 @@ func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
 			return nil, err
 		}
 		idx = cve.MergeIndex(idx, debianIdx)
+	}
+	if ovalPath, ok := cfg.OVALPath(); ok {
+		ovalIdx, err := loadOneCVESource(ovalPath, cacheDir, cacheErr, cve.LoadOVAL, cve.LoadOVALCached, warn)
+		if err != nil {
+			return nil, err
+		}
+		idx = cve.MergeIndex(idx, ovalIdx)
 	}
 	return idx, nil
 }

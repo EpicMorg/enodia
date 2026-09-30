@@ -1171,16 +1171,28 @@ Not dates. Order of work, and what each step unblocks.
   CVEs (1314 kernel, pending reboot or upgrade to 6.12.111-1; 13 openssl),
   matching a separate python3-apt check exactly. See `docs/DECISIONS.md`
   D42.
+- Package-level CVE correlation for Ubuntu, Linux Mint, RHEL, Rocky,
+  AlmaLinux and Oracle Linux from the vendors' own OVAL files
+  (`cve.oval.path`). The `ubuntu` probe and the four RHEL-family
+  registrations read installed packages (with AppStream module streams on
+  rpm) and the running kernel in their one SSH round trip. Validated
+  against `oscap oval eval` (Ubuntu 56/56 advisories, RHEL 128/128, Alma
+  197/197, Oracle 22/22) and `dnf updateinfo`. Rocky's own OVAL proved
+  unusable (13 of 130 advisories), so Rocky hosts are matched against
+  RHEL's. Also: Debian's `linux` is now matched only against a running
+  Debian kernel (Proxmox VE runs its own). See `docs/DECISIONS.md` D43.
 
 ## Next
 
 Found running 2.0 against a real ~600-target fleet.
 
-- **Package-level CVE correlation for Ubuntu**, the second half of what
-  Debian got in D42. Match `dpkg-query` source packages against
-  Canonical's OVAL / USN data, a plain downloadable file like the
-  tracker. The `ubuntu` probe needs the same `Packages`/kernel collection
-  the `debian` probe now has.
+- **Package-level CVEs for Alpine** from its secdb JSON
+  (`secdb.alpinelinux.org/<branch>/main.json`), with apk's own version
+  comparison.
+- **Astra Linux and RED OS package-level CVEs**: Debian 11/12 and RHEL
+  8/9 rebuilds with their own package versions. Check against real hosts
+  what their vendors publish (bulletins, OVAL?) and whether the upstream
+  data can be applied at all.
 
 ## Later
 

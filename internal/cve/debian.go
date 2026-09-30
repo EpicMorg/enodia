@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -103,69 +104,43 @@ func urgencyRank(u string) int {
 	return 0
 }
 
-// LookupPackages returns one Finding per installed source package the
-// Debian Security Tracker says is behind a security fix, for an
-// observation of product with the given packages (source package ->
-// version, see probe.Observation.Packages) and Extra. Only product
-// "debian" has package data today; every other product gets nil.
+// lookupDebian is LookupPackages for product "debian": q.Packages are
+// source packages, q.Extra["codename"] picks the tracker release.
 //
-// Extra["codename"] picks the tracker release. Extra["kernel"], when the
-// probe found one, is the running kernel's own Debian version and is used
-// for source package "linux" instead of whatever linux-* packages are
-// installed: a fixed kernel that is installed but not booted is still the
-// vulnerable one — and old linux-headers are routinely left installed
-// (confirmed live: 6.12.74-2 headers next to a running 6.12.107-1).
-//
-// One Finding per package, not per CVE: confirmed live, a trixie host one
-// kernel update behind has 1314 fixed-but-not-installed kernel CVEs, and
-// the thing to act on is one package upgrade, not 1314 lines. CVEIDs
-// carries every CVE; FixedVersion is the newest fix among them — the
-// version that closes all of them.
-func (idx *Index) LookupPackages(product string, packages, extra map[string]string) []Finding {
-	if idx == nil || idx.debian == nil || product != "debian" || len(packages) == 0 {
-		return nil
-	}
-	byPkg := idx.debian[extra["codename"]]
+// Source package "linux" is matched against the running kernel only —
+// q.Extra["kernel"], the Debian version `uname -v` reports — never against
+// whatever linux-* packages are installed: a fixed kernel installed but
+// not booted is still the vulnerable one, and old linux-headers are
+// routinely left behind (confirmed live: 6.12.74-2 headers next to a
+// running 6.12.107-1). No Debian kernel running (a Proxmox VE host runs
+// its own, and gets linux-libc-dev from Debian's linux source) means no
+// "linux" findings at all, rather than hundreds of kernel CVEs matched
+// against a C headers package.
+func (idx *Index) lookupDebian(q PackageQuery) []Finding {
+	byPkg := idx.debian[q.Extra["codename"]]
 	if byPkg == nil {
 		return nil
 	}
-
-	installed := packages
-	if k := extra["kernel"]; k != "" {
-		if _, ok := packages["linux"]; ok || byPkg["linux"] != nil {
-			installed = maps.Clone(packages)
-			installed["linux"] = k
-		}
+	installed := maps.Clone(q.Packages)
+	delete(installed, "linux")
+	if k := q.Extra["kernel"]; k != "" {
+		installed["linux"] = k
 	}
 
 	var out []Finding
 	for _, src := range slices.Sorted(maps.Keys(installed)) {
 		have := installed[src]
-		var f Finding
+		agg := packageAggregate{cmp: version.CompareDebian, rank: urgencyRank}
 		for _, fix := range byPkg[src] {
-			if version.CompareDebian(have, fix.Fixed) >= 0 {
-				continue
-			}
-			f.CVEIDs = append(f.CVEIDs, fix.CVE)
-			if f.FixedVersion == "" || version.CompareDebian(fix.Fixed, f.FixedVersion) > 0 {
-				f.FixedVersion = fix.Fixed
-			}
-			if urgencyRank(fix.Urgency) > urgencyRank(f.Severity) {
-				f.Severity = fix.Urgency
+			if version.CompareDebian(have, fix.Fixed) < 0 {
+				agg.add(fix.Fixed, fix.Urgency, nil, fix.CVE)
 			}
 		}
-		if len(f.CVEIDs) == 0 {
-			continue
+		if f, ok := agg.finding("debian", src, have); ok {
+			f.AdvisoryID = src
+			f.AdvisoryURL = "https://security-tracker.debian.org/tracker/source-package/" + url.PathEscape(src)
+			out = append(out, f)
 		}
-		slices.SortFunc(f.CVEIDs, compareCVEID)
-		f.CVEIDs = slices.Compact(f.CVEIDs)
-		f.Source = "debian"
-		f.AdvisoryID = src
-		f.MatchedName = src
-		f.InstalledVersion = have
-		f.RangeText = "< " + f.FixedVersion
-		f.Title = fmt.Sprintf("%s %s: %d CVE(s) fixed in %s", src, have, len(f.CVEIDs), f.FixedVersion)
-		out = append(out, f)
 	}
 	return out
 }
