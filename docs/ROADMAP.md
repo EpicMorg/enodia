@@ -1131,6 +1131,14 @@ Not dates. Order of work, and what each step unblocks.
   platform string on documentation alone (no Plus instance to confirm
   live against). No `DefaultResolver`: no endoflife.date page under any
   slug tried. See `docs/DECISIONS.md` D37.
+- Bug fix: a real, patched vCenter/ESXi 8.0 host (`8.0.3`) showed
+  `ahead` instead of `current` against the calendar's own `8.0 U3k` /
+  `8.0 Update 3k` latest — `version.Clean` folds VMware's "Update N"
+  shorthand into the numeric spine now (`8.0 U3k` → `8.0.3`); the
+  trailing patch letter is dropped, not folded in, since a live host's
+  own version string has nothing to compare it against either way. Two
+  older, already-EOL cycles use different, unhandled VMware shorthands
+  and are deliberately left alone. See `docs/DECISIONS.md` D38.
 
 ## Next
 
@@ -1150,9 +1158,6 @@ Found running 2.0 against a real ~600-target fleet.
   Debian first — it is the bulk of a typical fleet
 - BMC probes — Supermicro IPMI web UI / Redfish and Dell iDRAC (Redfish
   `/redfish/v1/Managers/...` carries the firmware version)
-- Bug: vCenter/ESXi `8.0.3` is rated `ahead` against the calendar's
-  latest `8.0 U3k` / `8.0 Update 3k` — the two version shapes need
-  normalizing before comparison
 - Bug: GitHub-release resolvers show the tag verbatim in LATEST
   (`v2026.9.1`, `v1.0.68`) — strip the leading `v` like `normalized` does
 

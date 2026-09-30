@@ -14,12 +14,24 @@ var (
 	rePrefix = regexp.MustCompile(`^\s*[vV]?(?:ersion\s*)?`)
 	reTrail  = regexp.MustCompile(`(?i)[-+_](?:ee|ce|se|oss|enterprise|community|standard|final|ga|release|lts)\b.*$`)
 	reCore   = regexp.MustCompile(`\d+(?:\.\d+)*`)
+	// reVMwareUpdate folds VMware's own "Update N" patch-level shorthand —
+	// as it appears in vCenter/ESXi's endoflife.date "latest" field, e.g.
+	// "8.0 U3k" or "8.0 Update 3k" — into the version's numeric spine
+	// ("8.0.3"). Confirmed live: a real vCenter/ESXi host's own reported
+	// version already treats Update N as the third digit ("Update 3" ->
+	// "8.0.3"); it has no way to express the trailing patch letter ("k")
+	// at all, so that part is dropped, not folded in. Without this, the
+	// space before "U"/"Update" made Clean's own first-field split treat
+	// "8.0 U3k" as bare "8.0", so any real, patched 8.0 host compared as
+	// "ahead" of a calendar entry that is, in reality, newer.
+	reVMwareUpdate = regexp.MustCompile(`(?i)\s+U(?:pdate)?\s*(\d+)[a-z]?\b.*$`)
 )
 
 // Clean strips the decoration vendors hang off a version:
 // "v10.3.2" -> "10.3.2", "17.8.1-ee" -> "17.8.1".
 func Clean(raw string) string {
 	s := rePrefix.ReplaceAllString(strings.TrimSpace(raw), "")
+	s = reVMwareUpdate.ReplaceAllString(s, ".$1")
 	s = reTrail.ReplaceAllString(s, "")
 	if f := strings.Fields(s); len(f) > 0 {
 		s = f[0]

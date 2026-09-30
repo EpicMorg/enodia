@@ -2124,3 +2124,35 @@ the probe's own comment and its test, not presented as confirmed.
 No `DefaultResolver`: `endoflife.date` has no page under `pfsense`,
 `pfsense-ce` or `pfsense-plus` (confirmed 404 for all three) —
 inventory-only, same as `gentoo`/`kali-linux`/`p4d`/`p4p`.
+
+---
+
+## D38 — `version.Clean` folds VMware's "Update N" shorthand into the numeric spine
+
+**Decided.** Reported from a real fleet: a genuinely current, patched
+vCenter/ESXi 8.0 host (observed `8.0.3`) showed as `ahead` of the
+calendar's own latest, not `current`. Confirmed live against
+`endoflife.date`'s real `vcenter`/`esxi` cycles: the `8.0` branch's
+`latest` field reads `"8.0 U3k"` (vCenter) / `"8.0 Update 3k"` (ESXi)
+— a space, then VMware's own "Update N" patch-level shorthand plus a
+trailing patch letter neither product's own reported version string
+has any way to express. `Clean` already collapses on the first
+whitespace field before `Core`'s numeric-spine regex ever runs, so
+`"8.0 U3k"` was read as bare `"8.0"`, silently losing the update
+number — any real Update-3-or-later host then compared as newer than
+a calendar entry that, in reality, already accounts for it.
+
+Fixed in `internal/version.Clean` itself (a new `reVMwareUpdate`
+regex, applied before the whitespace split), not in `evaluatePatch` or
+anywhere product-specific: this is a decoration vendors hang off a
+version string, precisely the class of thing `Clean`'s own doc comment
+already claims to strip, and every other cycle for these two products
+(`9.0`, `9.1`) already has a plain dotted `latest` with nothing to
+fold. The trailing patch letter (`k`, `w`, ...) is dropped, not
+folded in — a live host's own `8.0.3` has no matching digit for it, so
+there is nothing to compare it against either way. Two other, older,
+already-EOL cycles use different, unhandled VMware shorthands
+(`"6.0 EP 25"`, `"6.5 ESXi650-202403001"`) — deliberately left alone:
+neither is what was reported, and guessing at either's real shape
+without a live host to confirm against would be exactly the kind of
+invention D9/CLAUDE.md's working style warns off.

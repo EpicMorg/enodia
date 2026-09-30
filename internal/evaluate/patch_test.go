@@ -31,6 +31,23 @@ func TestEvaluatePatchCleansLatestPrefix(t *testing.T) {
 	}
 }
 
+// A real, patched vCenter/ESXi 8.0 host used to compare "ahead" of
+// endoflife.date's own "8.0 U3k"/"8.0 Update 3k" latest — the space before
+// the update letter made version.Clean's first-field split read it as bare
+// "8.0", losing the update number entirely. See internal/version's
+// reVMwareUpdate.
+func TestEvaluatePatchFoldsVMwareUpdateLetter(t *testing.T) {
+	if got := evaluatePatch("8.0.3", "8.0 U3k"); got != PatchCurrent {
+		t.Fatalf("got %v, want current (Update 3 == .3)", got)
+	}
+	if got := evaluatePatch("8.0.3", "8.0 Update 3k"); got != PatchCurrent {
+		t.Fatalf("got %v, want current (Update 3 == .3)", got)
+	}
+	if got := evaluatePatch("8.0.2", "8.0 Update 3k"); got != PatchBehind {
+		t.Fatalf("got %v, want behind (Update 2 predates Update 3)", got)
+	}
+}
+
 func TestEvaluatePatchUnknownWhenUnparseable(t *testing.T) {
 	if got := evaluatePatch("not-a-version", "10.3.2"); got != PatchUnknown {
 		t.Fatalf("got %v, want unknown", got)

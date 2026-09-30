@@ -12,6 +12,16 @@ func TestClean(t *testing.T) {
 		"2025.03.1 (build 4711)": "2025.03.1",
 		"1.1.1w":                 "1.1.1w",
 		"  8.19.4  ":             "8.19.4",
+		// vCenter/ESXi's real endoflife.date "latest" field, confirmed
+		// live: the trailing patch letter has no equivalent in what a
+		// live host's own version string can express, so it's dropped,
+		// not folded in — see reVMwareUpdate's own doc comment.
+		"8.0 U3k":               "8.0.3",
+		"8.0 Update 3k":         "8.0.3",
+		"7.0 U3w":               "7.0.3",
+		"9.1.1.0":               "9.1.1.0", // unaffected: no "U"/"Update" token at all
+		"6.0 EP 25":             "6.0",     // a different, unhandled VMware shorthand — unaffected either way
+		"6.5 ESXi650-202403001": "6.5",     // ditto
 	}
 	for in, want := range cases {
 		if got := Clean(in); got != want {
@@ -30,6 +40,12 @@ func TestCompare(t *testing.T) {
 		{"9.12.0", "9.4.0", 1},       // not a string comparison
 		{"2025.03.1", "2025.3.1", 0}, // leading zeros are cosmetic
 		{"17.8.1-ee", "17.8.1", 0},
+		// The reported bug: a real, patched vCenter/ESXi 8.0 host used to
+		// compare as "ahead" of the calendar's own "8.0 U3k"/"8.0 Update
+		// 3k" latest, because the space swallowed everything after "8.0".
+		{"8.0.3", "8.0 U3k", 0},
+		{"8.0.3", "8.0 Update 3k", 0},
+		{"8.0.2", "8.0 Update 3k", -1},
 	}
 	for _, c := range cases {
 		got, ok := Compare(c.a, c.b)
