@@ -129,6 +129,7 @@ var builtin = []Probe{
 	p4dProbe{},
 	p4pProbe{},
 	perforceSwarmProbe{},
+	pfsenseProbe{},
 	pgadminProbe{},
 	// Official top-level photon:5.0 (Docker's Official Images program,
 	// not vmware/photon's own stale repo which stops at 2.0): ID=photon,

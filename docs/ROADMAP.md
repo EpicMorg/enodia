@@ -1124,6 +1124,13 @@ Not dates. Order of work, and what each step unblocks.
   calendar (`mariadb`, confirmed live). CVE mapping deliberately not
   done yet — that's the later, dedicated CVE pass, not an oversight.
   See `docs/DECISIONS.md` D36.
+- `pfsense` probe (Community Edition) — confirmed live against three
+  real dev hosts: SSH in, read `/etc/version` and `/etc/platform` in
+  one round trip. Netgate's commercial pfSense Plus is a different
+  product with its own calendar-based version scheme; rejected by
+  platform string on documentation alone (no Plus instance to confirm
+  live against). No `DefaultResolver`: no endoflife.date page under any
+  slug tried. See `docs/DECISIONS.md` D37.
 
 ## Next
 
@@ -1141,7 +1148,6 @@ Found running 2.0 against a real ~600-target fleet.
   plain downloadable files, so they fit the existing offline model next to
   the NVD feeds and the BDU export (`cve:` block, operator-refreshed).
   Debian first — it is the bulk of a typical fleet
-- `pfsense` probe — only `opnsense` exists today
 - BMC probes — Supermicro IPMI web UI / Redfish and Dell iDRAC (Redfish
   `/redfish/v1/Managers/...` carries the firmware version)
 - Bug: vCenter/ESXi `8.0.3` is rated `ahead` against the calendar's

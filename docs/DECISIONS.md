@@ -2099,3 +2099,28 @@ discarding it, since `internal/version.Clean` doesn't recognize
 `-MariaDB-<os tag>` as a suffix to strip. `endoflife.date` already has
 a `mariadb` calendar (confirmed live), so this gets a real
 `DefaultResolver` from day one, unlike several other recent additions.
+
+---
+
+## D37 — `pfsense` covers Community Edition only; Plus is a different product, rejected on sight
+
+**Decided.** Confirmed live against three real pfSense CE hosts
+(`2.7.2-RELEASE`, `2.8.1-RELEASE` ×2, real dev boxes): SSHing in and
+reading `/etc/version` and `/etc/platform` in one round trip (same
+combined-command shape `debian.go` uses) gives exactly the version
+string pfSense's own dashboard shows, plus `pfSense` in the platform
+file — no `pfSense-version` command exists (guessed first, confirmed
+wrong live, cost nothing since it was checked before being relied on).
+
+Netgate's commercial pfSense Plus is a different product built from the
+same lineage, with its own calendar-based version scheme (`24.11`, not
+`2.x.y-RELEASE`) — the same shape of split this project already made
+for `vcenter`/`esxi` and `sonarqube-server`/`-community` (D9). No Plus
+instance was available to test against, so `pfsenseProbe` rejects a
+`pfSense-Plus` platform string on the strength of documentation alone
+rather than guess at its real version format — flagged as such in both
+the probe's own comment and its test, not presented as confirmed.
+
+No `DefaultResolver`: `endoflife.date` has no page under `pfsense`,
+`pfsense-ce` or `pfsense-plus` (confirmed 404 for all three) —
+inventory-only, same as `gentoo`/`kali-linux`/`p4d`/`p4p`.
