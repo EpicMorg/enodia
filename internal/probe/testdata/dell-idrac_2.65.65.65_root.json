@@ -1,0 +1,16 @@
+{
+  "@odata.type": "#ServiceRoot.v1_3_0.ServiceRoot",
+  "@odata.id": "/redfish/v1",
+  "Id": "RootService",
+  "Name": "Root Service",
+  "Product": "Integrated Dell Remote Access Controller",
+  "RedfishVersion": "1.4.0",
+  "Oem": {
+    "Dell": {
+      "@odata.type": "#DellServiceRoot.v1_0_0.ServiceRootSummary",
+      "IsBranded": 0,
+      "ManagerMACAddress": "00:00:00:00:00:00",
+      "ServiceTag": "EXAMPLE1"
+    }
+  }
+}

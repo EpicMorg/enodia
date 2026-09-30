@@ -43,6 +43,9 @@ var builtin = []Probe{
 	// never carries Debian's point release ("13", not "13.6") — see
 	// debian.go for why this needs its own file.
 	debianProbe{},
+	// Confirmed live: /redfish/v1 carries Oem.Dell, the Manager resource
+	// itself carries none — see dellidrac.go for why this is 2 requests.
+	dellIDRACProbe{},
 	elasticsearchProbe{},
 	esxiProbe{},
 	// Real ISO rootfs capture (not a Docker image — none exists): ID="eurolinux", VERSION_ID="8.10".
@@ -67,6 +70,9 @@ var builtin = []Probe{
 	graylogProbe{},
 	haproxyProbe{},
 	harborProbe{},
+	// iLO 4's own non-standard "HP RESTful" shape, not full Redfish — see
+	// hpilo4.go. iLO 5 is untested and needs its own probe/product.
+	hpILO4Probe{},
 	jaegerProbe{},
 	jellyfinProbe{},
 	jenkinsProbe{},
@@ -170,6 +176,10 @@ var builtin = []Probe{
 	// vendor's own consistent branding) but hasn't been captured live —
 	// only the 2.x fixture below is confirmed.
 	osReleaseFamilyProbe{product: "steamos", summary: "SteamOS", resolver: ResolverRef{Type: "endoflife", ID: "steamos"}, match: osReleaseIDEquals("steamos")},
+	// Confirmed live against two real BMCs of different generations —
+	// see supermicrobmc.go for why the check is Oem.Supermicro, not a
+	// Manufacturer/Vendor field only one of the two actually has.
+	supermicroBMCProbe{},
 	// SYNO.API.Auth login, then GET SYNO.DSM.Info with the resulting
 	// session id (and SynoToken, when CSRF protection is enabled).
 	// Verified live against a real DSM 7.3.2 NAS.

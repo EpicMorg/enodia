@@ -1,0 +1,14 @@
+{
+  "@odata.type": "#Manager.v1_3_3.Manager",
+  "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1",
+  "Id": "iDRAC.Embedded.1",
+  "Name": "Manager",
+  "Description": "BMC",
+  "ManagerType": "BMC",
+  "Model": "12G Modular",
+  "FirmwareVersion": "2.65.65.65",
+  "Status": {
+    "Health": "OK",
+    "State": "Enabled"
+  }
+}

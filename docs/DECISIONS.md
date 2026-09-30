@@ -2178,3 +2178,69 @@ like `"10.3"` round-trips through `Clean` unchanged, so this costs
 those products nothing. Comparison logic in `evaluatePatch` and branch
 detection in `evaluateBranch` still receive the original `matched`
 struct untouched; only what gets displayed changed.
+
+---
+
+## D40 — Three BMC probes: `supermicro-bmc`, `dell-idrac`, `hp-ilo4`
+
+**Decided.** The first hardware-management-controller probes in this
+tree, all confirmed live against four real BMCs across three vendors,
+all over HTTPS with HTTP Basic auth (`AuthSpec{Required: true, Kinds:
+[]AuthKind{AuthBasic}}` — a real 401 without credentials confirmed on
+every one of them) — no SSH, no IPMI-over-LAN, both firmly out of
+scope: the ROADMAP's own "Redfish carries the firmware version" framing
+turned out to hold for all three vendors, including one (`iLO 4`) whose
+own service root doesn't call itself Redfish at all.
+
+**`supermicro-bmc`** reads `GET /redfish/v1/Managers/1`. Confirmed live
+against two real generations — an X12-series board (AST2600 chip,
+firmware `01.05.25`) and an older X9/X10-era board (plain
+"ASPEED"-branded, firmware `01.73.13`) — that neither carries a
+`Manufacturer`/`Vendor` field anywhere in its Redfish tree the older one
+can reach in one request, but both carry an `"Oem":{"Supermicro":{}}`
+key on this exact resource. That's the D9 signal checked, deliberately
+not a field only one generation actually has.
+
+**`dell-idrac`** needs two requests, not one: confirmed live that a real
+12G iDRAC's `Managers/iDRAC.Embedded.1` resource carries no vendor
+marker of any kind — no `Manufacturer`, no `Oem` key at all — while
+`/redfish/v1` itself carries `"Oem":{"Dell":{"ServiceTag": "...", ...}}`
+and a `"Product": "Integrated Dell Remote Access Controller"` string.
+First request confirms identity (and captures the service tag into
+`Extra`); second reads `FirmwareVersion` off the Manager. `iDRAC.
+Embedded.1` is the one Manager id checked — the standard Dell name for
+the embedded controller, confirmed on this one real blade; a
+differently-shaped controller would need its own fix, not a guess baked
+in ahead of time.
+
+**`hp-ilo4`** is scoped to iLO 4 specifically, not "HP iLO" generally:
+confirmed live that iLO 4's own service root calls itself "HP RESTful
+Root Service" with non-standard `@odata.type` values
+(`"#ServiceRoot.1.0.0.ServiceRoot"`, not genuine Redfish's versioned
+`"#ServiceRoot.v1_x_x.ServiceRoot"` shape) — a real pre-Redfish HP API,
+not a Redfish implementation with rough edges. The specific resource
+this probe reads (`GET /redfish/v1/Managers/1/` — note the trailing
+slash, confirmed to matter live) happens to overlap with genuine
+Redfish closely enough that the same `FetchHTTP`/JSON approach works
+unchanged: an `"Oem":{"Hp":{}}` key for identity, and
+`FirmwareVersion` — reported live as `"iLO 4 v2.82"`, parsed down to
+`2.82` since the generation is already the product id, not something
+worth repeating in every observation's own version string. iLO 5 is
+fully Redfish-compliant and almost certainly needs a different check
+(a real `Manufacturer`/`Vendor` field likely exists there the way it
+doesn't on iLO 4) — no iLO 5 controller was available to confirm live,
+so it gets no probe yet rather than a guessed one.
+
+None of the three gets a `DefaultResolver`: BMC firmware is proprietary
+hardware firmware with no public lifecycle calendar (confirmed 404
+under every slug tried for all three vendors).
+
+A Dell CMC (chassis-level management for a blade enclosure, as opposed
+to a per-server iDRAC) was also found live during this same
+investigation, on a blade-enclosure management address redirecting to
+`/cgi-bin/webcgi/index` — an old-style web UI with no Redfish endpoint
+at all (confirmed 404 at `/redfish/v1/`). Deliberately not built: a
+different product from iDRAC, needing either RACADM or HTML-scraping to
+read anything from, the same heavier shape D22 already rejected for
+Redmine. Left for a future decision if it's ever actually wanted, not
+silently folded into `dell-idrac`.

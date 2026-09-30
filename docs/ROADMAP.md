@@ -1146,6 +1146,17 @@ Not dates. Order of work, and what each step unblocks.
   `MatchedCycle`/`LatestInCycle`, the same cleaning `evaluatePatch`
   already did internally just for comparison. See `docs/DECISIONS.md`
   D39.
+- `supermicro-bmc`, `dell-idrac`, `hp-ilo4` — the first hardware BMC
+  probes, all confirmed live against four real controllers across three
+  vendors (two Supermicro generations, one Dell 12G iDRAC, one HP iLO
+  4), all HTTPS + Basic auth over Redfish (or, for iLO 4, a close
+  pre-Redfish HP precursor API). No `DefaultResolver` for any of the
+  three: BMC firmware has no public lifecycle calendar. A Dell CMC
+  (chassis-level, not per-server) was also found live but deliberately
+  not built — no Redfish endpoint at all, would need RACADM or HTML
+  scraping. iLO 5 (fully Redfish-compliant, unlike iLO 4) also not
+  built: no controller available to confirm its real shape live. See
+  `docs/DECISIONS.md` D40.
 
 ## Next
 
@@ -1163,8 +1174,6 @@ Found running 2.0 against a real ~600-target fleet.
   plain downloadable files, so they fit the existing offline model next to
   the NVD feeds and the BDU export (`cve:` block, operator-refreshed).
   Debian first — it is the bulk of a typical fleet
-- BMC probes — Supermicro IPMI web UI / Redfish and Dell iDRAC (Redfish
-  `/redfish/v1/Managers/...` carries the firmware version)
 
 ## Later
 

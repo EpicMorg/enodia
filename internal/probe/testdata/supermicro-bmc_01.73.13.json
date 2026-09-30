@@ -1,0 +1,63 @@
+{
+  "@odata.type": "#Manager.v1_5_2.Manager",
+  "@odata.id": "/redfish/v1/Managers/1",
+  "Id": "1",
+  "Name": "Manager",
+  "Description": "BMC",
+  "ManagerType": "BMC",
+  "UUID": "00000000-0000-0000-0000-000000000000",
+  "Model": "ASPEED",
+  "FirmwareVersion": "01.73.13",
+  "DateTime": "2026-09-30T12:47:29+03:00",
+  "Status": {
+    "State": "Enabled",
+    "Health": "OK"
+  },
+  "Oem": {
+    "Supermicro": {
+      "@odata.type": "#SmcManagerExtensions.v1_0_0.Manager",
+      "ActiveDirectory": {
+        "@odata.id": "/redfish/v1/Managers/1/ActiveDirectory"
+      },
+      "SMTP": {
+        "@odata.id": "/redfish/v1/Managers/1/SMTP"
+      },
+      "RADIUS": {
+        "@odata.id": "/redfish/v1/Managers/1/RADIUS"
+      },
+      "MouseMode": {
+        "@odata.id": "/redfish/v1/Managers/1/MouseMode"
+      },
+      "NTP": {
+        "@odata.id": "/redfish/v1/Managers/1/NTP"
+      },
+      "LDAP": {
+        "@odata.id": "/redfish/v1/Managers/1/LDAP"
+      },
+      "IPAccessControl": {
+        "@odata.id": "/redfish/v1/Managers/1/IPAccessControl"
+      },
+      "SMCRAKP": {
+        "@odata.id": "/redfish/v1/Managers/1/SMCRAKP"
+      },
+      "SNMP": {
+        "@odata.id": "/redfish/v1/Managers/1/SNMP"
+      },
+      "Syslog": {
+        "@odata.id": "/redfish/v1/Managers/1/Syslog"
+      },
+      "Snooping": {
+        "@odata.id": "/redfish/v1/Managers/1/Snooping"
+      },
+      "FanMode": {
+        "@odata.id": "/redfish/v1/Managers/1/FanMode"
+      },
+      "IKVM": {
+        "@odata.id": "/redfish/v1/Managers/1/IKVM"
+      },
+      "KCSInterface": {
+        "@odata.id": "/redfish/v1/Managers/1/KCSInterface"
+      }
+    }
+  }
+}
