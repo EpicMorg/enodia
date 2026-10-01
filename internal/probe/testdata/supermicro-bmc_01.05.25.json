@@ -1,0 +1,60 @@
+{
+  "@odata.type": "#Manager.v1_19_2.Manager",
+  "@odata.id": "/redfish/v1/Managers/1",
+  "Id": "1",
+  "Name": "Manager",
+  "Description": "BMC",
+  "ManagerType": "BMC",
+  "UUID": "00000000-0000-0000-0000-000000000000",
+  "Model": "AST2600",
+  "FirmwareVersion": "01.05.25",
+  "DateTime": "2026-09-30T12:47:29+03:00",
+  "Status": {
+    "State": "Enabled",
+    "Health": "OK"
+  },
+  "Oem": {
+    "Supermicro": {
+      "@odata.type": "#SmcManagerExtensions.v1_0_0.Manager",
+      "RADIUS": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/RADIUS"
+      },
+      "MouseMode": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/MouseMode"
+      },
+      "NTP": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/NTP"
+      },
+      "IPAccessControl": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/IPAccessControl"
+      },
+      "SMCRAKP": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/SMCRAKP"
+      },
+      "Syslog": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/Syslog"
+      },
+      "SysLockdown": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/SysLockdown"
+      },
+      "Snooping": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/Snooping"
+      },
+      "FanMode": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/FanMode"
+      },
+      "IKVM": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/IKVM"
+      },
+      "KCSInterface": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/KCSInterface"
+      },
+      "LLDP": {
+        "@odata.id": "/redfish/v1/Managers/1/Oem/Supermicro/LLDP"
+      },
+      "LicenseManager": {
+        "@odata.id": "/redfish/v1/Managers/1/LicenseManager"
+      }
+    }
+  }
+}

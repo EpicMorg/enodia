@@ -36,20 +36,29 @@ func (astraLinuxProbe) Meta() Meta {
 
 var astraVersionPattern = regexp.MustCompile(`^\d+(?:\.\d+)+$`)
 
+// astraProbeCommand also lists the binary packages Astra's own OVAL
+// names (D46), in the same round trip. packagesCommand's `|| true`s keep
+// the exit status 0 even without /etc/astra_version; that case is the
+// empty version below.
+var astraProbeCommand = "cat /etc/astra_version 2>/dev/null" + packagesCommand(packagesDpkgBinary)
+
 func (astraLinuxProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	start := time.Now()
 	obs := Observation{Kind: "observation", ID: t.ID, Name: t.Name, Product: t.Product, CollectedAt: start.UTC()}
 
-	const cmd = "cat /etc/astra_version"
-	out, verified, err := sshRunCommand(ctx, t, cmd)
+	out, verified, err := sshRunCommand(ctx, t, astraProbeCommand)
 	if err != nil {
 		if isSSHExitError(err) {
-			return obs, fmt.Errorf("%w: %q: no such file (not Astra Linux): %w", ErrNotSupported, cmd, err)
+			return obs, fmt.Errorf("%w: %w", ErrNotSupported, err)
 		}
 		return obs, err
 	}
 
-	version := strings.TrimSpace(out)
+	astraVersion, _, _ := strings.Cut(out, unameMarker)
+	version := strings.TrimSpace(astraVersion)
+	if version == "" {
+		return obs, fmt.Errorf("%w: no /etc/astra_version (not Astra Linux)", ErrNotSupported)
+	}
 	if !astraVersionPattern.MatchString(version) {
 		return obs, fmt.Errorf("%w: /etc/astra_version contains %q, not a version number", ErrUnparseable, version)
 	}
@@ -57,6 +66,9 @@ func (astraLinuxProbe) Probe(ctx context.Context, t Target) (Observation, error)
 	obs.Version = version
 	obs.Endpoint = "/etc/astra_version"
 	obs.Extra = map[string]string{"hostKeyVerified": strconv.FormatBool(verified)}
+	h := parsePackagesOutput(packagesDpkgBinary, out)
+	h.extra(obs.Extra)
+	obs.Packages = h.packages
 	obs.DurationMS = time.Since(start).Milliseconds()
 	return obs, nil
 }

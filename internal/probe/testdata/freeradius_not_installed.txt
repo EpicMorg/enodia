@@ -1,0 +1,4 @@
+bash: line 1: freeradius: command not found
+bash: line 1: radiusd: command not found
+bash: line 1: /usr/sbin/freeradius: No such file or directory
+bash: line 1: /usr/sbin/radiusd: No such file or directory

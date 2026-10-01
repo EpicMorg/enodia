@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -66,7 +67,39 @@ func runConfigValidateCmd(cmd *cobra.Command, _ []string) error {
 	if _, err := cfg.Build(warnPrinter(cmd)); err != nil {
 		return &ExitError{Code: 1, Err: err}
 	}
+	if err := validateCVEPaths(cfg); err != nil {
+		return &ExitError{Code: 1, Err: err}
+	}
 	fmt.Fprintf(cmd.OutOrStdout(), "%s: OK (%d target(s))\n", path, len(cfg.Targets))
+	return nil
+}
+
+// validateCVEPaths confirms every cve.*.path that is set actually
+// exists. credentials_file gets this same check for free from
+// LoadCredentials' own os.ReadFile (already run by cfg.Build above) — the
+// CVE paths had nothing equivalent, so a typo'd or moved path passed
+// `config validate` clean and only surfaced as a failure deep inside
+// `check`/`serve`, exactly the class of problem this command exists to
+// catch ahead of time. This can't live in Config.Validate itself: that
+// runs on every Load, including in contexts (tests, a config written on
+// one machine for another) where the path legitimately doesn't exist yet
+// on whatever machine is doing the loading.
+func validateCVEPaths(cfg *config.Config) error {
+	for key, resolve := range map[string]func() (string, bool){
+		"cve.bdu.path":    cfg.BDUPath,
+		"cve.nvd.path":    cfg.NVDPath,
+		"cve.debian.path": cfg.DebianPath,
+		"cve.oval.path":   cfg.OVALPath,
+		"cve.alpine.path": cfg.AlpinePath,
+	} {
+		path, ok := resolve()
+		if !ok {
+			continue
+		}
+		if _, err := os.Stat(path); err != nil {
+			return fmt.Errorf("%s: %w", key, err)
+		}
+	}
 	return nil
 }
 

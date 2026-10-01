@@ -182,6 +182,23 @@ type Observation struct {
 	Endpoint string            `json:"endpoint,omitempty"` // what was actually queried
 	Extra    map[string]string `json:"extra,omitempty"`    // buildNumber, typeId, ...
 
+	// Packages is the host's installed source packages, name -> version,
+	// for an OS probe that can list them (debian today: dpkg-query's
+	// source:Package/source:Version, the key the Debian Security Tracker
+	// is indexed on). Nil for everything else. When one source package is
+	// installed at several versions, the oldest one is kept — the one a
+	// fix is still missing from. Optional and additive, so no inventory
+	// SchemaVersion bump: an older enodia ignores the field, and an older
+	// inventory simply has no package-level CVEs.
+	Packages map[string]string `json:"packages,omitempty"`
+
+	// Modules is, for an RHEL-family host, each modular package's AppStream
+	// module stream ("nodejs" -> "nodejs:20", from rpm's MODULARITYLABEL):
+	// the vendors' OVAL publishes a separate fix per stream, and a package
+	// is only matched against its own stream's. Absent for non-modular
+	// packages, and nil everywhere else.
+	Modules map[string]string `json:"modules,omitempty"`
+
 	// Resolver overrides Meta().DefaultResolver for this one observation.
 	// Nil means "use the product's static default" — almost every probe
 	// leaves this unset. It exists for a product whose lifecycle calendar

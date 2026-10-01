@@ -1,0 +1,383 @@
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:oval-def="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:unix-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:red-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
+<generator>
+<oval:product_name>Oracle Errata System</oval:product_name>
+<oval:product_version>Oracle Linux</oval:product_version>
+<oval:schema_version>5.11</oval:schema_version>
+<oval:timestamp>2026-09-29T18:36:52</oval:timestamp>
+</generator>
+<definitions>
+<definition id="oval:com.oracle.elsa:def:202650075" version="501" class="patch">
+<metadata>
+<title>
+ELSA-2026-50075: openssl security update (IMPORTANT)
+</title>
+<affected family="unix">
+<platform>Oracle Linux 9</platform>
+
+</affected>
+<reference source="elsa" ref_id="ELSA-2026-50075" ref_url="https://linux.oracle.com/errata/ELSA-2026-50075.html"/>
+<reference source="CVE" ref_id="CVE-2025-11187" ref_url="https://linux.oracle.com/cve/CVE-2025-11187.html"/>
+<reference source="CVE" ref_id="CVE-2025-15467" ref_url="https://linux.oracle.com/cve/CVE-2025-15467.html"/>
+<reference source="CVE" ref_id="CVE-2025-15468" ref_url="https://linux.oracle.com/cve/CVE-2025-15468.html"/>
+<reference source="CVE" ref_id="CVE-2025-15469" ref_url="https://linux.oracle.com/cve/CVE-2025-15469.html"/>
+<reference source="CVE" ref_id="CVE-2025-66199" ref_url="https://linux.oracle.com/cve/CVE-2025-66199.html"/>
+<reference source="CVE" ref_id="CVE-2025-68160" ref_url="https://linux.oracle.com/cve/CVE-2025-68160.html"/>
+<reference source="CVE" ref_id="CVE-2025-69418" ref_url="https://linux.oracle.com/cve/CVE-2025-69418.html"/>
+<reference source="CVE" ref_id="CVE-2025-69419" ref_url="https://linux.oracle.com/cve/CVE-2025-69419.html"/>
+<reference source="CVE" ref_id="CVE-2025-69420" ref_url="https://linux.oracle.com/cve/CVE-2025-69420.html"/>
+<reference source="CVE" ref_id="CVE-2025-69421" ref_url="https://linux.oracle.com/cve/CVE-2025-69421.html"/>
+<reference source="CVE" ref_id="CVE-2026-22795" ref_url="https://linux.oracle.com/cve/CVE-2026-22795.html"/>
+<reference source="CVE" ref_id="CVE-2026-22796" ref_url="https://linux.oracle.com/cve/CVE-2026-22796.html"/>
+
+<description>trimmed</description>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~   advisory details   ~~~~~~~~~~~~~~~~~~~ 
+-->
+<advisory>
+<severity>IMPORTANT</severity>
+<rights>Copyright 2026 Oracle, Inc.</rights>
+<issued date="2026-01-29"/>
+<cve cvss3="6.1/CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:L/I:L/A:H" href="https://linux.oracle.com/cve/CVE-2025-11187.html" public="20260127">CVE-2025-11187</cve>
+<cve cvss3="9.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" href="https://linux.oracle.com/cve/CVE-2025-15467.html" public="20260127">CVE-2025-15467</cve>
+<cve cvss3="5.9/CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2025-15468.html" public="20260127">CVE-2025-15468</cve>
+<cve cvss3="5.5/CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N" href="https://linux.oracle.com/cve/CVE-2025-15469.html" public="20260127">CVE-2025-15469</cve>
+<cve cvss3="5.9/CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2025-66199.html" public="20260127">CVE-2025-66199</cve>
+<cve cvss3="4.7/CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2025-68160.html" public="20260127">CVE-2025-68160</cve>
+<cve cvss3="4.0/CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N" href="https://linux.oracle.com/cve/CVE-2025-69418.html" public="20260127">CVE-2025-69418</cve>
+<cve cvss3="7.4/CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N" href="https://linux.oracle.com/cve/CVE-2025-69419.html" public="20260127">CVE-2025-69419</cve>
+<cve cvss3="5.9/CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2025-69420.html" public="20260127">CVE-2025-69420</cve>
+<cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2025-69421.html" public="20260127">CVE-2025-69421</cve>
+<cve cvss3="5.5/CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-22795.html" public="20260127">CVE-2026-22795</cve>
+<cve cvss3="5.9/CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-22796.html" public="20260127">CVE-2026-22796</cve>
+
+<affected_cpe_list>
+<cpe>cpe:/a:oracle:linux:9::u3_security_validation</cpe>
+</affected_cpe_list>
+</advisory>
+</metadata>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075001" comment="Oracle Linux 9 is installed"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075002" comment="Oracle Linux arch is aarch64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075003" comment="openssl is earlier than 10:3.5.1-7.0.1.el9_7_fips"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075004" comment="openssl is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075005" comment="openssl is fips patched"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075006" comment="openssl-devel is earlier than 10:3.5.1-7.0.1.el9_7_fips"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075007" comment="openssl-devel is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075008" comment="openssl-devel is fips patched"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075009" comment="openssl-libs is earlier than 10:3.5.1-7.0.1.el9_7_fips"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075010" comment="openssl-libs is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075011" comment="openssl-libs is fips patched"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075012" comment="openssl-perl is earlier than 10:3.5.1-7.0.1.el9_7_fips"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075013" comment="openssl-perl is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075014" comment="openssl-perl is fips patched"/>
+</criteria>
+</criteria>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075015" comment="Oracle Linux arch is x86_64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075003" comment="openssl is earlier than 10:3.5.1-7.0.1.el9_7_fips"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075004" comment="openssl is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075005" comment="openssl is fips patched"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075006" comment="openssl-devel is earlier than 10:3.5.1-7.0.1.el9_7_fips"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075007" comment="openssl-devel is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075008" comment="openssl-devel is fips patched"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075009" comment="openssl-libs is earlier than 10:3.5.1-7.0.1.el9_7_fips"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075010" comment="openssl-libs is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075011" comment="openssl-libs is fips patched"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075012" comment="openssl-perl is earlier than 10:3.5.1-7.0.1.el9_7_fips"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075013" comment="openssl-perl is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202650075014" comment="openssl-perl is fips patched"/>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+
+</definition>
+<definition id="oval:com.oracle.elsa:def:2026671650" version="501" class="patch">
+<metadata>
+<title>
+ELSA-2026-67165-0:  openssl security, bug fix, and enhancement update (IMPORTANT)
+</title>
+<affected family="unix">
+<platform>Oracle Linux 9</platform>
+
+</affected>
+<reference source="elsa" ref_id="ELSA-2026-67165-0" ref_url="https://linux.oracle.com/errata/ELSA-2026-67165-0.html"/>
+<reference source="CVE" ref_id="CVE-2026-14456" ref_url="https://linux.oracle.com/cve/CVE-2026-14456.html"/>
+<reference source="CVE" ref_id="CVE-2026-14457" ref_url="https://linux.oracle.com/cve/CVE-2026-14457.html"/>
+<reference source="CVE" ref_id="CVE-2026-18798" ref_url="https://linux.oracle.com/cve/CVE-2026-18798.html"/>
+<reference source="CVE" ref_id="CVE-2026-54874" ref_url="https://linux.oracle.com/cve/CVE-2026-54874.html"/>
+<reference source="CVE" ref_id="CVE-2026-63072" ref_url="https://linux.oracle.com/cve/CVE-2026-63072.html"/>
+<reference source="CVE" ref_id="CVE-2026-63073" ref_url="https://linux.oracle.com/cve/CVE-2026-63073.html"/>
+<reference source="CVE" ref_id="CVE-2026-63074" ref_url="https://linux.oracle.com/cve/CVE-2026-63074.html"/>
+<reference source="CVE" ref_id="CVE-2026-63075" ref_url="https://linux.oracle.com/cve/CVE-2026-63075.html"/>
+<reference source="CVE" ref_id="CVE-2026-63076" ref_url="https://linux.oracle.com/cve/CVE-2026-63076.html"/>
+
+<description>trimmed</description>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~   advisory details   ~~~~~~~~~~~~~~~~~~~ 
+-->
+<advisory>
+<severity>IMPORTANT</severity>
+<rights>Copyright 2026 Oracle, Inc.</rights>
+<issued date="2026-09-14"/>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-14456.html" public="20260813">CVE-2026-14456</cve>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-14457.html" public="20260825">CVE-2026-14457</cve>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-18798.html" public="20260825">CVE-2026-18798</cve>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-54874.html" public="20260825">CVE-2026-54874</cve>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-63072.html" public="20260825">CVE-2026-63072</cve>
+<cve cvss3="5.9/CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-63073.html" public="20260825">CVE-2026-63073</cve>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-63074.html" public="20260825">CVE-2026-63074</cve>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-63075.html" public="20260825">CVE-2026-63075</cve>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" href="https://linux.oracle.com/cve/CVE-2026-63076.html" public="20260825">CVE-2026-63076</cve>
+
+<affected_cpe_list>
+<cpe>cpe:/a:oracle:linux:9::appstream</cpe>
+<cpe>cpe:/o:oracle:linux:9:8:baseos_patch</cpe>
+<cpe>cpe:/o:oracle:linux:9::baseos_latest</cpe>
+</affected_cpe_list>
+</advisory>
+</metadata>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650001" comment="Oracle Linux 9 is installed"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650002" comment="Oracle Linux arch is aarch64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650003" comment="openssl is earlier than 1:3.5.8-1.0.1.el9_8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650004" comment="openssl is signed with the Oracle Linux 9 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650005" comment="openssl-devel is earlier than 1:3.5.8-1.0.1.el9_8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650006" comment="openssl-devel is signed with the Oracle Linux 9 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650007" comment="openssl-libs is earlier than 1:3.5.8-1.0.1.el9_8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650008" comment="openssl-libs is signed with the Oracle Linux 9 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650009" comment="openssl-perl is earlier than 1:3.5.8-1.0.1.el9_8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650010" comment="openssl-perl is signed with the Oracle Linux 9 key"/>
+</criteria>
+</criteria>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650011" comment="Oracle Linux arch is x86_64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650003" comment="openssl is earlier than 1:3.5.8-1.0.1.el9_8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650004" comment="openssl is signed with the Oracle Linux 9 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650005" comment="openssl-devel is earlier than 1:3.5.8-1.0.1.el9_8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650006" comment="openssl-devel is signed with the Oracle Linux 9 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650007" comment="openssl-libs is earlier than 1:3.5.8-1.0.1.el9_8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650008" comment="openssl-libs is signed with the Oracle Linux 9 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650009" comment="openssl-perl is earlier than 1:3.5.8-1.0.1.el9_8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:2026671650010" comment="openssl-perl is signed with the Oracle Linux 9 key"/>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+
+</definition>
+</definitions>
+<tests>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075001"  version="501" comment="Oracle Linux 9 is installed" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075001" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075003" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075002"  version="501" comment="Oracle Linux arch is aarch64" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075001" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075004" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075003"  version="501" comment="openssl is earlier than 10:3.5.1-7.0.1.el9_7_fips" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075002" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075005" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075004"  version="501" comment="openssl is signed with the Oracle Linux 9 key" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075002" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075001" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075005"  version="501" comment="openssl is fips patched" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075002" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075002" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075006"  version="501" comment="openssl-devel is earlier than 10:3.5.1-7.0.1.el9_7_fips" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075003" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075005" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075007"  version="501" comment="openssl-devel is signed with the Oracle Linux 9 key" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075003" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075001" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075008"  version="501" comment="openssl-devel is fips patched" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075003" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075002" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075009"  version="501" comment="openssl-libs is earlier than 10:3.5.1-7.0.1.el9_7_fips" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075004" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075005" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075010"  version="501" comment="openssl-libs is signed with the Oracle Linux 9 key" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075004" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075001" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075011"  version="501" comment="openssl-libs is fips patched" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075004" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075002" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075012"  version="501" comment="openssl-perl is earlier than 10:3.5.1-7.0.1.el9_7_fips" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075005" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075005" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075013"  version="501" comment="openssl-perl is signed with the Oracle Linux 9 key" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075005" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075001" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075014"  version="501" comment="openssl-perl is fips patched" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075005" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075002" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:202650075015"  version="501" comment="Oracle Linux arch is x86_64" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:202650075001" />
+<state state_ref="oval:com.oracle.elsa:ste:202650075006" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650001"  version="501" comment="Oracle Linux 9 is installed" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650001" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650002" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650002"  version="501" comment="Oracle Linux arch is aarch64" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650001" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650003" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650003"  version="501" comment="openssl is earlier than 1:3.5.8-1.0.1.el9_8" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650002" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650004" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650004"  version="501" comment="openssl is signed with the Oracle Linux 9 key" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650002" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650001" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650005"  version="501" comment="openssl-devel is earlier than 1:3.5.8-1.0.1.el9_8" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650003" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650004" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650006"  version="501" comment="openssl-devel is signed with the Oracle Linux 9 key" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650003" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650001" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650007"  version="501" comment="openssl-libs is earlier than 1:3.5.8-1.0.1.el9_8" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650004" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650004" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650008"  version="501" comment="openssl-libs is signed with the Oracle Linux 9 key" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650004" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650001" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650009"  version="501" comment="openssl-perl is earlier than 1:3.5.8-1.0.1.el9_8" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650005" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650004" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650010"  version="501" comment="openssl-perl is signed with the Oracle Linux 9 key" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650005" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650001" />
+</rpminfo_test>
+<rpminfo_test id="oval:com.oracle.elsa:tst:2026671650011"  version="501" comment="Oracle Linux arch is x86_64" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+<object object_ref="oval:com.oracle.elsa:obj:2026671650001" />
+<state state_ref="oval:com.oracle.elsa:ste:2026671650005" />
+</rpminfo_test>
+</tests>
+<objects>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:202650075001" version="501">
+<name>oraclelinux-release</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:202650075002" version="501">
+<name>openssl</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:202650075003" version="501">
+<name>openssl-devel</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:202650075004" version="501">
+<name>openssl-libs</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:202650075005" version="501">
+<name>openssl-perl</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:2026671650001" version="501">
+<name>oraclelinux-release</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:2026671650002" version="501">
+<name>openssl</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:2026671650003" version="501">
+<name>openssl-devel</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:2026671650004" version="501">
+<name>openssl-libs</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:2026671650005" version="501">
+<name>openssl-perl</name>
+</rpminfo_object>
+</objects>
+<states>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:202650075001" version="501">
+<signature_keyid operation="equals">bc4d06a08d8b756f</signature_keyid>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:202650075002" version="501">
+<release operation="pattern match">fips</release>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:202650075003" version="501">
+<version operation="pattern match">^9</version>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:202650075004" version="501">
+<arch operation="pattern match">aarch64</arch>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:202650075005" version="501">
+<evr datatype="evr_string" operation="less than">10:3.5.1-7.0.1.el9_7_fips</evr>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:202650075006" version="501">
+<arch operation="pattern match">x86_64</arch>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:2026671650001" version="501">
+<signature_keyid operation="equals">bc4d06a08d8b756f</signature_keyid>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:2026671650002" version="501">
+<version operation="pattern match">^9</version>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:2026671650003" version="501">
+<arch operation="pattern match">aarch64</arch>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:2026671650004" version="501">
+<evr datatype="evr_string" operation="less than">1:3.5.8-1.0.1.el9_8</evr>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:2026671650005" version="501">
+<arch operation="pattern match">x86_64</arch>
+</rpminfo_state>
+</states>
+</oval_definitions>

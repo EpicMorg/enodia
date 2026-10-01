@@ -110,3 +110,32 @@ func TestNormalizeRELTag(t *testing.T) {
 		}
 	}
 }
+
+// github-tags-freeradius.sample.json is FreeRADIUS/freeradius-server's
+// real tags page (per_page=100, names only), which interleaves
+// release_3_2_* and release_3_0_* tags: both branches ship releases.
+func TestGithubTagsSourceBranches(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/github-tags-freeradius.sample.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("per_page") != "100" {
+			t.Errorf("got per_page %q, want 100", r.URL.Query().Get("per_page"))
+		}
+		_, _ = w.Write(fixture)
+	}))
+	defer srv.Close()
+
+	src := &githubTagsSource{BaseURL: srv.URL, Client: srv.Client(), Branches: true}
+	cycles, err := src.Fetch(context.Background(), probe.ResolverRef{Type: "github-tag-branches", ID: "FreeRADIUS/freeradius-server"})
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if len(cycles) < 2 {
+		t.Fatalf("got %+v, want at least the 3.2 and 3.0 branches", cycles)
+	}
+	if cycles[0].Cycle != "3.2" || cycles[0].Latest != "3.2.10" || cycles[1].Cycle != "3.0" || cycles[1].Latest != "3.0.28" {
+		t.Fatalf("got %+v, want 3.2 (3.2.10) then 3.0 (3.0.28), newest branch first", cycles[:2])
+	}
+}

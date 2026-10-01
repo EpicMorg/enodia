@@ -9,12 +9,38 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/EpicMorg/enodia/internal/version"
 )
 
 // debianVersionMarker separates the two files' output in debianProbe's one
 // combined SSH command — arbitrary but distinctive enough it will never
 // collide with real file content.
 const debianVersionMarker = "===ENODIA-DEBIAN-VERSION==="
+
+// debianKernelMarker and debianPackagesMarker separate the running
+// kernel's `uname -v` and dpkg-query's package list, the same way.
+const (
+	debianKernelMarker   = "===ENODIA-DEBIAN-KERNEL==="
+	debianPackagesMarker = "===ENODIA-DEBIAN-PACKAGES==="
+)
+
+// debianProbeCommand is the one round trip debianProbe makes. Every part
+// after os-release ends in `|| true` for the reason Probe explains.
+//
+// dpkg-query's source:Package/source:Version, not Package/Version: the
+// Debian Security Tracker is indexed by source package and its fixed
+// versions are source versions — confirmed live, binary acl
+// 2.3.2-2+b1 (a binNMU) is source acl 2.3.2-2.
+const debianProbeCommand = "cat /etc/os-release; echo '" + debianVersionMarker + "'; cat /etc/debian_version 2>/dev/null || true" +
+	"; echo '" + debianKernelMarker + "'; uname -v 2>/dev/null || true" +
+	"; echo '" + debianPackagesMarker + "'; dpkg-query -W -f='${db:Status-Abbrev}\\t${source:Package}\\t${source:Version}\\n' 2>/dev/null || true"
+
+// debianKernelPattern pulls the kernel package's own Debian version out of
+// `uname -v` — confirmed live: "#1 SMP PREEMPT_DYNAMIC Debian 6.12.107-1
+// (2026-08-29)". `uname -r` ("6.12.107+deb13-amd64") is the ABI name, not
+// a version the tracker's fixed versions can be compared with.
+var debianKernelPattern = regexp.MustCompile(`\bDebian (\d[\w.+~:-]*)`)
 
 // debianVersionPattern matches a real point release ("13.6", "12.15"), the
 // only shape /etc/debian_version is trusted for. Debian testing/unstable's
@@ -63,18 +89,20 @@ func (debianProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	start := time.Now()
 	obs := Observation{Kind: "observation", ID: t.ID, Name: t.Name, Product: t.Product, CollectedAt: start.UTC()}
 
-	// The trailing `|| true` matters: a target with no /etc/debian_version
-	// at all (shouldn't happen on real Debian, but this must not turn into
-	// a connection-level failure if it ever does) must not make the whole
-	// command exit non-zero, which sshRunCommand would otherwise surface as
-	// ErrNotSupported before this probe ever gets to look at os-release.
-	cmd := "cat /etc/os-release; echo '" + debianVersionMarker + "'; cat /etc/debian_version 2>/dev/null || true"
-	out, verified, err := sshRunCommand(ctx, t, cmd)
+	// The trailing `|| true`s matter: a target with no /etc/debian_version
+	// or no dpkg-query at all (shouldn't happen on real Debian, but this
+	// must not turn into a connection-level failure if it ever does) must
+	// not make the whole command exit non-zero, which sshRunCommand would
+	// otherwise surface as ErrNotSupported before this probe ever gets to
+	// look at os-release.
+	out, verified, err := sshRunCommand(ctx, t, debianProbeCommand)
 	if err != nil {
 		return obs, err
 	}
 
-	osRelease, debianVersionOut, _ := strings.Cut(out, debianVersionMarker)
+	osRelease, rest, _ := strings.Cut(out, debianVersionMarker)
+	debianVersionOut, rest, _ := strings.Cut(rest, debianKernelMarker)
+	kernelOut, packagesOut, _ := strings.Cut(rest, debianPackagesMarker)
 	fields := parseOSRelease(osRelease)
 	if fields["ID"] != "debian" {
 		return obs, fmt.Errorf("%w: /etc/os-release reports ID=%q, not debian", ErrNotSupported, fields["ID"])
@@ -94,8 +122,48 @@ func (debianProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 		}
 	}
 
+	if codename := fields["VERSION_CODENAME"]; codename != "" {
+		obs.Extra["codename"] = codename
+	}
+	if m := debianKernelPattern.FindStringSubmatch(kernelOut); m != nil {
+		obs.Extra["kernel"] = m[1]
+	}
+	obs.Packages = parseDpkgSourcePackages(packagesOut)
+
 	obs.Version = version
 	obs.Endpoint = "/etc/os-release"
 	obs.DurationMS = time.Since(start).Milliseconds()
 	return obs, nil
+}
+
+// parseDpkgSourcePackages reads debianProbeCommand's dpkg-query lines
+// ("<status>\t<source>\t<source version>") into source package ->
+// version, keeping only installed packages: the second status letter is
+// dpkg's current state, and "i" (installed), "W"/"t" (installed, triggers
+// pending) are the ones whose files are on disk. "rc" — removed, config
+// files left behind — is confirmed live as the common other case (51 of
+// 1970 on a real trixie host). When one source package is installed at
+// more than one version (old linux-headers next to new ones, a partial
+// upgrade), the oldest wins: that's the one still missing a fix. Nil when
+// nothing parsed, so an old inventory and a host without dpkg-query look
+// the same.
+func parseDpkgSourcePackages(out string) map[string]string {
+	var pkgs map[string]string
+	for line := range strings.Lines(out) {
+		fields := strings.Split(strings.TrimRight(line, "\r\n"), "\t")
+		if len(fields) != 3 || len(fields[0]) < 2 || !strings.ContainsRune("iWt", rune(fields[0][1])) {
+			continue
+		}
+		name, ver := fields[1], fields[2]
+		if name == "" || ver == "" {
+			continue
+		}
+		if pkgs == nil {
+			pkgs = map[string]string{}
+		}
+		if have, ok := pkgs[name]; !ok || version.CompareDebian(ver, have) < 0 {
+			pkgs[name] = ver
+		}
+	}
+	return pkgs
 }

@@ -1115,12 +1115,92 @@ Not dates. Order of work, and what each step unblocks.
   `CRITICAL · CVSS 3.1 9.8` rating parsed from both sources, most
   severe first; the CVES count now counts CVEs. See `docs/DECISIONS.md`
   D35.
+- `mariadb` probe — `mysql` has always correctly rejected a MariaDB
+  handshake ("this server is MariaDB …, not MySQL"), so MariaDB servers
+  had no probe of their own at all. Same `Protocol::HandshakeV10` the
+  two share (the packet-framing logic is now a shared
+  `readMySQLProtocolVersion`, confirmed live again against a fresh
+  `mariadb:10.11` container), own product id, own endoflife.date
+  calendar (`mariadb`, confirmed live). CVE mapping deliberately not
+  done yet — that's the later, dedicated CVE pass, not an oversight.
+  See `docs/DECISIONS.md` D36.
+- `pfsense` probe (Community Edition) — confirmed live against three
+  real dev hosts: SSH in, read `/etc/version` and `/etc/platform` in
+  one round trip. Netgate's commercial pfSense Plus is a different
+  product with its own calendar-based version scheme; rejected by
+  platform string on documentation alone (no Plus instance to confirm
+  live against). No `DefaultResolver`: no endoflife.date page under any
+  slug tried. See `docs/DECISIONS.md` D37.
+- Bug fix: a real, patched vCenter/ESXi 8.0 host (`8.0.3`) showed
+  `ahead` instead of `current` against the calendar's own `8.0 U3k` /
+  `8.0 Update 3k` latest — `version.Clean` folds VMware's "Update N"
+  shorthand into the numeric spine now (`8.0 U3k` → `8.0.3`); the
+  trailing patch letter is dropped, not folded in, since a live host's
+  own version string has nothing to compare it against either way. Two
+  older, already-EOL cycles use different, unhandled VMware shorthands
+  and are deliberately left alone. See `docs/DECISIONS.md` D38.
+- Bug fix: GitHub-release resolvers showed the raw tag verbatim in the
+  report's LATEST/CYCLE columns (`v2026.9.1`, `v1.0.68`), inconsistent
+  with every `endoflife`-resolved product's already-clean cycle names.
+  `Evaluate` now applies `version.Clean` before storing
+  `MatchedCycle`/`LatestInCycle`, the same cleaning `evaluatePatch`
+  already did internally just for comparison. See `docs/DECISIONS.md`
+  D39.
+- `supermicro-bmc`, `dell-idrac`, `hp-ilo4` — the first hardware BMC
+  probes, all confirmed live against four real controllers across three
+  vendors (two Supermicro generations, one Dell 12G iDRAC, one HP iLO
+  4), all HTTPS + Basic auth over Redfish (or, for iLO 4, a close
+  pre-Redfish HP precursor API). No `DefaultResolver` for any of the
+  three: BMC firmware has no public lifecycle calendar. A Dell CMC
+  (chassis-level, not per-server) was also found live but deliberately
+  not built — no Redfish endpoint at all, would need RACADM or HTML
+  scraping. iLO 5 (fully Redfish-compliant, unlike iLO 4) also not
+  built: no controller available to confirm its real shape live. See
+  `docs/DECISIONS.md` D40.
+- Bug fix: `config validate` did not check that `cve.bdu.path` /
+  `cve.nvd.path` exist, so a typo only surfaced at `check`/`serve`
+  time. It now fails with the offending key named. See
+  `docs/DECISIONS.md` D41.
+- Package-level CVE correlation for Debian (revisits D33). The `debian`
+  probe now also reads the installed source packages (`dpkg-query`) and
+  the running kernel (`uname -v`) in its one SSH round trip. They are
+  matched against the Debian Security Tracker's JSON export
+  (`cve.debian.path`, operator-downloaded), and only CVEs Debian has
+  already fixed in a newer version than the installed one are reported,
+  one finding per source package. Confirmed on a live trixie host: 1327
+  CVEs (1314 kernel, pending reboot or upgrade to 6.12.111-1; 13 openssl),
+  matching a separate python3-apt check exactly. See `docs/DECISIONS.md`
+  D42.
+- Package-level CVE correlation for Ubuntu, Linux Mint, RHEL, Rocky,
+  AlmaLinux and Oracle Linux from the vendors' own OVAL files
+  (`cve.oval.path`). The `ubuntu` probe and the four RHEL-family
+  registrations read installed packages (with AppStream module streams on
+  rpm) and the running kernel in their one SSH round trip. Validated
+  against `oscap oval eval` (Ubuntu 56/56 advisories, RHEL 128/128, Alma
+  197/197, Oracle 22/22) and `dnf updateinfo`. Rocky's own OVAL proved
+  unusable (13 of 130 advisories), so Rocky hosts are matched against
+  RHEL's. Also: Debian's `linux` is now matched only against a running
+  Debian kernel (Proxmox VE runs its own). See `docs/DECISIONS.md` D43.
+- Package-level CVE correlation for Alpine from secdb (`cve.alpine.path`),
+  keyed by origin package, with apk-tools' own version comparison
+  (checked against `apk version -t` on ~5300 pairs). On alpine:3.20.0 it
+  gives the same 4 packages and 34 CVEs as a reference run of
+  `apk version -t` over secdb. See `docs/DECISIONS.md` D44.
+- `freeradius` — SSH probe running the server's own `-v`, with
+  `options.container` for a FreeRADIUS in Docker/Podman (confirmed live:
+  3.2.10 in Docker). Lifecycle from a new `github-tag-branches` resolver
+  (one cycle per major.minor from GitHub tags, since 3.0.x and 3.2.x ship
+  side by side); CVEs from NVD and BDU. See `docs/DECISIONS.md` D45.
+- Package-level CVE correlation for Astra Linux SE 1.7/1.8 and RED OS
+  7.3/8.0 from the vendors' own OVAL (`cve.oval.path`): their packages
+  are rebuilds with their own versions, so Debian's/Red Hat's data can't
+  be applied. Validated against `oscap oval eval` (Astra 1.7 205/205 CVEs,
+  1.8 48/48, RED OS 7.3 53/53, 8.0 60/60). See `docs/DECISIONS.md` D46.
 
 ## Next
 
-Empty: every product that was tracked here across this project's probe
-build-out has landed in Done above. Add new entries as new probes get
-requested.
+Everything found running 2.0 against a real ~600-target fleet is done
+(see above).
 
 ## Later
 

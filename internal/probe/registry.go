@@ -15,9 +15,9 @@ import (
 // visible here. Ordering is alphabetical by product.
 var builtin = []Probe{
 	// almalinux 9 (docker.io/almalinux:9): ID="almalinux", VERSION_ID="9.8".
-	osReleaseFamilyProbe{product: "almalinux", summary: "AlmaLinux", resolver: ResolverRef{Type: "endoflife", ID: "almalinux"}, match: osReleaseIDEquals("almalinux")},
+	osReleaseFamilyProbe{product: "almalinux", summary: "AlmaLinux", resolver: ResolverRef{Type: "endoflife", ID: "almalinux"}, match: osReleaseIDEquals("almalinux"), packages: packagesRPM},
 	// alpine:latest: ID=alpine, VERSION_ID=3.24.1.
-	osReleaseFamilyProbe{product: "alpine-linux", summary: "Alpine Linux", resolver: ResolverRef{Type: "endoflife", ID: "alpine-linux"}, match: osReleaseIDEquals("alpine")},
+	osReleaseFamilyProbe{product: "alpine-linux", summary: "Alpine Linux", resolver: ResolverRef{Type: "endoflife", ID: "alpine-linux"}, match: osReleaseIDEquals("alpine"), packages: packagesAPK},
 	// amazonlinux:2023: ID="amzn", VERSION_ID="2023".
 	osReleaseFamilyProbe{product: "amazon-linux", summary: "Amazon Linux", resolver: ResolverRef{Type: "endoflife", ID: "amazon-linux"}, match: osReleaseIDEquals("amzn")},
 	apacheProbe{},
@@ -43,6 +43,9 @@ var builtin = []Probe{
 	// never carries Debian's point release ("13", not "13.6") — see
 	// debian.go for why this needs its own file.
 	debianProbe{},
+	// Confirmed live: /redfish/v1 carries Oem.Dell, the Manager resource
+	// itself carries none — see dellidrac.go for why this is 2 requests.
+	dellIDRACProbe{},
 	elasticsearchProbe{},
 	esxiProbe{},
 	// Real ISO rootfs capture (not a Docker image — none exists): ID="eurolinux", VERSION_ID="8.10".
@@ -56,6 +59,7 @@ var builtin = []Probe{
 	// Verified live via QEMU (FreeBSD's own official cloud qcow2, no Docker
 	// image exists): ID=freebsd, VERSION_ID="15.1".
 	osReleaseFamilyProbe{product: "freebsd", summary: "FreeBSD", resolver: ResolverRef{Type: "endoflife", ID: "freebsd"}, match: osReleaseIDEquals("freebsd"), path: "/var/run/os-release"},
+	freeradiusProbe{},
 	genericProbe{},
 	// gentoo/stage3 (official gentoo.org image): ID=gentoo, VERSION_ID=2.18
 	// — Gentoo Base System's own release number, not a distro version in
@@ -67,6 +71,9 @@ var builtin = []Probe{
 	graylogProbe{},
 	haproxyProbe{},
 	harborProbe{},
+	// iLO 4's own non-standard "HP RESTful" shape, not full Redfish — see
+	// hpilo4.go. iLO 5 is untested and needs its own probe/product.
+	hpILO4Probe{},
 	jaegerProbe{},
 	jellyfinProbe{},
 	jenkinsProbe{},
@@ -82,10 +89,13 @@ var builtin = []Probe{
 	// only Docker Hub image found earlier (linuxmintd/mint22-amd64, Mint's
 	// own CI build chroot, which reports the underlying Ubuntu instead),
 	// this is genuinely Mint's own identity.
-	osReleaseFamilyProbe{product: "linuxmint", summary: "Linux Mint", resolver: ResolverRef{Type: "endoflife", ID: "linuxmint"}, match: osReleaseIDEquals("linuxmint")},
+	osReleaseFamilyProbe{product: "linuxmint", summary: "Linux Mint", resolver: ResolverRef{Type: "endoflife", ID: "linuxmint"}, match: osReleaseIDEquals("linuxmint"), packages: packagesDpkgBinary},
 	logstashProbe{},
 	// Verified live via sw_vers over SSH against a real Mac (macOS 15.4).
 	macosProbe{},
+	// Same wire format mysqlProbe reads, minus the mask: readMySQLProtocolVersion
+	// is shared, see mariadb.go for exactly what differs (mysql.go).
+	mariadbProbe{},
 	mattermostProbe{},
 	mongodbProbe{},
 	mysqlProbe{},
@@ -118,7 +128,7 @@ var builtin = []Probe{
 	// -> "OPNsense 26.7 (amd64)".
 	opnsenseProbe{},
 	// oraclelinux:9: ID="ol", VERSION_ID="9.8".
-	osReleaseFamilyProbe{product: "oracle-linux", summary: "Oracle Linux", resolver: ResolverRef{Type: "endoflife", ID: "oracle-linux"}, match: osReleaseIDEquals("ol")},
+	osReleaseFamilyProbe{product: "oracle-linux", summary: "Oracle Linux", resolver: ResolverRef{Type: "endoflife", ID: "oracle-linux"}, match: osReleaseIDEquals("ol"), packages: packagesRPM},
 	// Captured via vmactions/solaris-vm (see solaris.go): /etc/release's
 	// "Oracle Solaris 11.4 X86" line.
 	oracleSolarisProbe{},
@@ -126,6 +136,7 @@ var builtin = []Probe{
 	p4dProbe{},
 	p4pProbe{},
 	perforceSwarmProbe{},
+	pfsenseProbe{},
 	pgadminProbe{},
 	// Official top-level photon:5.0 (Docker's Official Images program,
 	// not vmware/photon's own stale repo which stops at 2.0): ID=photon,
@@ -148,12 +159,12 @@ var builtin = []Probe{
 	redisProbe{},
 	// alrdockerhub/redos:7.3.1 (real RED OS content: HOME_URL/BUG_REPORT_URL
 	// point at red-soft.ru): ID="redos", VERSION_ID="7.3.1".
-	osReleaseFamilyProbe{product: "redos", summary: "RED OS", match: osReleaseIDEquals("redos")},
+	osReleaseFamilyProbe{product: "redos", summary: "RED OS", match: osReleaseIDEquals("redos"), packages: packagesRPM},
 	// registry.redhat.io/ubi9 (Red Hat's own free Universal Base Image):
 	// ID=rhel, VERSION_ID="9.8".
-	osReleaseFamilyProbe{product: "rhel", summary: "Red Hat Enterprise Linux", resolver: ResolverRef{Type: "endoflife", ID: "rhel"}, match: osReleaseIDEquals("rhel")},
+	osReleaseFamilyProbe{product: "rhel", summary: "Red Hat Enterprise Linux", resolver: ResolverRef{Type: "endoflife", ID: "rhel"}, match: osReleaseIDEquals("rhel"), packages: packagesRPM},
 	// rockylinux:9: ID="rocky", VERSION_ID="9.3".
-	osReleaseFamilyProbe{product: "rocky-linux", summary: "Rocky Linux", resolver: ResolverRef{Type: "endoflife", ID: "rocky-linux"}, match: osReleaseIDEquals("rocky")},
+	osReleaseFamilyProbe{product: "rocky-linux", summary: "Rocky Linux", resolver: ResolverRef{Type: "endoflife", ID: "rocky-linux"}, match: osReleaseIDEquals("rocky"), packages: packagesRPM},
 	routerosProbe{},
 	// vbatts/slackware:14.2: ID=slackware, VERSION_ID=14.2 — it does ship
 	// /etc/os-release, despite historical docs saying it doesn't.
@@ -166,6 +177,10 @@ var builtin = []Probe{
 	// vendor's own consistent branding) but hasn't been captured live —
 	// only the 2.x fixture below is confirmed.
 	osReleaseFamilyProbe{product: "steamos", summary: "SteamOS", resolver: ResolverRef{Type: "endoflife", ID: "steamos"}, match: osReleaseIDEquals("steamos")},
+	// Confirmed live against two real BMCs of different generations —
+	// see supermicrobmc.go for why the check is Oem.Supermicro, not a
+	// Manufacturer/Vendor field only one of the two actually has.
+	supermicroBMCProbe{},
 	// SYNO.API.Auth login, then GET SYNO.DSM.Info with the resulting
 	// session id (and SynoToken, when CSRF protection is enabled).
 	// Verified live against a real DSM 7.3.2 NAS.

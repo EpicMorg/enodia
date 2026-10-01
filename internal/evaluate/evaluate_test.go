@@ -129,6 +129,15 @@ func TestEvaluateGithubFallbackSingleCycle(t *testing.T) {
 	if a.Reason != ReasonNone {
 		t.Fatalf("got reason %v, want none — the single cycle must match trivially", a.Reason)
 	}
+	// The reported bug: MatchedCycle/LatestInCycle used to show the raw
+	// tag verbatim ("v2.9.0"), not the cleaned version every other
+	// resolver's cycle name already displays as.
+	if a.MatchedCycle != "2.9.0" {
+		t.Fatalf("got matched cycle %q, want 2.9.0 (cleaned, no leading v)", a.MatchedCycle)
+	}
+	if a.LatestInCycle != "2.9.0" {
+		t.Fatalf("got latest in cycle %q, want 2.9.0 (cleaned, no leading v)", a.LatestInCycle)
+	}
 	if a.Patch != PatchBehind {
 		t.Fatalf("got patch %v, want behind (2.8.5 < 2.9.0)", a.Patch)
 	}

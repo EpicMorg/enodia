@@ -26,22 +26,43 @@ type cveGroup struct {
 	rating  cve.CVSS
 	rawText string // a source's own severity text, when no rating parsed at all
 	tags    []string
+
+	// pkg is set for a package-level finding (Source "debian" or "oval",
+	// see isPackageFinding): one package behind on security fixes, every
+	// CVE it's missing in cveIDs. Such a finding is its own group, never
+	// merged per CVE.
+	pkg *cve.Finding
 }
 
 // cveGroupKey is what findings are merged on. A BDU finding citing
 // several CVEs is filed under its first; the rest still show on its line.
 func cveGroupKey(f cve.Finding) string {
+	if isPackageFinding(f) {
+		return "pkg:" + f.Source + ":" + f.MatchedName
+	}
 	if len(f.CVEIDs) > 0 {
 		return f.CVEIDs[0]
 	}
 	return f.AdvisoryID
 }
 
-// distinctCVECount is how many cveGroups findings make — the CVES column's
-// number, so it counts CVEs rather than per-source, per-CPE findings.
+// isPackageFinding reports whether f is a package-level finding (see
+// cve.Index.LookupPackages) rather than a product/version one.
+func isPackageFinding(f cve.Finding) bool { return f.InstalledVersion != "" }
+
+// distinctCVECount is the CVES column's number: how many CVEs findings
+// cover, not how many per-source, per-CPE findings they are. That's one
+// per cveGroup, except a package-level group, which counts every CVE it
+// carries — a kernel one update behind is 1314 CVEs, not 1.
 func distinctCVECount(findings []cve.Finding) int {
 	seen := make(map[string]bool, len(findings))
 	for _, f := range findings {
+		if isPackageFinding(f) {
+			for _, id := range f.CVEIDs {
+				seen[id] = true
+			}
+			continue
+		}
 		seen[cveGroupKey(f)] = true
 	}
 	return len(seen)
@@ -63,6 +84,14 @@ func groupCVEs(findings []cve.Finding) []cveGroup {
 			g = &cveGroup{key: k}
 			byKey[k] = g
 			order = append(order, k)
+		}
+		if isPackageFinding(f) {
+			pkg := f
+			g.pkg = &pkg
+			g.cveIDs = f.CVEIDs
+			g.rawText = f.Severity
+			g.tags = []string{f.Source}
+			continue
 		}
 		for _, id := range f.CVEIDs {
 			if !slices.Contains(g.cveIDs, id) {
@@ -93,6 +122,12 @@ func groupCVEs(findings []cve.Finding) []cveGroup {
 		out = append(out, *byKey[k])
 	}
 	slices.SortStableFunc(out, func(a, b cveGroup) int {
+		if a.pkg != nil && b.pkg != nil { // the package missing the most fixes first
+			if c := cmp.Compare(len(b.cveIDs), len(a.cveIDs)); c != 0 {
+				return c
+			}
+			return strings.Compare(a.key, b.key)
+		}
 		if c := cmp.Compare(b.rating.Score, a.rating.Score); c != 0 {
 			return c
 		}

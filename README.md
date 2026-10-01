@@ -34,8 +34,9 @@ You describe your services once. Enodia handles the rest.
 > **[docs.enodia.sh](https://docs.enodia.sh)** · full docs, config reference,
 > and per-product probe notes.
 
-> **Status: 2.0.** The full pipeline (collect → inventory → evaluate →
-> render), 90 probes, CVE correlation against BDU ФСТЭК and NVD,
+> **Status: 2.1.** The full pipeline (collect → inventory → evaluate →
+> render), 96 probes, CVE correlation against BDU ФСТЭК and NVD and, for
+> twelve Linux distributions, per installed package,
 > `settings.yaml`, and the release/packaging pipeline are all implemented
 > and used against real production infrastructure. See
 > [`CHANGELOG.md`](CHANGELOG.md) for release history, or the
@@ -358,9 +359,15 @@ cve:
     path: /var/lib/enodia/cve/bdu/vulxml.zip   # https://bdu.fstec.ru/files/documents/vulxml.zip
   nvd:
     path: /var/lib/enodia/cve/nvd              # a directory of nvdcve-2.0-<year>.json.gz
+  debian:
+    path: /var/lib/enodia/cve/debian.json      # https://security-tracker.debian.org/tracker/data/json
+  oval:
+    path: /var/lib/enodia/cve/oval             # vendor OVAL files, one per release (see below)
+  alpine:
+    path: /var/lib/enodia/cve/alpine           # https://secdb.alpinelinux.org/<branch>/{main,community}.json
 ```
 
-Either block works alone. `bdu.path` is the export as published (`.zip`),
+Each block works alone. `bdu.path` is the export as published (`.zip`),
 or the `.xml` inside it, or a `.tar.gz`. `nvd.path` is one file or a
 directory of NVD's yearly files (`.json`, `.json.gz` or `.json.zip`, from
 https://nvd.nist.gov/feeds/json/cve/2.0/). Relative paths resolve against
@@ -377,11 +384,50 @@ minute for all of NVD plus BDU — and caches the result in the OS cache
 directory (`~/.cache/enodia/cve`, `%LocalAppData%\enodia\cve`). Every later
 run reads the cache in under a second.
 
+`debian.path` is the Debian Security Tracker's JSON export (`.json`,
+`.json.gz` or `.json.zip`). It is matched per installed package, not per
+release: the `debian` probe also reads the host's source packages
+(`dpkg-query`) and running kernel (`uname -v`) in the same SSH round trip.
+A package is flagged when Debian has already fixed a CVE in a newer version
+than the one installed, so each finding is something `apt upgrade` (and,
+for the kernel, a reboot) would close. CVEs Debian hasn't fixed yet are
+left out. The tracker only covers releases its security team still
+supports (bookworm, trixie, testing, sid), so older hosts get no package
+findings. The file parses in about a second, so it isn't cached.
+
+`oval.path` is one vendor OVAL file or a directory of them, as published
+(`.xml` or `.xml.bz2`), one per release in your fleet. `ubuntu`,
+`linuxmint`, `rhel`, `rocky-linux`, `almalinux`, `oracle-linux`,
+`astra-linux` and `redos` targets are matched per installed package the
+same way:
+
+| Targets | File |
+|---|---|
+| Ubuntu, Linux Mint (its Ubuntu base) | `https://security-metadata.canonical.com/oval/com.ubuntu.<codename>.usn.oval.xml.bz2` (not the `oci.` variant) |
+| RHEL, **and Rocky Linux** | `https://security.access.redhat.com/data/oval/v2/RHEL<N>/rhel-<N>.oval.xml.bz2` |
+| AlmaLinux | `https://security.almalinux.org/oval/org.almalinux.alsa-<N>.xml.bz2` |
+| Oracle Linux | `https://linux.oracle.com/security/oval/com.oracle.elsa-ol<N>.xml.bz2` |
+| Astra Linux SE | `https://dl.astralinux.ru/astra/oval/<1.7\|1.8>_x86-64/oval-definitions-alse-<1.7\|1.8>.xml` |
+| RED OS | `https://redos.red-soft.ru/support/secure/<7.3\|8.0>/redos.xml` |
+
+Rocky's own OVAL file is refused: it is far from complete, so Rocky hosts
+are matched against Red Hat's. Parsed OVAL is cached like BDU and NVD.
+
+`alpine.path` is Alpine's secdb, a file or a directory of the `main.json`
+and `community.json` files of each branch in your fleet (download them
+under distinct names, e.g. `v3.20-main.json`). `alpine-linux` targets
+are matched per origin package.
+
+A Proxmox VE host gets package findings as a second, SSH `debian` target
+alongside its API `proxmox` one.
+
 Findings show up as a CVES count in `check`'s compact and drift views and
-as a per-CVE list in `export --format html`; `export --format json` carries
-every finding with its source. Which products are matched, and why some
-(general-purpose Linux distributions among them) deliberately aren't, is
-in `docs/DECISIONS.md` D30–D35.
+as a per-CVE list in `export --format html`, with Debian, OVAL and
+Alpine findings grouped per package (`linux 6.12.107-1 → 6.12.111-1`, linked to
+the advisory that fixes it, with its CVE list folded).
+`export --format json` carries every finding with its source. Which
+products are matched, and why some deliberately aren't, is in
+`docs/DECISIONS.md` D30–D35 and D42–D46.
 
 ## File locations
 

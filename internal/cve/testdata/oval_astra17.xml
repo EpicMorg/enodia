@@ -1,0 +1,232 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:oval-def="http://oval.mitre.org/XMLSchema/oval-definitions-5" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd">
+  <generator>
+    <oval:product_name>The OVAL Astra Linux</oval:product_name>
+    <oval:schema_version>5.11.1</oval:schema_version>
+    <oval:timestamp>2026-09-14T11:02:27.882723+00:00</oval:timestamp>
+  </generator>
+  <definitions>
+<definition class="vulnerability" id="oval:astra:def:1139791878441367135475633412724291" version="1">
+      <metadata>
+        <title> Astra Linux - уязвимость в glibc</title>
+        <affected family="unix">
+          <platform>Astra Linux 1.7</platform>
+          <product>glibc</product>
+        </affected>
+        <reference source="FSTEC" ref_url="https://bdu.fstec.ru/vul/2020-04683" ref_id="BDU:2020-04683" />
+        <reference source="CVE" ref_url="https://www.cve.org/CVERecord?id=CVE-2016-10228" ref_id="CVE-2016-10228" />
+        <description>trimmed</description>
+        <description_ru>trimmed</description_ru>
+        <bdu>
+          <cwe>[NistCWE(cwe='CWE-20')]</cwe>
+          <CVSS2.0>NistCVSS2(cvss='AV:N/AC:M/Au:N/C:N/I:N/A:P', score=4.3)</CVSS2.0>
+          <CVSS3.0>NistCVSS3(cvss='AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H', score=5.9)</CVSS3.0>
+          <mitigations>
+
+glibc:
+
+- Выполнять регламентный контроль целостности системы для избежания запуска недоверенных программ
+- При использовании ПО glibc выполнять обработку файлов, полученных только из доверенных источников
+- Для непривилегированных пользователей активировать блокировку интерпретаторов и bash
+- Запретить установку бита исполнения для всех пользователей, включая администраторов
+- Активировать и настроить профили пользователей для работы в режиме Киоск-2</mitigations>
+        </bdu>
+      </metadata>
+      <criteria operator="OR">
+        <criterion test_ref="oval:astra:tst:4177" comment="libc6 DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:4178" comment="libc-bin DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:4179" comment="libc-l10n DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:4180" comment="locales DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:4181" comment="nscd DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:4182" comment="libc6-i386 DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:4183" comment="locales-all DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33349" comment="glibc-doc DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33350" comment="glibc-source DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33351" comment="libc-dev-bin DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33352" comment="libc6-dbg DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33353" comment="libc6-dev DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33354" comment="libc6-dev-i386 DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33355" comment="libc6-dev-x32 DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33356" comment="libc6-pic DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33357" comment="libc6-x32 DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+        <criterion test_ref="oval:astra:tst:33358" comment="multiarch-support DPKG is earlier than 2.28-10+deb10u1+ci202207192202+astra4" />
+      </criteria>
+    </definition>
+</definitions>
+<tests>
+<dpkginfo_test id="oval:astra:tst:33349" version="1" check="all" check_existence="at_least_one_exists" comment="glibc-doc is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33349" />
+      <state state_ref="oval:astra:ste:33349" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33350" version="1" check="all" check_existence="at_least_one_exists" comment="glibc-source is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33350" />
+      <state state_ref="oval:astra:ste:33350" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33351" version="1" check="all" check_existence="at_least_one_exists" comment="libc-dev-bin is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33351" />
+      <state state_ref="oval:astra:ste:33351" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33352" version="1" check="all" check_existence="at_least_one_exists" comment="libc6-dbg is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33352" />
+      <state state_ref="oval:astra:ste:33352" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33353" version="1" check="all" check_existence="at_least_one_exists" comment="libc6-dev is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33353" />
+      <state state_ref="oval:astra:ste:33353" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33354" version="1" check="all" check_existence="at_least_one_exists" comment="libc6-dev-i386 is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33354" />
+      <state state_ref="oval:astra:ste:33354" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33355" version="1" check="all" check_existence="at_least_one_exists" comment="libc6-dev-x32 is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33355" />
+      <state state_ref="oval:astra:ste:33355" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33356" version="1" check="all" check_existence="at_least_one_exists" comment="libc6-pic is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33356" />
+      <state state_ref="oval:astra:ste:33356" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33357" version="1" check="all" check_existence="at_least_one_exists" comment="libc6-x32 is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33357" />
+      <state state_ref="oval:astra:ste:33357" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:33358" version="1" check="all" check_existence="at_least_one_exists" comment="multiarch-support is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:33358" />
+      <state state_ref="oval:astra:ste:33358" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:4177" version="1" check="all" check_existence="at_least_one_exists" comment="libc6 is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:4177" />
+      <state state_ref="oval:astra:ste:4177" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:4178" version="1" check="all" check_existence="at_least_one_exists" comment="libc-bin is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:4178" />
+      <state state_ref="oval:astra:ste:4178" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:4179" version="1" check="all" check_existence="at_least_one_exists" comment="libc-l10n is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:4179" />
+      <state state_ref="oval:astra:ste:4179" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:4180" version="1" check="all" check_existence="at_least_one_exists" comment="locales is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:4180" />
+      <state state_ref="oval:astra:ste:4180" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:4181" version="1" check="all" check_existence="at_least_one_exists" comment="nscd is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:4181" />
+      <state state_ref="oval:astra:ste:4181" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:4182" version="1" check="all" check_existence="at_least_one_exists" comment="libc6-i386 is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:4182" />
+      <state state_ref="oval:astra:ste:4182" />
+    </dpkginfo_test>
+<dpkginfo_test id="oval:astra:tst:4183" version="1" check="all" check_existence="at_least_one_exists" comment="locales-all is earlier than 2.28-10+deb10u1+ci202207192202+astra4" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+      <object object_ref="oval:astra:obj:4183" />
+      <state state_ref="oval:astra:ste:4183" />
+    </dpkginfo_test>
+</tests>
+<objects>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33349" version="1">
+      <name>glibc-doc</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33350" version="1">
+      <name>glibc-source</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33351" version="1">
+      <name>libc-dev-bin</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33352" version="1">
+      <name>libc6-dbg</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33353" version="1">
+      <name>libc6-dev</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33354" version="1">
+      <name>libc6-dev-i386</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33355" version="1">
+      <name>libc6-dev-x32</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33356" version="1">
+      <name>libc6-pic</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33357" version="1">
+      <name>libc6-x32</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:33358" version="1">
+      <name>multiarch-support</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:4177" version="1">
+      <name>libc6</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:4178" version="1">
+      <name>libc-bin</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:4179" version="1">
+      <name>libc-l10n</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:4180" version="1">
+      <name>locales</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:4181" version="1">
+      <name>nscd</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:4182" version="1">
+      <name>libc6-i386</name>
+    </dpkginfo_object>
+<dpkginfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:astra:obj:4183" version="1">
+      <name>locales-all</name>
+    </dpkginfo_object>
+</objects>
+<states>
+<dpkginfo_state id="oval:astra:ste:33349" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33350" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33351" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33352" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33353" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33354" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33355" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33356" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33357" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:33358" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:4177" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:4178" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:4179" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:4180" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:4181" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:4182" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+<dpkginfo_state id="oval:astra:ste:4183" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" version="1">
+      <evr datatype="debian_evr_string" operation="less than">0:2.28-10+deb10u1+ci202207192202+astra4</evr>
+    </dpkginfo_state>
+</states>
+</oval_definitions>

@@ -1,0 +1,102 @@
+PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
+NAME="Debian GNU/Linux"
+VERSION_ID="12"
+VERSION="12 (bookworm)"
+VERSION_CODENAME=bookworm
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+===ENODIA-DEBIAN-VERSION===
+12.15
+===ENODIA-DEBIAN-KERNEL===
+#1 SMP PREEMPT_DYNAMIC Debian 6.12.107-1 (2026-08-29)
+===ENODIA-DEBIAN-PACKAGES===
+ii 	adduser	3.134
+ii 	apt	2.6.1
+ii 	base-files	12.4+deb12u15
+ii 	base-passwd	3.6.1
+ii 	bash	5.2.15-2
+ii 	util-linux	2.38.1-5+deb12u3
+ii 	coreutils	9.1-1
+ii 	dash	0.5.12-2
+ii 	debconf	1.5.82
+ii 	debian-archive-keyring	2023.3+deb12u2
+ii 	debianutils	5.7-0.5~deb12u1
+ii 	diffutils	1:3.8-4
+ii 	dpkg	1.21.23
+ii 	e2fsprogs	1.47.0-2
+ii 	findutils	4.9.0-4
+ii 	gcc-12	12.2.0-14+deb12u1
+ii 	gnupg2	2.2.40-1.1+deb12u2
+ii 	grep	3.8-5
+ii 	gzip	1.12-1
+ii 	hostname	3.23+nmu1
+ii 	init-system-helpers	1.65.2+deb12u1
+ii 	acl	2.3.1-3
+ii 	apt	2.6.1
+ii 	attr	1:2.5.1-4
+ii 	audit	1:3.0.9-1
+ii 	audit	1:3.0.9-1
+ii 	util-linux	2.38.1-5+deb12u3
+ii 	bzip2	1.0.8-5
+ii 	glibc	2.36-9+deb12u14
+ii 	glibc	2.36-9+deb12u14
+ii 	libcap-ng	0.8.3-1
+ii 	libcap2	1:2.66-4+deb12u3
+ii 	e2fsprogs	1.47.0-2
+ii 	libxcrypt	1:4.4.33-2
+ii 	db5.3	5.3.28+dfsg2-1
+ii 	cdebconf	0.270
+ii 	e2fsprogs	1.47.0-2
+ii 	libffi	3.4.4-1
+ii 	gcc-12	12.2.0-14+deb12u1
+ii 	libgcrypt20	1.10.1-3+deb12u1
+ii 	gmp	2:6.2.1+dfsg1-1.1
+ii 	gnutls28	3.7.9-2+deb12u7
+ii 	libgpg-error	1.46-1
+ii 	nettle	3.8.1-2
+ii 	libidn2	2.3.3-1
+ii 	lz4	1.9.4-1
+ii 	xz-utils	5.4.1-1+deb12u2
+ii 	libmd	1.0.4-2
+ii 	util-linux	2.38.1-5+deb12u3
+ii 	nettle	3.8.1-2
+ii 	p11-kit	0.24.1-2
+ii 	pam	1.5.2-6+deb12u2
+ii 	pam	1.5.2-6+deb12u2
+ii 	pam	1.5.2-6+deb12u2
+ii 	pam	1.5.2-6+deb12u2
+ii 	pcre2	10.42-1+deb12u1
+ii 	libseccomp	2.5.4-1+deb12u1
+ii 	libselinux	3.4-1
+ii 	libsemanage	3.4-1
+ii 	libsemanage	3.4-1
+ii 	libsepol	3.4-2.1
+ii 	util-linux	2.38.1-5+deb12u3
+ii 	e2fsprogs	1.47.0-2
+ii 	gcc-12	12.2.0-14+deb12u1
+ii 	systemd	252.39-1~deb12u2
+ii 	libtasn1-6	4.19.0-2+deb12u1
+ii 	ncurses	6.4-4
+ii 	systemd	252.39-1~deb12u2
+ii 	libunistring	1.0-2
+ii 	util-linux	2.38.1-5+deb12u3
+ii 	xxhash	0.8.1-1
+ii 	libzstd	1.5.4+dfsg2-5
+ii 	shadow	1:4.13+dfsg1-1+deb12u2
+ii 	e2fsprogs	1.47.0-2
+ii 	mawk	1.3.4.20200120-3.1
+ii 	util-linux	2.38.1-5+deb12u3
+ii 	ncurses	6.4-4
+ii 	ncurses	6.4-4
+ii 	shadow	1:4.13+dfsg1-1+deb12u2
+ii 	perl	5.36.0-7+deb12u3
+ii 	sed	4.9-1+deb12u1
+ii 	sysvinit	3.06-4
+ii 	tar	1.34+dfsg-1.2+deb12u1
+ii 	tzdata	2026b-0+deb12u1
+ii 	usrmerge	37~deb12u1
+ii 	util-linux	2.38.1-5+deb12u3
+ii 	util-linux	2.38.1-5+deb12u3
+ii 	zlib	1:1.2.13.dfsg-1

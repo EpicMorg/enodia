@@ -1,0 +1,22 @@
+{
+  "@odata.type": "#Manager.1.0.0.Manager",
+  "@odata.id": "/redfish/v1/Managers/1/",
+  "Id": "1",
+  "Name": "Manager",
+  "Type": "Manager.1.0.0",
+  "ManagerType": "BMC",
+  "FirmwareVersion": "iLO 4 v2.82",
+  "Firmware": {
+    "Current": {
+      "VersionString": "iLO 4 v2.82"
+    }
+  },
+  "Status": {
+    "State": "Enabled"
+  },
+  "Oem": {
+    "Hp": {
+      "@odata.type": "#HpiLO.1.2.0.HpiLO"
+    }
+  }
+}

@@ -2072,3 +2072,528 @@ rest"; CRITICAL got danger too rather than info, which would have made
 the most severe level look the calmest.) `text-bg-*`, not `bg-*`: same
 background, but Bootstrap also sets a readable text color. Inline mode
 defines the same classes in its own CSS with Bootstrap's colors.
+
+---
+
+## D36 — `mariadb` is a separate probe, not a mysqlProbe flag
+
+**Decided.** Found running 2.0 against a real fleet: `mysqlProbe` has
+always rejected a MariaDB server's handshake outright ("this server is
+MariaDB, not MySQL") rather than parse it — correct per D9, but it left
+MariaDB with no probe of its own at all.
+
+Both speak the identical wire format (`Protocol::HandshakeV10`); they
+differ only in whether the version string carries MariaDB's own
+"5.5.5-" compatibility mask, confirmed live (again) against a fresh
+`mariadb:10.11` container to still be true today, byte-for-byte
+identical to the fixture already captured for `mysqlProbe`'s own
+rejection test. The shared packet-framing/NUL-termination logic moved
+into `readMySQLProtocolVersion` (`mysql.go`), returning the *raw*
+version with no MariaDB-specific interpretation at all;
+`readMySQLHandshakeVersion` (mysqlProbe's own wrapper, kept under its
+original name so its existing tests needed no changes) rejects the
+masked shape same as before, and the new `mariadbProbe` (`mariadb.go`)
+requires it — stripping the mask, then extracting the numeric spine and
+keeping the vendor tag (`MariaDB-ubu2204`) in `Extra` rather than
+discarding it, since `internal/version.Clean` doesn't recognize
+`-MariaDB-<os tag>` as a suffix to strip. `endoflife.date` already has
+a `mariadb` calendar (confirmed live), so this gets a real
+`DefaultResolver` from day one, unlike several other recent additions.
+
+---
+
+## D37 — `pfsense` covers Community Edition only; Plus is a different product, rejected on sight
+
+**Decided.** Confirmed live against three real pfSense CE hosts
+(`2.7.2-RELEASE`, `2.8.1-RELEASE` ×2, real dev boxes): SSHing in and
+reading `/etc/version` and `/etc/platform` in one round trip (same
+combined-command shape `debian.go` uses) gives exactly the version
+string pfSense's own dashboard shows, plus `pfSense` in the platform
+file — no `pfSense-version` command exists (guessed first, confirmed
+wrong live, cost nothing since it was checked before being relied on).
+
+Netgate's commercial pfSense Plus is a different product built from the
+same lineage, with its own calendar-based version scheme (`24.11`, not
+`2.x.y-RELEASE`) — the same shape of split this project already made
+for `vcenter`/`esxi` and `sonarqube-server`/`-community` (D9). No Plus
+instance was available to test against, so `pfsenseProbe` rejects a
+`pfSense-Plus` platform string on the strength of documentation alone
+rather than guess at its real version format — flagged as such in both
+the probe's own comment and its test, not presented as confirmed.
+
+No `DefaultResolver`: `endoflife.date` has no page under `pfsense`,
+`pfsense-ce` or `pfsense-plus` (confirmed 404 for all three) —
+inventory-only, same as `gentoo`/`kali-linux`/`p4d`/`p4p`.
+
+---
+
+## D38 — `version.Clean` folds VMware's "Update N" shorthand into the numeric spine
+
+**Decided.** Reported from a real fleet: a genuinely current, patched
+vCenter/ESXi 8.0 host (observed `8.0.3`) showed as `ahead` of the
+calendar's own latest, not `current`. Confirmed live against
+`endoflife.date`'s real `vcenter`/`esxi` cycles: the `8.0` branch's
+`latest` field reads `"8.0 U3k"` (vCenter) / `"8.0 Update 3k"` (ESXi)
+— a space, then VMware's own "Update N" patch-level shorthand plus a
+trailing patch letter neither product's own reported version string
+has any way to express. `Clean` already collapses on the first
+whitespace field before `Core`'s numeric-spine regex ever runs, so
+`"8.0 U3k"` was read as bare `"8.0"`, silently losing the update
+number — any real Update-3-or-later host then compared as newer than
+a calendar entry that, in reality, already accounts for it.
+
+Fixed in `internal/version.Clean` itself (a new `reVMwareUpdate`
+regex, applied before the whitespace split), not in `evaluatePatch` or
+anywhere product-specific: this is a decoration vendors hang off a
+version string, precisely the class of thing `Clean`'s own doc comment
+already claims to strip, and every other cycle for these two products
+(`9.0`, `9.1`) already has a plain dotted `latest` with nothing to
+fold. The trailing patch letter (`k`, `w`, ...) is dropped, not
+folded in — a live host's own `8.0.3` has no matching digit for it, so
+there is nothing to compare it against either way. Two other, older,
+already-EOL cycles use different, unhandled VMware shorthands
+(`"6.0 EP 25"`, `"6.5 ESXi650-202403001"`) — deliberately left alone:
+neither is what was reported, and guessing at either's real shape
+without a live host to confirm against would be exactly the kind of
+invention D9/CLAUDE.md's working style warns off.
+
+---
+
+## D39 — LATEST/CYCLE in the report show the cleaned version, not the raw tag
+
+**Decided.** Reported from a real fleet: GitHub-release-resolved
+products showed the raw tag verbatim in the report's LATEST column
+(`v2026.9.1`, `v1.0.68`) instead of a plain version — inconsistent
+with every `endoflife`-resolved product's own cycle names, which are
+already clean, and inconsistent with the *comparison* itself, since
+`evaluatePatch` already calls `version.Clean` on its own copy of
+`matched.Latest` before comparing — only the copy stored for *display*
+(`Assessment.MatchedCycle`/`LatestInCycle`) was left raw.
+
+Fixed at the one place both fields get set (`Evaluate`, right before
+`evaluatePatch` runs): `version.Clean` applied to `matched.Cycle` and
+`matched.Latest` before storing them into the `Assessment`, not a
+GitHub-specific special case — an already-clean `endoflife` cycle name
+like `"10.3"` round-trips through `Clean` unchanged, so this costs
+those products nothing. Comparison logic in `evaluatePatch` and branch
+detection in `evaluateBranch` still receive the original `matched`
+struct untouched; only what gets displayed changed.
+
+---
+
+## D40 — Three BMC probes: `supermicro-bmc`, `dell-idrac`, `hp-ilo4`
+
+**Decided.** The first hardware-management-controller probes in this
+tree, all confirmed live against four real BMCs across three vendors,
+all over HTTPS with HTTP Basic auth (`AuthSpec{Required: true, Kinds:
+[]AuthKind{AuthBasic}}` — a real 401 without credentials confirmed on
+every one of them) — no SSH, no IPMI-over-LAN, both firmly out of
+scope: the ROADMAP's own "Redfish carries the firmware version" framing
+turned out to hold for all three vendors, including one (`iLO 4`) whose
+own service root doesn't call itself Redfish at all.
+
+**`supermicro-bmc`** reads `GET /redfish/v1/Managers/1`. Confirmed live
+against two real generations — an X12-series board (AST2600 chip,
+firmware `01.05.25`) and an older X9/X10-era board (plain
+"ASPEED"-branded, firmware `01.73.13`) — that neither carries a
+`Manufacturer`/`Vendor` field anywhere in its Redfish tree the older one
+can reach in one request, but both carry an `"Oem":{"Supermicro":{}}`
+key on this exact resource. That's the D9 signal checked, deliberately
+not a field only one generation actually has.
+
+**`dell-idrac`** needs two requests, not one: confirmed live that a real
+12G iDRAC's `Managers/iDRAC.Embedded.1` resource carries no vendor
+marker of any kind — no `Manufacturer`, no `Oem` key at all — while
+`/redfish/v1` itself carries `"Oem":{"Dell":{"ServiceTag": "...", ...}}`
+and a `"Product": "Integrated Dell Remote Access Controller"` string.
+First request confirms identity (and captures the service tag into
+`Extra`); second reads `FirmwareVersion` off the Manager. `iDRAC.
+Embedded.1` is the one Manager id checked — the standard Dell name for
+the embedded controller, confirmed on this one real blade; a
+differently-shaped controller would need its own fix, not a guess baked
+in ahead of time.
+
+**`hp-ilo4`** is scoped to iLO 4 specifically, not "HP iLO" generally:
+confirmed live that iLO 4's own service root calls itself "HP RESTful
+Root Service" with non-standard `@odata.type` values
+(`"#ServiceRoot.1.0.0.ServiceRoot"`, not genuine Redfish's versioned
+`"#ServiceRoot.v1_x_x.ServiceRoot"` shape) — a real pre-Redfish HP API,
+not a Redfish implementation with rough edges. The specific resource
+this probe reads (`GET /redfish/v1/Managers/1/` — note the trailing
+slash, confirmed to matter live) happens to overlap with genuine
+Redfish closely enough that the same `FetchHTTP`/JSON approach works
+unchanged: an `"Oem":{"Hp":{}}` key for identity, and
+`FirmwareVersion` — reported live as `"iLO 4 v2.82"`, parsed down to
+`2.82` since the generation is already the product id, not something
+worth repeating in every observation's own version string. iLO 5 is
+fully Redfish-compliant and almost certainly needs a different check
+(a real `Manufacturer`/`Vendor` field likely exists there the way it
+doesn't on iLO 4) — no iLO 5 controller was available to confirm live,
+so it gets no probe yet rather than a guessed one.
+
+None of the three gets a `DefaultResolver`: BMC firmware is proprietary
+hardware firmware with no public lifecycle calendar (confirmed 404
+under every slug tried for all three vendors).
+
+A Dell CMC (chassis-level management for a blade enclosure, as opposed
+to a per-server iDRAC) was also found live during this same
+investigation, on a blade-enclosure management address redirecting to
+`/cgi-bin/webcgi/index` — an old-style web UI with no Redfish endpoint
+at all (confirmed 404 at `/redfish/v1/`). Deliberately not built: a
+different product from iDRAC, needing either RACADM or HTML-scraping to
+read anything from, the same heavier shape D22 already rejected for
+Redmine. Left for a future decision if it's ever actually wanted, not
+silently folded into `dell-idrac`.
+
+## D41 — `config validate` checks that `cve.bdu.path`/`cve.nvd.path` exist; `Config.Validate` does not
+
+A typo'd or moved `cve.bdu.path`/`cve.nvd.path` used to pass `config
+validate` clean and only fail later, deep inside `check`/`serve` when
+the CVE index was loaded — exactly the class of mistake `config
+validate` exists to catch ahead of time. `credentials_file` never had
+this gap: `cfg.Build` already reads it through `LoadCredentials`.
+
+The existence check lives in the `config validate` command
+(`validateCVEPaths`), not in `Config.Validate`. `Config.Validate` runs
+on every `Load`, including where the path legitimately doesn't exist
+on the loading machine: a config written on one host for another, or
+tests that only exercise path resolution. Existence is a property of
+the machine the config is used on, so only the command that asks "is
+this config ready to run here?" checks it. It checks existence only.
+Whether the file actually parses is still left to `loadCVEIndex`, which
+already reports that clearly.
+
+## D42 — Package-level CVEs for Debian from the Debian Security Tracker
+
+**Revisits D33,** which left the distributions unmatched because a
+release number can't tell which packages have been patched since. The fix
+is to stop matching on the release. The `debian` probe already holds an
+SSH session, so it now reads the installed packages and the running
+kernel in the same round trip. Findings come from the Debian Security
+Tracker's JSON export (`cve.debian.path`), the same approach `debsecan`
+uses. The operator downloads the file the same way as BDU and NVD.
+
+**What the probe collects.**
+- `dpkg-query`'s `source:Package` / `source:Version` into the new optional
+  `Observation.Packages` (source package → version). The tracker is
+  indexed by source package, and its fixed versions are source versions.
+  Confirmed live: binary `acl 2.3.2-2+b1` is source `acl 2.3.2-2`.
+- Only installed packages are kept (dpkg state `i`, `W`, `t`). `rc`
+  packages (removed, config files left behind) are dropped: 51 of 1970 on
+  the test host.
+- A source package installed at several versions keeps its oldest one.
+- `Extra["codename"]` (os-release `VERSION_CODENAME`) picks the tracker
+  release.
+- `Extra["kernel"]` is the running kernel's Debian version, taken from
+  `uname -v`. `uname -r` is the ABI name.
+
+The field is additive, so there is no inventory SchemaVersion bump. The
+payload is about 28KB per host (1074 source packages on the test host).
+
+**The running kernel replaces the installed `linux` version.** Confirmed
+live on the test host:
+- `linux-headers` 6.12.74-2 were still installed next to a running
+  6.12.107-1. Matching the oldest installed version would have flagged
+  CVEs the host no longer runs.
+- A fixed kernel that is installed but not booted is still the vulnerable
+  one, so the rule catches that case too.
+
+**Only fixed-but-not-installed CVEs are reported.** A CVE is reported
+when its status is `resolved` and its `fixed_version` is newer than the
+installed version. A `fixed_version` of `0` means "never affected".
+`open` and `undetermined` are dropped. Measured on the same
+trixie host:
+- 1327 CVEs are fixed but not installed: 1314 in the kernel (a reboot or
+  upgrade to 6.12.111-1) and 13 in openssl (one pending upgrade). This is
+  exactly what `apt list --upgradable` said was pending.
+- About 2000 CVEs are open, 813 of them in the kernel. They are the same
+  on every trixie host and nobody can act on them, so reporting them
+  would bury the actionable ones under a permanent constant.
+
+The count was cross-checked against a separate python3-apt script on the
+real 78MB export, and the two matched exactly.
+
+**One Finding per source package, not per CVE.** Its fields:
+- `CVEIDs` lists every missing fix.
+- `FixedVersion` is the newest fixed version among them, the version that
+  closes all of them.
+- `InstalledVersion` is what the host has.
+- `Severity` is the tracker's own most urgent word. "not yet assigned"
+  (about 80% of entries) is treated as no rating.
+
+A per-CVE report would put 1314 lines, each with its description, in
+every lagging host's modal, and a few hundred MB into a fleet HTML report.
+Per package, the modal line is `linux 6.12.107-1 → 6.12.111-1`, with a
+link to the tracker's source-package page and the CVE list as plain text
+inside a `<details>`. The CVES column still counts CVEs (1327), not
+packages.
+
+**Version comparison is dpkg's own algorithm** (`version.CompareDebian`).
+It was checked against python3-apt's `apt_pkg.version_compare` on about
+4000 pairs of real tracker versions, committed as testdata.
+
+**No on-disk cache.** The whole export parses in about 0.9s, with 60MB of
+heap. A cache would only add a way to go stale.
+
+**Known limits:**
+- The tracker only carries releases the security team still supports.
+  Today those are bookworm, trixie, forky and sid. Bullseye and older get
+  no package findings, and the lifecycle axis already marks them EOL.
+- Ubuntu (Canonical OVAL / USN) is a separate source with its own
+  versioning and is not done yet.
+- Astra Linux is Debian-derived but not covered by Debian's tracker.
+
+## D43 — Package-level CVEs for Ubuntu, Linux Mint and the RHEL family from vendor OVAL
+
+**Extends D42 to five more probes.** One source format covers them:
+each vendor's own OVAL file, which is a plain download like the Debian
+tracker. The config key is `cve.oval.path`: one file or a directory,
+`.xml` or the vendors' `.xml.bz2`. Which release a file is for is read
+from its content, never from its name:
+- Ubuntu: from the definition ids.
+- RHEL, Oracle: from `<platform>`.
+- AlmaLinux: from its "AlmaLinux 9 is installed" criterion, because its
+  definitions carry no platform element at all.
+
+| Probe | File | Matched on |
+|---|---|---|
+| ubuntu | `com.ubuntu.<codename>.usn.oval.xml` | binary packages, running kernel |
+| linuxmint | the same file, for its `UBUNTU_CODENAME` | binary packages |
+| rhel | `rhel-<N>.oval.xml` (OVAL v2) | binary packages, module streams |
+| rocky-linux | **`rhel-<N>.oval.xml`**, see below | same |
+| almalinux | `org.almalinux.alsa-<N>.xml` | same |
+| oracle-linux | `com.oracle.elsa-ol<N>.xml` | same, plus arch, FIPS and Ksplice variants |
+
+**Not a full OVAL interpreter.** Every patch definition is reduced to its
+"package NAME older than VERSION" checks (the approach Trivy and vuls
+use), with the conditions that scope them. The rest of the criteria logic
+is not evaluated:
+- The OS-is-installed checks: the file is already per release.
+- Package signing keys: the probe doesn't read signatures, so a
+  third-party package with a distribution package's name is compared as
+  if it were the distribution's.
+- kpatch state.
+
+The scoping conditions each come from a real case:
+- **Module streams.** RHEL, Alma and Oracle fix nodejs:18, nodejs:20 and
+  non-modular nodejs 16 separately. The rpm probe reads each package's
+  `MODULARITYLABEL` into `Observation.Modules`, and a package is only
+  matched against its own stream's fixes.
+- **Architecture.** Oracle writes separate x86_64 and aarch64 branches,
+  matched against `uname -m`.
+- **Oracle's FIPS and Ksplice rebuilds.** "openssl is fips patched" marks
+  epoch-10 `_fips` packages. Before this rule, 11 of 12 advisories on a
+  real Oracle 9.8 container were false positives. A variant fix applies
+  only to a package whose release carries that marker, and the reverse.
+- **Neighbouring releases.** A fix tagged `.elN` for a different major
+  release than the file's is dropped. Oracle's ol9 file carries some OL8
+  and OL10 definitions.
+
+**Ubuntu's kernel check is corrected, not copied.** Canonical's OVAL
+compares the running kernel's ABI alone (`6.8.0-35`) against the fixed
+package version (`6.8.0-35.35`). The ABI alone sorts before that version,
+so the kernel that carries the fix would read as still missing it. The
+probe also reads `uname -v`, and the upload number from it (`#35-Ubuntu`,
+or `#36~22.04.1-Ubuntu` for HWE) completes the version.
+
+**Running kernels on rpm distributions.** dnf keeps three installonly
+kernels. For a name installed at several versions, the one matching
+`uname -r` wins, and otherwise the oldest.
+
+**Validated against the reference tools, in containers of old images**
+(RHEL UBI 9.4, AlmaLinux 9.0, Rocky 9.3, Ubuntu noble 2024-06, Oracle 9
+with packages downgraded):
+- **Ubuntu:** 56 of 56 advisories match `oscap oval eval` on the same
+  file. That required removing oscap's own "unix family" applicability
+  test, which reports "unknown" in a container.
+- **RHEL:** 128 of 128 match oscap.
+- **AlmaLinux:** 197 of 197 match oscap. At package level, 71 of the 73
+  packages `dnf updateinfo list --security` names are found. The missing
+  two, p11-kit and p11-kit-trust, are ALSAs absent from Alma's own OVAL
+  file (they are in RHEL's), which is a gap in the vendor's data.
+- **Oracle:** 22 of 22 match oscap, and 16 of 16 packages match dnf.
+
+**Rocky's own OVAL is refused; Rocky hosts use RHEL's.** Measured on the
+Rocky 9.3 container:
+- `org.rockylinux.rlsa-9.xml` holds 13 of the 130 advisories dnf reports.
+- It fails OVAL schema validation (`tst:unk` references), and oscap
+  segfaults on it with validation skipped.
+- It mixes el8 and el9 fixes in one definition.
+- Its definitions carry fixed versions from unrelated later updates:
+  RLSA-2022:5250 flags libxml2 below 2.9.13-6.el9_4.
+- It carries CVE ids only in description text.
+
+Rocky rebuilds RHEL's packages with the same version-release. Against
+`rhel-9.oval.xml`, the same host flags all 52 packages dnf names, plus 7
+more (rpm*, gawk, ca-certificates) whose CVE fixes Red Hat shipped as
+RHBAs, which `--security` filters out. Loading a Rocky file is an error
+naming the file to use instead.
+
+**One Finding per package, as in D42.** `Source` is "oval".
+- `AdvisoryID` / `AdvisoryURL` name the advisory that carries the newest
+  fix. For AlmaLinux that is its ALSA, not the RHSA it cites first.
+- `Advisories` lists every advisory the package is missing.
+- `Severity` is the vendor's own word.
+- Ubuntu kernel findings are named `kernel <flavour> (<uname -r>)`.
+
+**Cached per file.** Parsing Ubuntu noble's, RHEL 9's, Alma 9's and
+Oracle 9's files takes about 11s together, most of it bzip2. From the
+cache, the whole `check` takes 1.3s. Invalidation is by mtime and size,
+like D30/D31.
+
+**Also fixed in D42's Debian matching:** source package `linux` is now
+matched only against a running Debian kernel. A Proxmox VE host runs its
+own kernel (`uname -v` says PMX, not Debian) but has Debian's
+`linux-libc-dev`. Matching the headers package would have reported
+hundreds of kernel CVEs against it. Proxmox itself gets no code: its
+probe talks to the HTTPS API with a token. A `debian` target over SSH
+to the same host (its os-release is Debian's) gets its package CVEs,
+minus the Proxmox-built packages, which have no public feed.
+
+**Not covered:**
+- The OVAL-free rpm distributions: CentOS Stream, Fedora, Amazon Linux
+  and openSUSE (SUSE has OVAL; not done yet).
+- Astra Linux and RED OS: Debian and RHEL rebuilds with their own
+  versions, to be looked at against real hosts.
+- Ubuntu's `oci.*` OVAL variant, which checks the dpkg status file with
+  regexes instead of packages. It is refused with a pointer to the right
+  file.
+
+## D44 — Package-level CVEs for Alpine from secdb
+
+**Same model as D42/D43.** Alpine publishes one JSON file per branch
+and repository: `https://secdb.alpinelinux.org/<branch>/main.json` and
+`community.json`. The operator downloads them into `cve.alpine.path`,
+which is one file or a directory. Each file names its own branch in
+`distroversion`, and `main` and `community` merge per branch. A host's
+branch is its `VERSION_ID` major.minor (3.20.3 → v3.20). Edge has no
+numbered branch and gets no findings.
+
+**What the probe collects.** The `alpine-linux` probe reads
+`/lib/apk/db/installed`'s `P:`/`V:`/`o:` lines. It keys packages by
+**origin**, because secdb is keyed by aport and not by binary package:
+`libcrypto3` and `libssl3` are both `openssl`. alpine:3.20.0's 14 binary
+packages come from 9 origins. When several binaries of one origin sit at
+different versions mid-upgrade, the oldest is kept.
+
+**How the data is read:**
+- `secfixes` maps a fixed version to the CVEs it fixes.
+- A `"0"` key means "never affected" and is skipped.
+- Only CVE ids are kept from each entry: `"CVE-2021-27219 GHSL-2021-045"`
+  keeps its CVE.
+- The 61 entries (of 17,859 across v3.20 and v3.22) that cite no CVE at
+  all, such as `ALPINE-13661` or `DW202402-001`, are dropped.
+
+**Version comparison is apk-tools 2.x's own** (`version.CompareAPK`).
+It was checked against `apk version -t` on about 5300 pairs of real
+secdb versions, committed as testdata. apk's quirks are kept on purpose:
+a second trailing letter ends the comparison, so apk itself calls
+`0.9.8zh` and `0.9.8zg` equal.
+
+**Validated on alpine:3.20.0.** All secdb candidates were compared with
+the real `apk version -t` inside the container. This gave 4 origins
+(busybox, musl, openssl, zlib) and 34 CVEs, and enodia finds exactly the
+same. The fixed versions (musl 1.2.5-r3, busybox 1.36.1-r31) are the ones
+`apk upgrade` moves them to.
+
+One Finding per origin, `Source` "alpine", linked to the origin's page
+on security.alpinelinux.org. secdb carries no severity. There is no
+cache: the files are a few hundred KB.
+
+## D45 — `freeradius` is an SSH probe; its lifecycle is read per branch from GitHub tags
+
+**The version can't come from the network.** RADIUS has no version
+exchange. FreeRADIUS's Status-Server reply carries statistics counters
+only: 3.2.10's `dictionary.freeradius*` define no version attribute at
+all. The probe SSHes in and runs the server's own `-v`. It tries
+`freeradius` (Debian/Ubuntu) and `radiusd` (RHEL-family, source builds),
+first by name and then by `/usr/sbin` path, because a non-login SSH
+session's PATH often lacks `/usr/sbin`. Confirmed live against the
+production host it was built for:
+- `radiusd: FreeRADIUS Version 3.2.10 (git #9071ea041), …` gives
+  `3.2.10`, and the git hash goes to `Extra["git"]`.
+- That host runs FreeRADIUS in Docker and has no binary on the host at
+  all. `options.container: <name>` runs the same command through
+  `docker exec` (`options.container_runtime: podman` for Podman). The
+  SSH user needs to be allowed to use the runtime.
+- The container name is checked against Docker's own name pattern before
+  it goes into the remote command.
+
+**`github-tag-branches` resolver.** endoflife.date has no FreeRADIUS page
+(404), and FreeRADIUS publishes tags like `release_3_2_10`. It maintains
+3.0.x and 3.2.x side by side: `release_3_2_10` and `release_3_0_28` are
+both among its newest tags. A single "latest tag" cycle would call a
+fully patched 3.0.28 "behind 3.2.10". The new resolver type is the
+existing `github-tags` source with one Cycle per major.minor branch, each
+branch's highest tag as its Latest, read from GitHub's maximum page of
+100 tags (back to 0.9.x). Confirmed live:
+- 3.2.10 reads as current and latest.
+- A 3.0.19 observation reads as behind 3.0.28, with a newer branch.
+
+pgAdmin keeps plain `github-tags`, because its minor numbers are
+releases, not branches.
+
+**CVEs: NVD `freeradius:freeradius`, BDU "FreeRADIUS Development Team" /
+"FreeRADIUS",** both verified verbatim in the full exports (459 NVD
+matches). A 3.0.19 observation gets 6 CVEs, BlastRADIUS (CVE-2024-3596)
+included. NVD's range for BlastRADIUS is only `versionEndExcluding
+3.0.27`, with nothing for the 3.2 branch (fixed in 3.2.5), so a 3.2.3 host
+gets no finding for it. That is followed as data, the same as D33's
+Dropbear case, not patched over.
+
+## D46 — Package-level CVEs for Astra Linux and RED OS from their own OVAL
+
+**Their upstream's data doesn't apply; their own does.** Both are
+rebuilds whose package versions are the vendor's, not upstream's.
+Confirmed live in epicmorg/astralinux:1.7-main and :1.8-main:
+- Astra 1.7 is Debian 10 (buster) underneath (`/etc/debian_version`
+  10.0), with pieces from newer releases: curl `7.88.1-10+deb12u15.astra1`
+  from bookworm, openssl `1.1.1w-0+deb11u2-astra10` from bullseye.
+- Astra 1.8 is bookworm with openssl `3.4.0-2-astra9` from trixie/sid.
+- Nearly every package carries `.astraN` / `-astraN` / `+ciN` rebuild
+  suffixes.
+
+Against the Debian tracker this breaks in both directions:
+- buster isn't in the tracker at all any more.
+- For 1.8, whether `1.2.13.dfsg-1.astra2` sorts before or after Debian's
+  `1.2.13.dfsg-1+deb12u1` is decided by dpkg's character order (`.` after
+  `+`), not by whether the fix is in.
+
+RED OS likewise uses its own releases: `.el7` on 7.3, `.red80` on 8.0.
+
+Both vendors publish OVAL, and it fits D43's extractor almost unchanged:
+
+| | File | Tests | Advisory |
+|---|---|---|---|
+| Astra Linux SE | `https://dl.astralinux.ru/astra/oval/<1.7\|1.8>_x86-64/oval-definitions-alse-<1.7\|1.8>.xml` | `dpkginfo`, binary packages, dpkg versions | the bulletin (1.8; `№ ` stripped), or BDU (1.7 cites none) |
+| RED OS | `https://redos.red-soft.ru/support/secure/<7.3\|8.0>/redos.xml` | `rpminfo`, binary packages, rpm versions | its `ROS-…` bulletin |
+
+**The differences from D43:**
+- Every definition is `class="vulnerability"`, one per CVE, each holding
+  the fixed versions, and not `class="patch"`. Those are read only for
+  these two vendors. RHEL-family files use the class differently.
+- Releases are minor versions ("Astra Linux 1.8", "RED OS 7.3"), matched
+  on the probe's major.minor (Astra's `1.8.6`, RED OS's `7.3.1` or `7.3`).
+- Both also cite BDU (`source="FSTEC"`). A vendor bulletin wins over it,
+  and BDU is the advisory only when there's nothing else.
+- RED OS carries severity; Astra doesn't.
+
+**What the probes collect.** The `astra-linux` probe adds dpkg's binary
+package list to its `/etc/astra_version` read. `redos` now collects rpm
+packages like the RHEL family.
+
+**Validated against `oscap oval eval` on the vendors' own files**, in
+the images above plus registry.red-soft.ru/ubi7/ubi and ubi8/ubi. The
+CVE sets are identical:
+- Astra 1.7: 205 of 205.
+- Astra 1.8: 48 of 48, after downgrading 10 packages from Astra's frozen
+  1.8.1/1.8.2 repositories. The fresh image has 1.
+- RED OS 8.0: 60 of 60.
+- RED OS 7.3: 53 of 53, on registry.red-soft.ru/ubi7/ubi:7.3.7-260727.
+  oscap took about 20 minutes on that 82MB file (68,835 tests).
+
+**Not covered:**
+- Astra's kernel packages are named per series (`linux-image-6.1-generic`)
+  and compared as installed, not as running.
+- Astra's arm and s390x OVAL files exist (`4.7_arm`, `3.8_s390x`) but
+  weren't tested.

@@ -46,7 +46,7 @@ func TestUbuntuProbePrefersVersionFieldPointRelease(t *testing.T) {
 	} {
 		t.Run(tc.version, func(t *testing.T) {
 			addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
-				"cat /etc/os-release": loadUbuntuFixture(t, tc.fixture),
+				ubuntuProbeCommand: loadUbuntuFixture(t, tc.fixture),
 			})
 
 			p := ubuntuProbe{}
@@ -66,7 +66,7 @@ func TestUbuntuProbePrefersVersionFieldPointRelease(t *testing.T) {
 // VERSION="24.10 (Oracular Oriole)", identical precision to VERSION_ID).
 func TestUbuntuProbeNonLTSHasNoExtraPrecisionToPrefer(t *testing.T) {
 	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
-		"cat /etc/os-release": loadUbuntuFixture(t, "ubuntu_24.10.txt"),
+		ubuntuProbeCommand: loadUbuntuFixture(t, "ubuntu_24.10.txt"),
 	})
 
 	p := ubuntuProbe{}
@@ -81,7 +81,7 @@ func TestUbuntuProbeNonLTSHasNoExtraPrecisionToPrefer(t *testing.T) {
 
 func TestUbuntuProbeRejectsNonUbuntu(t *testing.T) {
 	addr, fp := sshTestServer(t, "probeuser", "probepass", nil, map[string]string{
-		"cat /etc/os-release": "ID=debian\nVERSION_ID=\"13\"\n",
+		ubuntuProbeCommand: "ID=debian\nVERSION_ID=\"13\"\n",
 	})
 
 	p := ubuntuProbe{}

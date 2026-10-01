@@ -37,6 +37,10 @@ type osReleaseFamilyProbe struct {
 	// /etc/os-release. FreeBSD is the one registration that overrides this
 	// (/var/run/os-release — see above).
 	path string
+	// packages, when set, also lists the host's installed packages and
+	// running kernel in the same round trip, for package-level CVE
+	// matching (D43).
+	packages packageKind
 }
 
 func (p osReleaseFamilyProbe) Meta() Meta {
@@ -59,6 +63,11 @@ func (p osReleaseFamilyProbe) Probe(ctx context.Context, t Target) (Observation,
 		path = "/etc/os-release"
 	}
 	cmd := "cat " + path
+	if p.packages != packagesNone {
+		// cat's own exit status would be lost behind packagesCommand's
+		// `|| true`s; a missing os-release still fails the ID check below.
+		cmd += " 2>/dev/null" + packagesCommand(p.packages)
+	}
 	out, verified, err := sshRunCommand(ctx, t, cmd)
 	if err != nil {
 		if isSSHExitError(err) {
@@ -67,7 +76,8 @@ func (p osReleaseFamilyProbe) Probe(ctx context.Context, t Target) (Observation,
 		return obs, err
 	}
 
-	fields := parseOSRelease(out)
+	osRelease, _, _ := strings.Cut(out, unameMarker)
+	fields := parseOSRelease(osRelease)
 	if !p.match(fields) {
 		return obs, fmt.Errorf("%w: %s reports ID=%q, not %s", ErrNotSupported, path, fields["ID"], p.product)
 	}
@@ -80,6 +90,14 @@ func (p osReleaseFamilyProbe) Probe(ctx context.Context, t Target) (Observation,
 	obs.Version = version
 	obs.Endpoint = path
 	obs.Extra = map[string]string{"hostKeyVerified": strconv.FormatBool(verified)}
+	if p.packages != packagesNone {
+		h := parsePackagesOutput(p.packages, out)
+		h.extra(obs.Extra)
+		obs.Packages, obs.Modules = h.packages, h.modules
+		if c := fields["UBUNTU_CODENAME"]; c != "" {
+			obs.Extra["codename"] = c // Linux Mint: its Ubuntu base, whose OVAL it's matched against
+		}
+	}
 	obs.DurationMS = time.Since(start).Milliseconds()
 	return obs, nil
 }
