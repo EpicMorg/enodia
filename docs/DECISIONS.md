@@ -2597,3 +2597,16 @@ CVE sets are identical:
   and compared as installed, not as running.
 - Astra's arm and s390x OVAL files exist (`4.7_arm`, `3.8_s390x`) but
   weren't tested.
+
+## D47 — MariaDB 11.0+ is recognised by its "-MariaDB" version tag, not only the "5.5.5-" mask
+
+**Found on a real fleet.** D36 told MariaDB from MySQL by the `5.5.5-`
+compatibility mask alone. MariaDB 11.0 dropped the mask. Real 11.4 and 12.3
+servers answer `11.4.9-MariaDB-ubu2404-log` and `12.3.3-MariaDB-ubu2404`, so
+`mysql` had been recording them as MySQL (against MySQL's lifecycle) and
+`mariadb` would have refused them. Re-captured from the mariadb:11.4 and
+mariadb:12 images: `11.4.13-MariaDB-ubu2404`, `12.3.3-MariaDB-ubu2404`.
+
+`mariadbServerVersion` now decides for both probes: a `5.5.5-` prefix
+(MariaDB 10.x, unmasked), or `-MariaDB` anywhere in the version (11.0+, as
+is). `mysql` rejects both, and `mariadb` accepts both.
