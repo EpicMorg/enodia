@@ -12,10 +12,10 @@ import (
 
 // mariadbProbe reads the version out of MariaDB's initial handshake packet
 // — the same Protocol::HandshakeV10 mysqlProbe reads (see
-// readMySQLProtocolVersion in mysql.go) — but requires MariaDB's own
-// "5.5.5-" compatibility mask instead of rejecting it. mysqlProbe already
-// rejects exactly this shape as "not MySQL" (D9); this is the other half of
-// that pair, not a new transport.
+// readMySQLProtocolVersion in mysql.go) — but accepts exactly the replies
+// mysqlProbe rejects as "not MySQL" (D9): MariaDB 10.x's "5.5.5-"-masked
+// version and 11.0+'s unmasked "-MariaDB"-tagged one (see
+// mariadbServerVersion). The other half of that pair, not a new transport.
 type mariadbProbe struct{}
 
 func (mariadbProbe) Meta() Meta {
@@ -57,14 +57,14 @@ func (mariadbProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 		return obs, tcpErr(ctx, err)
 	}
 
-	masked, ok := strings.CutPrefix(raw, "5.5.5-")
+	unmasked, ok := mariadbServerVersion(raw)
 	if !ok {
-		return obs, fmt.Errorf("%w: no \"5.5.5-\" compatibility mask on %q — this looks like MySQL, not MariaDB", ErrNotSupported, raw)
+		return obs, fmt.Errorf("%w: %q is neither \"5.5.5-\"-masked nor \"-MariaDB\"-tagged — this looks like MySQL, not MariaDB", ErrNotSupported, raw)
 	}
 
-	m := mariadbVersionPattern.FindStringSubmatch(masked)
+	m := mariadbVersionPattern.FindStringSubmatch(unmasked)
 	if m == nil {
-		return obs, fmt.Errorf("%w: unmasked version %q has no recognizable numeric spine", ErrUnparseable, masked)
+		return obs, fmt.Errorf("%w: version %q has no recognizable numeric spine", ErrUnparseable, unmasked)
 	}
 
 	obs.Version = m[1]

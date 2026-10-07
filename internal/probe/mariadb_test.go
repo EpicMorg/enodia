@@ -17,7 +17,12 @@ import (
 // because the bytes differ.
 func mariadbFixtureListener(t *testing.T) net.Listener {
 	t.Helper()
-	raw := loadMySQLFixture(t, "mariadb_10.11.19.bin")
+	return mariadbFixtureListenerFor(t, "mariadb_10.11.19.bin")
+}
+
+func mariadbFixtureListenerFor(t *testing.T, fixture string) net.Listener {
+	t.Helper()
+	raw := loadMySQLFixture(t, fixture)
 	ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
@@ -105,5 +110,26 @@ func TestMariaDBProbeMeta(t *testing.T) {
 	}
 	if m.DefaultResolver.Type != "endoflife" || m.DefaultResolver.ID != "mariadb" {
 		t.Fatalf("got resolver %+v", m.DefaultResolver)
+	}
+}
+
+// mariadb_11.4.13.bin and mariadb_12.3.3.bin are real handshakes captured
+// from the mariadb:11.4 and mariadb:12 images: since 11.0 MariaDB sends its
+// version unmasked ("11.4.13-MariaDB-ubu2404"), with "-MariaDB" as the
+// only signal. Found live: real 11.4/12.3 servers had been recorded by
+// mysqlProbe as MySQL.
+func TestMariaDBProbeUnmaskedVersions(t *testing.T) {
+	for fixture, want := range map[string]string{"mariadb_11.4.13.bin": "11.4.13", "mariadb_12.3.3.bin": "12.3.3"} {
+		ln := mariadbFixtureListenerFor(t, fixture)
+		obs, err := mariadbProbe{}.Probe(context.Background(), Target{
+			ID: "x", Product: "mariadb", Address: ln.Addr().String(), Timeout: 2 * time.Second,
+		})
+		ln.Close()
+		if err != nil {
+			t.Fatalf("%s: %v", fixture, err)
+		}
+		if obs.Version != want || obs.Extra["tag"] != "MariaDB-ubu2404" {
+			t.Fatalf("%s: got version %q, Extra %v", fixture, obs.Version, obs.Extra)
+		}
 	}
 }

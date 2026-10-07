@@ -47,6 +47,16 @@ func TestReadMySQLHandshakeVersionRejectsMariaDB(t *testing.T) {
 	}
 }
 
+// MariaDB 11.0+ sends its version unmasked; mysqlProbe must still refuse it.
+func TestReadMySQLHandshakeVersionRejectsUnmaskedMariaDB(t *testing.T) {
+	for _, fixture := range []string{"mariadb_11.4.13.bin", "mariadb_12.3.3.bin"} {
+		_, err := readMySQLHandshakeVersion(bytes.NewReader(loadMySQLFixture(t, fixture)))
+		if !errors.Is(err, ErrNotSupported) {
+			t.Fatalf("%s: got %v, want ErrNotSupported", fixture, err)
+		}
+	}
+}
+
 func TestReadMySQLHandshakeVersionTruncatedHeader(t *testing.T) {
 	_, err := readMySQLHandshakeVersion(bytes.NewReader([]byte{0x01, 0x00}))
 	if !errors.Is(err, ErrUnreachable) {
