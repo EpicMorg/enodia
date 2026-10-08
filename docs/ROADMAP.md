@@ -1227,8 +1227,10 @@ Everything found running 2.0 against a real ~600-target fleet is done
   when the version is hidden on purpose. But with `server_tokens on`,
   nginx's own error pages still print `nginx/<version>` in the body, so
   a fallback that reads a 404 page's footer may find it. `stub_status`
-  carries no version and doesn't help. To check against a real
-  headers-more nginx before deciding
+  carries no version and doesn't help. Seen on a real host with
+  `server_tokens off` + `more_set_headers`: the 404 body is a bare
+  `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
+  there. Still unchecked against `server_tokens on` with a rewritten header
 - Lower priority: Uptime Kuma, Sentry self-hosted, Ghost, OnlyOffice
   DocumentServer (none on endoflife.date), ZooKeeper (endoflife:
   `zookeeper`). Kafka stays blocked on JMX — see Later and D21
