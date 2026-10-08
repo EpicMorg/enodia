@@ -1200,7 +1200,31 @@ Not dates. Order of work, and what each step unblocks.
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
-(see above).
+(see above). Requests from a second, ~90-target fleet:
+
+- CVEs for `mariadb` — the probe shipped (D36, D47) with no CVE mapping,
+  so its CVES column is always `-`. NVD has CPE `mariadb:mariadb`, BDU
+  lists MariaDB under its own vendor name; both go into
+  `internal/cve/productmap.go` like `mysql`, checked against a real
+  10.5/10.11/11.4 the way other mappings were. MariaDB's own "Security
+  fixes by version" page (CVE → first fixed release per branch) is a
+  candidate second source if NVD's ranges turn out too coarse
+- CVEs for a database running from a Docker image — the distro's OVAL
+  sees the host's packages, not what's inside a container, so such a
+  server only gets the product-level (NVD/BDU) match above. Nothing more
+  is planned until a container-aware source is worth it
+- `rabbitmq` probe — management plugin's `GET /api/overview`
+  (`rabbitmq_version`), `kind: basic`; endoflife: `rabbitmq`
+- `memcached` probe — text protocol `version` command, no auth;
+  endoflife: `memcached`
+- `cassandra` probe — CQL native protocol, `system.local`
+  `release_version`; `kind: password` when the cluster requires auth;
+  endoflife: `apache-cassandra`
+- `weblate` probe — version from its API or about page; no endoflife.date
+  page (404), so a GitHub resolver
+- Lower priority: Uptime Kuma, Sentry self-hosted, Ghost, OnlyOffice
+  DocumentServer (none on endoflife.date), ZooKeeper (endoflife:
+  `zookeeper`). Kafka stays blocked on JMX — see Later and D21
 
 ## Later
 
@@ -1246,6 +1270,14 @@ Everything found running 2.0 against a real ~600-target fleet is done
   unattended persistent access. Ruled out on principle, not a tooling
   gap — the user confirmed this one stays crossed off entirely, not
   merely deferred — see DECISIONS.md D23
+
+- `nginx` behind a rewritten `Server` header — not planned as a
+  fallback: the version nginx discloses comes from one place
+  (`server_tokens`), and its error pages carry the same header text;
+  `stub_status` has connection counters but no version. A rewritten
+  header is the operator hiding the version on purpose, and
+  `not_supported` is the honest answer. Probe such a host over SSH
+  (`nginx -v`) if the version matters
 
 ## Deliberately not planned
 
