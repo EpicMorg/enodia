@@ -8,6 +8,12 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ## [Unreleased]
 
+### Added
+
+- `PRIVACY.md`: what enodia connects to (your targets, endoflife.date,
+  the GitHub API — product and repository names only) and what it stores
+  (only your own files and a local cache). No telemetry.
+
 ### Changed
 
 - `teamcity` works without credentials: with none configured it reads the
