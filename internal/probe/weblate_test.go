@@ -45,7 +45,7 @@ func TestWeblateProbeRealFixture(t *testing.T) {
 // links its versioned documentation.
 func TestWeblateProbeOtherShapes(t *testing.T) {
 	for body, want := range map[string]string{
-		`<footer>Powered by <a href="https://weblate.org/">Weblate 5.10.4</a></footer>`:                      "5.10.4",
+		`<footer>Powered by <a href="https://weblate.org/">Weblate 5.10.4</a></footer>`:                    "5.10.4",
 		`<a class="dropdown-item" href="https://docs.weblate.org/en/weblate-2026.9.1/index.html">Docs</a>`: "2026.9.1",
 	} {
 		obs, err := weblateProbe{}.Probe(context.Background(), target(weblateServer(t, []byte(body)), "weblate"))
