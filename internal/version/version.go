@@ -25,11 +25,21 @@ var (
 	// "8.0 U3k" as bare "8.0", so any real, patched 8.0 host compared as
 	// "ahead" of a calendar entry that is, in reality, newer.
 	reVMwareUpdate = regexp.MustCompile(`(?i)\s+U(?:pdate)?\s*(\d+)[a-z]?\b.*$`)
+	// reMinIORelease is MinIO's release naming, a UTC timestamp:
+	// "RELEASE.2025-10-15T17-29-55Z" (its GitHub tags and `minio
+	// --version`), also with a builder's own marker after RELEASE, e.g.
+	// "RELEASE_SABER.2025-03-12T18-04-18Z" from a real in-house build.
+	// Folded into a dotted, comparable "2025.10.15.17.29.55"; without it
+	// the only numeric spine Core found was the year.
+	reMinIORelease = regexp.MustCompile(`^RELEASE(?:_[A-Za-z0-9]+)?\.(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})Z`)
 )
 
 // Clean strips the decoration vendors hang off a version:
 // "v10.3.2" -> "10.3.2", "17.8.1-ee" -> "17.8.1".
 func Clean(raw string) string {
+	if m := reMinIORelease.FindStringSubmatch(strings.TrimSpace(raw)); m != nil {
+		return strings.Join(m[1:], ".")
+	}
 	s := rePrefix.ReplaceAllString(strings.TrimSpace(raw), "")
 	s = reVMwareUpdate.ReplaceAllString(s, ".$1")
 	s = reTrail.ReplaceAllString(s, "")

@@ -10,17 +10,6 @@ import (
 	"time"
 )
 
-// Target options freeradiusProbe reads.
-const (
-	// freeradiusContainerOption names a container to run the version
-	// command in, for a FreeRADIUS running in Docker/Podman on the SSH host
-	// rather than on the host itself.
-	freeradiusContainerOption = "container"
-	// freeradiusRuntimeOption is the container CLI: "docker" (default) or
-	// "podman".
-	freeradiusRuntimeOption = "container_runtime"
-)
-
 // freeradiusVersionCommand tries each name the server binary ships under
 // — "freeradius" on Debian/Ubuntu, "radiusd" on RHEL-family and source
 // builds — by name and then by its /usr/sbin path, since a non-login SSH
@@ -33,11 +22,6 @@ const freeradiusVersionCommand = "freeradius -v 2>&1 || radiusd -v 2>&1 || /usr/
 // against FreeRADIUS 3.2.10: "radiusd: FreeRADIUS Version 3.2.10 (git
 // #9071ea041), for host x86_64-pc-linux-gnu".
 var freeradiusVersionPattern = regexp.MustCompile(`FreeRADIUS Version (\d+(?:\.\d+)+)(?: \(git #([0-9a-f]+)\))?`)
-
-// containerNamePattern is what Docker itself accepts as a container name
-// ([a-zA-Z0-9][a-zA-Z0-9_.-]*) — checked before the name goes into a
-// remote shell command.
-var containerNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
 
 // freeradiusProbe runs the server's own `-v` over SSH.
 //
@@ -68,32 +52,11 @@ func (freeradiusProbe) Meta() Meta {
 	}
 }
 
-// freeradiusCommand is the command for t: freeradiusVersionCommand, run
-// inside t's container when options.container is set.
-func freeradiusCommand(t Target) (string, error) {
-	container := t.Options[freeradiusContainerOption]
-	if container == "" {
-		return freeradiusVersionCommand, nil
-	}
-	if !containerNamePattern.MatchString(container) {
-		return "", fmt.Errorf("%w: options.%s %q is not a valid container name", ErrNotSupported, freeradiusContainerOption, container)
-	}
-	runtime := t.Options[freeradiusRuntimeOption]
-	switch runtime {
-	case "":
-		runtime = "docker"
-	case "docker", "podman":
-	default:
-		return "", fmt.Errorf("%w: options.%s must be docker or podman, not %q", ErrNotSupported, freeradiusRuntimeOption, runtime)
-	}
-	return runtime + " exec " + container + " sh -c '" + freeradiusVersionCommand + "'", nil
-}
-
 func (freeradiusProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	start := time.Now()
 	obs := Observation{Kind: "observation", ID: t.ID, Name: t.Name, Product: t.Product, CollectedAt: start.UTC()}
 
-	cmd, err := freeradiusCommand(t)
+	cmd, err := containerCommand(t, freeradiusVersionCommand)
 	if err != nil {
 		return obs, err
 	}
@@ -110,7 +73,7 @@ func (freeradiusProbe) Probe(ctx context.Context, t Target) (Observation, error)
 	m := freeradiusVersionPattern.FindStringSubmatch(out)
 	if m == nil {
 		return obs, fmt.Errorf("%w: no FreeRADIUS version in the output of freeradius/radiusd -v (not installed here, or in a container — see options.%s)",
-			ErrNotSupported, freeradiusContainerOption)
+			ErrNotSupported, containerOption)
 	}
 
 	obs.Version = m[1]
@@ -119,7 +82,7 @@ func (freeradiusProbe) Probe(ctx context.Context, t Target) (Observation, error)
 	if m[2] != "" {
 		obs.Extra["git"] = m[2]
 	}
-	if c := t.Options[freeradiusContainerOption]; c != "" {
+	if c := t.Options[containerOption]; c != "" {
 		obs.Extra["container"] = c
 	}
 	obs.DurationMS = time.Since(start).Milliseconds()

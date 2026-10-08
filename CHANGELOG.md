@@ -10,6 +10,8 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `minio` probe: `minio --version` over SSH, optionally in a container;
+  MinIO's `RELEASE.<timestamp>` names now compare as versions (D56).
 - `sentry` probe: self-hosted Sentry's version from its anonymous login
   page (D55).
 - `zookeeper` probe: the `srvr` four-letter word (D54).
@@ -49,6 +51,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Fixed
 
+- The `github` resolver no longer fails on repositories whose releases
+  list is over 1MiB (minio/minio's is 3.4MB): it now reads up to 8MiB
+  (D56).
 - A credential of a kind its product never sends is now a config error
   instead of being dropped silently. `kind: password` on an HTTP product
   (RouterOS, Harbor, ...) used to send the request with no `Authorization`

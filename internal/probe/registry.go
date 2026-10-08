@@ -110,6 +110,9 @@ var builtin = []Probe{
 	// "version" over the text protocol. Verified live against memcached:1.6
 	// (1.6.45).
 	memcachedProbe{},
+	// `minio --version` over SSH (optionally in a container). Verified live
+	// against an in-house build, RELEASE_SABER.2025-03-12T18-04-18Z.
+	minioProbe{},
 	mongodbProbe{},
 	mysqlProbe{},
 	// Captured via vmactions/netbsd-vm (see uname.go): `uname -sr` -> "NetBSD 11.0".

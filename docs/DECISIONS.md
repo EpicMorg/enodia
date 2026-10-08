@@ -2850,3 +2850,34 @@ page. The fixture is that login page reduced to the relevant
 self-hosted Sentry (a few dozen containers) for a capture wasn't needed
 with a real instance at hand.
 
+## D56 — `minio` over SSH; MinIO release names compare; larger GitHub release lists
+
+**Why SSH.** MinIO gives no version anonymously on any network surface:
+the S3 API's Server header is a bare "MinIO", the Console's anonymous
+`/api/v1/login` returns only the login strategy, and the admin API
+(`/minio/admin/v3/info`) and Prometheus metrics need an admin key or a
+bearer token generated with `mc`. On the fleet this was built against the
+S3 port (9000) wasn't reachable from the network at all, while the hosts
+were already SSH targets. So `minio` runs `minio --version` (by name, then
+`/usr/local/bin/minio`) over SSH like `freeradius` (D45), with the same
+`options.container`/`container_runtime`, now a shared helper
+(`containerCommand`). Live, an in-house build said "minio version
+RELEASE_SABER.2025-03-12T18-04-18Z (commit-id=64d5bb49...)", then
+"Runtime: go1.24.4 linux/amd64". The builder's marker (SABER), commit and
+Go runtime go into extra.
+
+**Comparable versions.** MinIO names releases by UTC timestamp,
+`RELEASE.2025-10-15T17-29-55Z`, in `--version` and in its GitHub tags;
+version.Core found only "2025" in it. `version.Clean` now folds that name,
+with or without a `_<MARKER>` after RELEASE, into "2025.10.15.17.29.55" —
+applied to the observed version and, through D39, to the resolver's tag,
+so both sides compare.
+
+**Lifecycle.** `github` on minio/minio (no endoflife.date page). That
+repository is archived: the community edition's last release is
+RELEASE.2025-10-15T17-29-55Z, which is what a MinIO is compared against
+from now on. The resolver failed on it at first: GitHub's releases list
+carries every release's full changelog, and minio/minio's 30 latest came
+to 3.4MB, cut mid-JSON by the resolver's 1MiB read cap. The `github`
+resolver's own cap is now 8MiB.
+

@@ -65,7 +65,7 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 		return nil, fmt.Errorf("%w: HTTP %d", ErrUnreachable, resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, githubMaxBody))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUnreachable, err)
 	}
@@ -107,3 +107,8 @@ func trimRepoPrefix(tag, ownerRepo string) string {
 	}
 	return tag
 }
+
+// githubMaxBody caps a releases list. Each release carries its full
+// changelog: minio/minio's 30 latest came to 3.4MB, which maxBody (1MiB)
+// cut mid-JSON — the resolver then failed to parse at all.
+const githubMaxBody = 8 << 20

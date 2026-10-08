@@ -5,9 +5,11 @@ package resolver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/EpicMorg/enodia/internal/probe"
@@ -103,5 +105,33 @@ func TestTrimRepoPrefix(t *testing.T) {
 		if got := trimRepoPrefix(tc.tag, tc.repo); got != tc.want {
 			t.Errorf("trimRepoPrefix(%q, %q) = %q, want %q", tc.tag, tc.repo, got, tc.want)
 		}
+	}
+}
+
+// minio/minio's real releases list is 3.4MB for 30 entries, every one
+// carrying its whole changelog; a 1MiB cap cut it mid-JSON.
+func TestGithubSourceReadsLargeReleaseLists(t *testing.T) {
+	big := strings.Repeat("x", 200<<10)
+	var b strings.Builder
+	b.WriteString("[")
+	for i := range 30 {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		fmt.Fprintf(&b, `{"tag_name":"RELEASE.2025-10-%02dT00-00-00Z","draft":false,"prerelease":false,"body":%q}`, 30-i, big)
+	}
+	b.WriteString("]")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(b.String()))
+	}))
+	defer srv.Close()
+
+	src := &githubSource{BaseURL: srv.URL, Client: srv.Client()}
+	cycles, err := src.Fetch(context.Background(), probe.ResolverRef{Type: "github", ID: "minio/minio"})
+	if err != nil {
+		t.Fatalf("Fetch (%d bytes): %v", b.Len(), err)
+	}
+	if cycles[0].Latest != "RELEASE.2025-10-30T00-00-00Z" {
+		t.Fatalf("got %q", cycles[0].Latest)
 	}
 }
