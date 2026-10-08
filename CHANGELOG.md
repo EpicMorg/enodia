@@ -10,6 +10,8 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `weblate` probe: the anonymous "Powered by Weblate" footer, GitHub
+  resolver (D52).
 - `memcached` probe: the text protocol's `version` command, no
   credentials (D51).
 - `rabbitmq` probe: the management plugin's `/api/overview`, `kind: basic`
@@ -28,6 +30,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Changed
 
+- The `github` resolver drops a leading `<repo>-`/`<repo>_` from release
+  tags, so `weblate-2026.10` reads as `2026.10` in LATEST/CYCLE and in the
+  comparison (D52).
 - `teamcity` works without credentials: with none configured it reads the
   anonymous `/app/rest/server/version`, open on every TeamCity checked from
   2017.2 to 2026.1 even with guest login off. A token still selects

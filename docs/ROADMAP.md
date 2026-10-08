@@ -1204,6 +1204,11 @@ Not dates. Order of work, and what each step unblocks.
   Cassandra 3.11.19, and 5.0.9 with PasswordAuthenticator). See
   `docs/DECISIONS.md` D51.
 
+- `weblate` probe — the anonymous "Powered by Weblate" footer on
+  `/about/`, verified live (2026.10); GitHub resolver, whose release tags
+  ("weblate-2026.10") now lose their repo-name prefix. See
+  `docs/DECISIONS.md` D52.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1240,8 +1245,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   sees the host's packages, not what's inside a container, so such a
   server only gets the product-level (NVD/BDU) match above. Nothing more
   is planned until a container-aware source is worth it
-- `weblate` probe — version from its API or about page; no endoflife.date
-  page (404), so a GitHub resolver
 - `nginx` behind a rewritten `Server` header (headers-more's
   `more_set_headers`) — the probe reports `not_supported`, which is right
   when the version is hidden on purpose. But with `server_tokens on`,

@@ -210,6 +210,9 @@ var builtin = []Probe{
 	vaultProbe{},
 	bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden", resolver: ResolverRef{Type: "github", ID: "dani-garcia/vaultwarden"}},
 	vcenterProbe{},
+	// Anonymous: the "Powered by Weblate" footer on /about/. Verified live
+	// against weblate/weblate:latest (2026.10).
+	weblateProbe{},
 	wordpressProbe{},
 	youtrackProbe{},
 	zabbixProbe{},

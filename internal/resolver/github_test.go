@@ -87,3 +87,21 @@ func TestGithubSourceSendsAuthorizationHeaderWhenTokenSet(t *testing.T) {
 		t.Fatalf("got Authorization %q, want %q", gotAuth, "Bearer s3cret")
 	}
 }
+
+// WeblateOrg/weblate tags "weblate-2026.10"; bitwarden/server "v2026.9.1"
+// keeps its v for version.Clean to strip.
+func TestTrimRepoPrefix(t *testing.T) {
+	for _, tc := range []struct{ tag, repo, want string }{
+		{"weblate-2026.10", "WeblateOrg/weblate", "2026.10"},
+		{"Weblate_5.10.4", "WeblateOrg/weblate", "5.10.4"},
+		{"v2026.9.1", "bitwarden/server", "v2026.9.1"},
+		{"server-1.0", "bitwarden/server", "1.0"},
+		{"weblate", "WeblateOrg/weblate", "weblate"},
+		{"weblatex-1.0", "WeblateOrg/weblate", "weblatex-1.0"},
+		{"1.2.3", "noslash", "1.2.3"},
+	} {
+		if got := trimRepoPrefix(tc.tag, tc.repo); got != tc.want {
+			t.Errorf("trimRepoPrefix(%q, %q) = %q, want %q", tc.tag, tc.repo, got, tc.want)
+		}
+	}
+}

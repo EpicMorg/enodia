@@ -81,7 +81,8 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 		if rel.Draft || rel.Prerelease {
 			continue
 		}
-		c := Cycle{Cycle: rel.TagName, Latest: rel.TagName}
+		tag := trimRepoPrefix(rel.TagName, ref.ID)
+		c := Cycle{Cycle: tag, Latest: tag}
 		if rel.PublishedAt != nil {
 			d := Date{Time: *rel.PublishedAt}
 			c.ReleaseDate = &d
@@ -90,4 +91,19 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 		return []Cycle{c}, nil
 	}
 	return nil, fmt.Errorf("%w: %q has no published, non-prerelease release", ErrUnknownProduct, ref.ID)
+}
+
+// trimRepoPrefix drops a leading "<repo>-" or "<repo>_" from a release
+// tag, case-insensitively: WeblateOrg/weblate tags its releases
+// "weblate-2026.10", which version.Clean (it strips only a "v") would leave
+// as is — in the report's LATEST/CYCLE columns and in the comparison.
+func trimRepoPrefix(tag, ownerRepo string) string {
+	_, repo, ok := strings.Cut(ownerRepo, "/")
+	if !ok || len(tag) <= len(repo)+1 {
+		return tag
+	}
+	if strings.EqualFold(tag[:len(repo)], repo) && (tag[len(repo)] == '-' || tag[len(repo)] == '_') {
+		return tag[len(repo)+1:]
+	}
+	return tag
 }

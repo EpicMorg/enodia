@@ -2755,3 +2755,24 @@ attempted.
 All three have endoflife.date calendars (`memcached`, `rabbitmq`,
 `apache-cassandra`). CVE mappings for them are a separate step.
 
+## D52 — `weblate` reads its public footer; GitHub release tags lose a repo-name prefix
+
+**Where the version is.** Weblate prints it on every page: the footer's
+"Powered by <a href="https://weblate.org/">Weblate 2026.10</a>" and the
+Documentation link, `docs.weblate.org/en/weblate-2026.10/`. Confirmed live
+against weblate/weblate:latest (with PostgreSQL and Redis), where the
+package's own `weblate.utils.version.VERSION` was `2026.10` too. The REST
+API root `/api/` is anonymous but has no version, `/api/metrics/` needs a
+token. The probe reads `/about/` anonymously, the footer first and the docs
+link if the footer was customised away; a REQUIRE_LOGIN site redirects to
+its login page, which has the same footer. Weblate moved to calendar
+versions after 5.x (2026.9, 2026.9.1, 2026.10); both shapes parse.
+
+**Lifecycle.** No endoflife.date page (404), so the `github` resolver on
+WeblateOrg/weblate. Its release tags are `weblate-2026.10`, and the report
+showed exactly that in LATEST and CYCLE: D39's `version.Clean` strips only
+a `v`. The resolver now drops a leading `<repo>-` or `<repo>_` (matched
+case-insensitively against the repository name) from the tag — in the
+resolver, not `version.Clean`, which every observed version also passes
+through. Tags without that prefix are unchanged.
+
