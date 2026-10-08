@@ -1222,6 +1222,13 @@ Everything found running 2.0 against a real ~600-target fleet is done
   endoflife: `apache-cassandra`
 - `weblate` probe — version from its API or about page; no endoflife.date
   page (404), so a GitHub resolver
+- `nginx` behind a rewritten `Server` header (headers-more's
+  `more_set_headers`) — the probe reports `not_supported`, which is right
+  when the version is hidden on purpose. But with `server_tokens on`,
+  nginx's own error pages still print `nginx/<version>` in the body, so
+  a fallback that reads a 404 page's footer may find it. `stub_status`
+  carries no version and doesn't help. To check against a real
+  headers-more nginx before deciding
 - Lower priority: Uptime Kuma, Sentry self-hosted, Ghost, OnlyOffice
   DocumentServer (none on endoflife.date), ZooKeeper (endoflife:
   `zookeeper`). Kafka stays blocked on JMX — see Later and D21
@@ -1270,14 +1277,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   unattended persistent access. Ruled out on principle, not a tooling
   gap — the user confirmed this one stays crossed off entirely, not
   merely deferred — see DECISIONS.md D23
-
-- `nginx` behind a rewritten `Server` header — not planned as a
-  fallback: the version nginx discloses comes from one place
-  (`server_tokens`), and its error pages carry the same header text;
-  `stub_status` has connection counters but no version. A rewritten
-  header is the operator hiding the version on purpose, and
-  `not_supported` is the honest answer. Probe such a host over SSH
-  (`nginx -v`) if the version matters
 
 ## Deliberately not planned
 
