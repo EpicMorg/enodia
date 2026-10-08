@@ -2776,3 +2776,36 @@ case-insensitively against the repository name) from the tag — in the
 resolver, not `version.Clean`, which every observed version also passes
 through. Tags without that prefix are unchanged.
 
+## D53 — `onlyoffice` and `euro-office`: one probe, two products, told apart by `/welcome/`
+
+**The version.** The document service answers its root, `/index.html`,
+anonymously even with JWT enabled: "Server is functioning normally.
+Version: 9.4.0. Build: 129. Release date: 2026-05-18T00:00:00.000Z.
+Package type: 0. ..." (onlyoffice/documentserver:latest, live). Package
+type 0/1/2 is Community/Enterprise/Developer and goes into extra as
+`edition`, with the build number as `build`. `/coauthoring/CommandService.ashx`'s
+`version` command needs the JWT secret; `api.js` carries no version.
+
+**Euro-Office.** The fork Nextcloud ships (nextcloud/aio-eurooffice, run
+live with PostgreSQL and Redis) answers `/index.html` in exactly the same
+words: "Version: 9.3.1. Build: 37. Release date: 2016-06-29..." — the date
+is a placeholder, the version is real (the image's own package is
+`euro-office-documentserver 9.3.1-dev.1`). It has its own release line
+(Euro-Office/DocumentServer: v9.3.3, v9.3.4, v9.3.4-hotfix.1) apart from
+ONLYOFFICE's (v9.3.1, v9.4.0), so it is its own product with its own
+resolver: compared against ONLYOFFICE's releases, a current Euro-Office
+would always read as behind.
+
+**Telling them apart.** `/index.html` can't, and `api.js` barely differs
+(both still say Ascensio/ONLYOFFICE in their headers). The welcome page's
+title does: "ONLYOFFICE Docs Community Edition" vs "Euro-Office Docs
+Community Edition". The editors' static files sit under versioned paths,
+and the SDK bundle that carries the brand is 2.6–3.5MB — not something to
+pull every hour. So the probe reads `/welcome/` too: a brand that belongs
+to the other product is refused with the product to use (as `mysql`
+refuses MariaDB, D36), and a server with the welcome page turned off (404)
+is taken to be what the config says.
+
+Both on `github` resolvers (neither has an endoflife.date page). No
+credentials: both pages are public.
+

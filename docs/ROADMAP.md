@@ -1209,6 +1209,12 @@ Not dates. Order of work, and what each step unblocks.
   ("weblate-2026.10") now lose their repo-name prefix. See
   `docs/DECISIONS.md` D52.
 
+- `onlyoffice` and `euro-office` probes — one probe for ONLYOFFICE Docs
+  and its Euro-Office fork: version from the anonymous `/index.html`,
+  brand from `/welcome/`, each on its own GitHub release line. Verified
+  live (ONLYOFFICE 9.4.0, Euro-Office 9.3.1 from Nextcloud AIO). See
+  `docs/DECISIONS.md` D53.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1254,9 +1260,9 @@ Everything found running 2.0 against a real ~600-target fleet is done
   `server_tokens off` + `more_set_headers`: the 404 body is a bare
   `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
   there. Still unchecked against `server_tokens on` with a rewritten header
-- Lower priority: Uptime Kuma, Sentry self-hosted, Ghost, OnlyOffice
-  DocumentServer (none on endoflife.date), ZooKeeper (endoflife:
-  `zookeeper`). Kafka stays blocked on JMX — see Later and D21
+- Lower priority: Uptime Kuma, Sentry self-hosted, Ghost (none on
+  endoflife.date), ZooKeeper (endoflife: `zookeeper`). Kafka stays
+  blocked on JMX — see Later and D21
 
 ## Later
 

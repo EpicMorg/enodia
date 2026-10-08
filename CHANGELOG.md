@@ -10,6 +10,10 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `onlyoffice` and `euro-office` probes: ONLYOFFICE Docs and its
+  Euro-Office fork (as shipped for Nextcloud), read anonymously from the
+  document server's `/index.html`; a server of the other brand is refused
+  with the product to use (D53).
 - `weblate` probe: the anonymous "Powered by Weblate" footer, GitHub
   resolver (D52).
 - `memcached` probe: the text protocol's `version` command, no

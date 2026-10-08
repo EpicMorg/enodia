@@ -54,6 +54,9 @@ var builtin = []Probe{
 	esxiProbe{},
 	// Real ISO rootfs capture (not a Docker image — none exists): ID="eurolinux", VERSION_ID="8.10".
 	osReleaseFamilyProbe{product: "eurolinux", summary: "EuroLinux", resolver: ResolverRef{Type: "endoflife", ID: "eurolinux"}, match: osReleaseIDEquals("eurolinux")},
+	// ONLYOFFICE Docs' Euro-Office fork, its own release line. Verified
+	// live: nextcloud/aio-eurooffice (9.3.1).
+	onlyofficeFamilyProbe{product: "euro-office", summary: "Euro-Office Docs (ONLYOFFICE fork)", brand: "Euro-Office", resolver: ResolverRef{Type: "github", ID: "Euro-Office/DocumentServer"}},
 	// fedora:latest: ID=fedora, VERSION_ID=44.
 	osReleaseFamilyProbe{product: "fedora", summary: "Fedora Linux", resolver: ResolverRef{Type: "endoflife", ID: "fedora"}, match: osReleaseIDEquals("fedora")},
 	forgejoProbe{},
@@ -117,6 +120,9 @@ var builtin = []Probe{
 	// ID=nixos, VERSION_ID="26.05".
 	osReleaseFamilyProbe{product: "nixos", summary: "NixOS", resolver: ResolverRef{Type: "endoflife", ID: "nixos"}, match: osReleaseIDEquals("nixos")},
 	oauth2ProxyProbe{},
+	// /index.html (version, build, package type) plus /welcome/'s title for
+	// the brand. Verified live: onlyoffice/documentserver:latest (9.4.0).
+	onlyofficeFamilyProbe{product: "onlyoffice", summary: "ONLYOFFICE Docs (Document Server)", brand: "ONLYOFFICE", resolver: ResolverRef{Type: "github", ID: "ONLYOFFICE/DocumentServer"}},
 	// Captured via vmactions/openbsd-vm (see uname.go): `uname -sr` -> "OpenBSD 7.9".
 	unameFamilyProbe{product: "openbsd", summary: "OpenBSD", resolver: ResolverRef{Type: "endoflife", ID: "openbsd"}, unameName: "OpenBSD"},
 	// Captured via vmactions/openeuler-vm (24.03-LTS-SP4, the action's
