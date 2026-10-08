@@ -373,6 +373,8 @@ cve:
     path: /var/lib/enodia/cve/oval             # vendor OVAL files, one per release (see below)
   alpine:
     path: /var/lib/enodia/cve/alpine           # https://secdb.alpinelinux.org/<branch>/{main,community}.json
+  mariadb:
+    path: /var/lib/enodia/cve/mariadb.md       # https://mariadb.com/docs/server/security/cve/community-server.md
 ```
 
 Each block works alone. `bdu.path` is the export as published (`.zip`),
@@ -426,6 +428,17 @@ and `community.json` files of each branch in your fleet (download them
 under distinct names, e.g. `v3.20-main.json`). `alpine-linux` targets
 are matched per origin package.
 
+`mariadb.path` is MariaDB's own table of fixed CVEs, the Markdown page
+above saved as is. It lists, for every CVE, the release that fixes it in
+each maintained series, so a `mariadb` target is judged on its own
+series: 10.11.19 is not flagged for a CVE fixed only in 11.4 and up. A
+series that had already ended when a CVE was fixed elsewhere is flagged,
+with the newer release to move to. It merges with BDU and NVD (which also
+cover `mariadb`): for a CVE MariaDB's table knows, its verdict wins,
+because BDU's and NVD's per-series ranges often reach into series the bug
+never existed in. CVEs the table doesn't list yet still come from BDU and
+NVD.
+
 A Proxmox VE host gets package findings as a second, SSH `debian` target
 alongside its API `proxmox` one.
 
@@ -435,7 +448,7 @@ Alpine findings grouped per package (`linux 6.12.107-1 → 6.12.111-1`, linked t
 the advisory that fixes it, with its CVE list folded).
 `export --format json` carries every finding with its source. Which
 products are matched, and why some deliberately aren't, is in
-`docs/DECISIONS.md` D30–D35 and D42–D46.
+`docs/DECISIONS.md` D30–D35, D42–D46 and D50.
 
 ## File locations
 

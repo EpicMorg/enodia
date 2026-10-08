@@ -86,11 +86,12 @@ func runConfigValidateCmd(cmd *cobra.Command, _ []string) error {
 // on whatever machine is doing the loading.
 func validateCVEPaths(cfg *config.Config) error {
 	for key, resolve := range map[string]func() (string, bool){
-		"cve.bdu.path":    cfg.BDUPath,
-		"cve.nvd.path":    cfg.NVDPath,
-		"cve.debian.path": cfg.DebianPath,
-		"cve.oval.path":   cfg.OVALPath,
-		"cve.alpine.path": cfg.AlpinePath,
+		"cve.bdu.path":     cfg.BDUPath,
+		"cve.nvd.path":     cfg.NVDPath,
+		"cve.debian.path":  cfg.DebianPath,
+		"cve.oval.path":    cfg.OVALPath,
+		"cve.alpine.path":  cfg.AlpinePath,
+		"cve.mariadb.path": cfg.MariaDBPath,
 	} {
 		path, ok := resolve()
 		if !ok {

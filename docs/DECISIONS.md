@@ -2665,3 +2665,56 @@ visible auth error instead of being papered over by the anonymous path.
 path — this one included — with a 200 HTML maintenance page. The reply must
 match `YYYY.N[.N] (build N)` in full or the probe reports `ErrUnparseable`.
 
+## D50 — MariaDB CVEs: BDU and NVD, plus MariaDB's own fixed-versions table, which wins where it knows a CVE
+
+**The ask.** `mariadb` (D36) shipped with no CVE mapping, so its CVES
+column was always `-`. NVD has CPE `mariadb:mariadb` (1,513 matches across
+2002–2026) and BDU lists it as vendor "MariaDB Foundation", name "MariaDB"
+(438 entries), so both went into `productmap.go` like `mysql`.
+
+**Why that alone was wrong.** Checked against real fleet versions, BDU and
+NVD flagged the latest release of maintained series: 10.11.19 got 3 CVEs,
+11.4.13 got 2. BDU writes a per-series fix as an open-ended range with no
+lower bound ("до 11.4.10", "до 11.8.6", "до 12.2.2"), so "до 11.8.6"
+covers 10.11.19 too — D30's overlapping-branch limitation, which bites
+hard on a product that maintains five or six series at once. NVD did the
+same for CVE-2026-35549 ("before 11.4.10"). MariaDB's own table shows both
+were fixed only in 11.4/11.8/12.2: 10.11 never had the affected code. In
+the other direction, NVD and BDU missed 9 of the 21 CVEs MariaDB lists for
+10.11.8.
+
+**The vendor source.** MariaDB publishes "Security Vulnerabilities (CVE)
+Fixed in MariaDB Community Server" with a Markdown source
+(`https://mariadb.com/docs/server/security/cve/community-server.md`,
+~320KB, 456 CVEs). Each row is a CVE, its CVSS 3.1 base score, and the
+releases fixing it, one per series, mostly with a release date. The
+operator downloads it like the Debian tracker; `cve.mariadb.path` points at
+the file. Rules (`LoadMariaDB`):
+
+- A series with its own fix: vulnerable from the series' first release up
+  to that fix.
+- A series with no fix of its own, still maintained (it got some security
+  release on or after this CVE's first fix date) — unaffected: MariaDB
+  fixes every live series together.
+- A series with no fix of its own whose last security release in the
+  table predates this CVE's first fix — it had ended. Every release of it
+  is flagged, with the lowest fix in a newer series as the upgrade target
+  and FixStatus saying so. This over-reports on purpose (an ended series
+  may never have had the code — D30's bias); it only applies to ended
+  series.
+- Rows naming a whole series ("[5.5]", 2012) or no release give no bound
+  and are skipped.
+
+**Merging.** All three sources are merged like BDU and NVD always were,
+and the report groups them per CVE. One rule on top: when the vendor's
+table knows a CVE and doesn't flag this version for it, a BDU or NVD
+finding whose CVEs are all known to the table is dropped
+(`Index.vendorCVEs`, `Lookup`). A finding the table doesn't cover —
+newer than the downloaded table, BDU-only, or with no CVE id — is kept.
+Without `cve.mariadb.path`, BDU and NVD apply on their own, with the
+overlap limitation above.
+
+**Result on fleet versions** (local NVD/BDU copies from 2026-09-23):
+10.5.12 89 CVEs, 10.5.29 23 (ended series), 10.11.8 26, and 10.11.19,
+11.4.13 and 12.3.3 none.
+

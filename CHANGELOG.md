@@ -10,6 +10,12 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- CVEs for `mariadb` targets. BDU and NVD now cover MariaDB, and a new
+  `cve.mariadb.path` reads MariaDB's own fixed-CVE table
+  (`community-server.md`), which knows the fix release per series. Merged
+  with BDU and NVD; where MariaDB's table knows a CVE, its verdict
+  replaces their open-ended ranges, so the latest release of a maintained
+  series is no longer flagged for CVEs fixed only in newer series (D50).
 - `PRIVACY.md`: what enodia connects to (your targets, endoflife.date,
   the GitHub API — product and repository names only) and what it stores
   (only your own files and a local cache). No telemetry.

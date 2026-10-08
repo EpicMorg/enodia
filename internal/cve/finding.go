@@ -10,7 +10,7 @@ import "github.com/EpicMorg/enodia/internal/version"
 // facts, not a verdict) — Severity is the source's own published rating,
 // not something this project computed.
 type Finding struct {
-	Source      string   // "bdu" or "nvd"
+	Source      string   // "bdu", "nvd", "mariadb", or a package-level source (see InstalledVersion)
 	AdvisoryID  string   // the source's own advisory id: "BDU:2023-06364" for BDU; for NVD, the CVE id again — NVD has no separate advisory id of its own
 	CVEIDs      []string // e.g. ["CVE-2023-22515"]; may be empty — not every BDU entry cites one
 	Title       string
@@ -98,6 +98,10 @@ type Index struct {
 	debian    debianTracker           // nil unless cve.debian.path is configured
 	oval      map[string]*ovalRelease // by ovalReleaseKey; nil unless cve.oval.path is configured
 	alpine    alpineSecdb             // nil unless cve.alpine.path is configured
+	// vendorCVEs is, per product, every CVE a vendor's own fixed-versions
+	// data covers (today: MariaDB's, cve.mariadb.path). For those CVEs the
+	// vendor's verdict replaces BDU's and NVD's — see Lookup.
+	vendorCVEs map[string]map[string]bool
 }
 
 // Lookup returns every finding for product whose range contains probed
@@ -111,6 +115,7 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 	if idx == nil {
 		return nil
 	}
+	vendor := idx.vendorCVEs[product]
 	var out []Finding
 	for _, f := range idx.byProduct[product] {
 		if edition != "" && f.Edition != "" && f.Edition != edition {
@@ -120,7 +125,45 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 			out = append(out, f)
 		}
 	}
-	return out
+	if vendor == nil {
+		return out
+	}
+	// The vendor's own data knows which series each CVE was fixed in;
+	// BDU's and NVD's ranges for the same CVE often don't (D50). A BDU/NVD
+	// finding survives only when the vendor flags this version for one of
+	// its CVEs too, or when none of its CVEs are in the vendor's data at
+	// all (newer than the vendor's table, or BDU-only).
+	flagged := map[string]bool{}
+	for _, f := range out {
+		if f.Source == mariadbSource {
+			for _, id := range f.CVEIDs {
+				flagged[id] = true
+			}
+		}
+	}
+	kept := out[:0]
+	for _, f := range out {
+		if f.Source != mariadbSource && vendorOverrides(f.CVEIDs, vendor, flagged) {
+			continue
+		}
+		kept = append(kept, f)
+	}
+	return kept
+}
+
+// vendorOverrides reports whether a BDU/NVD finding with these CVEs is
+// contradicted by the vendor's data: every CVE is known to the vendor,
+// and the vendor flags none of them for this version.
+func vendorOverrides(ids []string, known, flagged map[string]bool) bool {
+	if len(ids) == 0 {
+		return false
+	}
+	for _, id := range ids {
+		if !known[id] || flagged[id] {
+			return false
+		}
+	}
+	return true
 }
 
 // MergeIndex combines a and b into one Index, mutating and returning
@@ -146,6 +189,12 @@ func MergeIndex(a, b *Index) *Index {
 	}
 	if a.alpine == nil {
 		a.alpine = b.alpine
+	}
+	for product, ids := range b.vendorCVEs {
+		if a.vendorCVEs == nil {
+			a.vendorCVEs = map[string]map[string]bool{}
+		}
+		a.vendorCVEs[product] = ids
 	}
 	return a
 }
