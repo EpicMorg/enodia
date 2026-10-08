@@ -2831,3 +2831,22 @@ credential kind for one digit, not worth it: Ghost's releases are x.y.0
 almost without exception, and "6.69" compares equal to the v6.69.0 tag.
 Resolver: `github` TryGhost/Ghost (no endoflife.date page).
 
+## D55 — `sentry` reads the version self-hosted Sentry embeds in its login page
+
+Self-hosted Sentry embeds `window.__initialData = {...}` in every page,
+the login page included, and that object carries `"version": {"current":
+"26.2.1", "latest": ..., "build": "<git sha>", "upgradeAvailable": ...}`.
+Confirmed live, anonymously, on a production self-hosted 26.2.1:
+`/auth/login/` redirects to the single organization's login page, which
+has it. `current` is the version; `build` and `sentryMode` go into extra.
+`latest` is Sentry's own upgrade check and not used: with the check off it
+was stale (21.7.0). The API root `/api/0/` is anonymous too but answers
+`"version": "0"`, the API's version; `/api/0/internal/health/` needs auth.
+
+Resolver: `github` on getsentry/self-hosted, whose release tags (26.7.0,
+26.8.0, 26.9.0) are the server versions it installs. No endoflife.date
+page. The fixture is that login page reduced to the relevant
+`__initialData` keys, values as served, hostname replaced — standing up a
+self-hosted Sentry (a few dozen containers) for a capture wasn't needed
+with a real instance at hand.
+

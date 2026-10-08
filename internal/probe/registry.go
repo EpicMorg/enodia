@@ -185,6 +185,9 @@ var builtin = []Probe{
 	// rockylinux:9: ID="rocky", VERSION_ID="9.3".
 	osReleaseFamilyProbe{product: "rocky-linux", summary: "Rocky Linux", resolver: ResolverRef{Type: "endoflife", ID: "rocky-linux"}, match: osReleaseIDEquals("rocky"), packages: packagesRPM},
 	routerosProbe{},
+	// window.__initialData.version on the login page, anonymous. Verified
+	// live against a production self-hosted Sentry 26.2.1.
+	sentryProbe{},
 	// vbatts/slackware:14.2: ID=slackware, VERSION_ID=14.2 — it does ship
 	// /etc/os-release, despite historical docs saying it doesn't.
 	osReleaseFamilyProbe{product: "slackware", summary: "Slackware", resolver: ResolverRef{Type: "endoflife", ID: "slackware"}, match: osReleaseIDEquals("slackware")},

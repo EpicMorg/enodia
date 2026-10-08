@@ -1220,6 +1220,10 @@ Not dates. Order of work, and what each step unblocks.
   `/ghost/api/admin/site/` (major.minor). Verified live (ZooKeeper 3.9.6,
   Ghost 6.69). See `docs/DECISIONS.md` D54.
 
+- `sentry` probe — self-hosted Sentry's anonymous login page
+  (`window.__initialData.version`), resolver getsentry/self-hosted.
+  Verified live on a production 26.2.1. See `docs/DECISIONS.md` D55.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1271,9 +1275,7 @@ Everything found running 2.0 against a real ~600-target fleet is done
   2.5.5), and API keys only open `/metrics`. Needs an Engine.IO
   long-polling client and a username/password socket.io login (which 2FA
   blocks)
-- `sentry` (self-hosted) probe — not yet looked at; self-hosted Sentry is
-  a few dozen containers to stand up for a capture. Kafka stays blocked
-  on JMX — see Later and D21
+- Kafka stays blocked on JMX — see Later and D21
 
 ## Later
 

@@ -10,6 +10,8 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `sentry` probe: self-hosted Sentry's version from its anonymous login
+  page (D55).
 - `zookeeper` probe: the `srvr` four-letter word (D54).
 - `ghost` probe: the anonymous `/ghost/api/admin/site/`, which gives
   major.minor (D54).
