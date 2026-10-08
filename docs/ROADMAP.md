@@ -1209,6 +1209,26 @@ Everything found running 2.0 against a real ~600-target fleet is done
   10.5/10.11/11.4 the way other mappings were. MariaDB's own "Security
   fixes by version" page (CVE → first fixed release per branch) is a
   candidate second source if NVD's ranges turn out too coarse
+- `enodia cve update` — download the CVE databases the config names
+  into their `cve.*.path`, instead of every operator writing their own
+  cron script. Only on that explicit command: `check`/`collect`/`serve`
+  never fetch databases, so air-gapped use is unchanged; PRIVACY.md lists
+  the sources. What to fetch comes from the config plus the latest
+  inventory (Ubuntu codenames, RHEL-family majors, Astra/RED OS minors,
+  Alpine branches) and files already present; NVD the current year (and
+  the previous one in January) by default, every year on request. Each
+  file goes to a temp name, is checked (gzip/zip/bz2/JSON/XML/the MariaDB
+  table), then renamed, so a broken download never replaces a working
+  copy; `If-Modified-Since` skips unchanged files. BDU needs
+  `cve.bdu.ca_file`: bdu.fstec.ru's certificate chains to the Russian
+  Trusted Root CA through "Russian Trusted Sub CA" 2024
+  (`subca_ssl_rsa2024`, AIA
+  http://nuc-cdp.digital.gov.ru/cdp/subca_ssl_rsa2024.crt — not the
+  older Sub CA on gu-st.ru), and the server sends no intermediate, so the
+  file must hold both. Checked: with that bundle the plain Go
+  User-Agent gets 200 with Last-Modified/ETag. Once it ships, the Docker
+  image drops its baked-in databases and the hosts' own update scripts
+  go; images for older versions keep a plain download script
 - CVEs for a database running from a Docker image — the distro's OVAL
   sees the host's packages, not what's inside a container, so such a
   server only gets the product-level (NVD/BDU) match above. Nothing more
