@@ -73,6 +73,9 @@ var builtin = []Probe{
 	// the traditional sense (Gentoo is rolling-release; no endoflife.date
 	// calendar exists, confirmed 404, for the same reason).
 	osReleaseFamilyProbe{product: "gentoo", summary: "Gentoo Linux", match: osReleaseIDEquals("gentoo")},
+	// The anonymous Admin API /ghost/api/admin/site/ (major.minor only).
+	// Verified live against ghost:6 (6.69).
+	ghostProbe{},
 	gitlabProbe{},
 	grafanaProbe{},
 	graylogProbe{},
@@ -222,6 +225,9 @@ var builtin = []Probe{
 	wordpressProbe{},
 	youtrackProbe{},
 	zabbixProbe{},
+	// "srvr", the one four-letter word allowed by default. Verified live
+	// against zookeeper:3.9 (3.9.6).
+	zookeeperProbe{},
 	zouFamilyProbe{product: "zou", summary: "Zou (CG-Wire API backend)"},
 }
 

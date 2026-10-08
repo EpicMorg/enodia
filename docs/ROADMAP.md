@@ -1215,6 +1215,11 @@ Not dates. Order of work, and what each step unblocks.
   live (ONLYOFFICE 9.4.0, Euro-Office 9.3.1 from Nextcloud AIO). See
   `docs/DECISIONS.md` D53.
 
+- `zookeeper` and `ghost` probes — ZooKeeper's `srvr` four-letter word
+  (the one allowed by default), Ghost's anonymous Admin API
+  `/ghost/api/admin/site/` (major.minor). Verified live (ZooKeeper 3.9.6,
+  Ghost 6.69). See `docs/DECISIONS.md` D54.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1260,9 +1265,15 @@ Everything found running 2.0 against a real ~600-target fleet is done
   `server_tokens off` + `more_set_headers`: the 404 body is a bare
   `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
   there. Still unchecked against `server_tokens on` with a rewritten header
-- Lower priority: Uptime Kuma, Sentry self-hosted, Ghost (none on
-  endoflife.date), ZooKeeper (endoflife: `zookeeper`). Kafka stays
-  blocked on JMX — see Later and D21
+- `uptime-kuma` probe — no anonymous version anywhere: the socket.io
+  `info` event hides it before login (`sendInfo(socket, hideVersion)`,
+  confirmed live on 1.23.17), `/metrics` has no version series (1.23.17,
+  2.5.5), and API keys only open `/metrics`. Needs an Engine.IO
+  long-polling client and a username/password socket.io login (which 2FA
+  blocks)
+- `sentry` (self-hosted) probe — not yet looked at; self-hosted Sentry is
+  a few dozen containers to stand up for a capture. Kafka stays blocked
+  on JMX — see Later and D21
 
 ## Later
 

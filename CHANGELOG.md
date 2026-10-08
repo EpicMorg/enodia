@@ -10,6 +10,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `zookeeper` probe: the `srvr` four-letter word (D54).
+- `ghost` probe: the anonymous `/ghost/api/admin/site/`, which gives
+  major.minor (D54).
 - `onlyoffice` and `euro-office` probes: ONLYOFFICE Docs and its
   Euro-Office fork (as shipped for Nextcloud), read anonymously from the
   document server's `/index.html`; a server of the other brand is refused

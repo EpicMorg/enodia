@@ -2809,3 +2809,25 @@ is taken to be what the config says.
 Both on `github` resolvers (neither has an endoflife.date page). No
 credentials: both pages are public.
 
+## D54 — `zookeeper` via `srvr`, `ghost` via its public site endpoint (major.minor only)
+
+**zookeeper.** Four-letter words on the client port (2181), no auth: the
+probe sends `srvr` and reads until the server closes — "Zookeeper version:
+3.9.6-<git hash>, built on ...", then counters and "Mode: standalone"
+(zookeeper:3.9, live). ZooKeeper 3.5+ allows only `srvr` by default
+(`4lw.commands.whitelist`); `stat`, `mntr`, `ruok`, `envi` answered "is
+not executed because it is not in the whitelist", which is
+`ErrNotSupported` if a server has removed `srvr` too. The AdminServer
+(HTTP, 8080) carries the same, but is often not exposed; the client port
+always is. Git hash and mode go into extra; endoflife: `zookeeper`.
+
+**ghost.** `GET /ghost/api/admin/site/` is the one Admin API endpoint
+served without a session or key — the admin app reads it before login —
+and returns `site.version`. Live on ghost:6 it said "6.69", the same as
+`<meta name="generator">` and the Content-Version header, while the
+installed package was 6.69.0: Ghost makes only major.minor public. The
+full version needs the Admin API's key, which is a signed JWT — a new
+credential kind for one digit, not worth it: Ghost's releases are x.y.0
+almost without exception, and "6.69" compares equal to the v6.69.0 tag.
+Resolver: `github` TryGhost/Ghost (no endoflife.date page).
+
