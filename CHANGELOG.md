@@ -10,6 +10,12 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `memcached` probe: the text protocol's `version` command, no
+  credentials (D51).
+- `rabbitmq` probe: the management plugin's `/api/overview`, `kind: basic`
+  (D51).
+- `cassandra` probe: `release_version` over the CQL native protocol v4,
+  `kind: password` when the cluster has PasswordAuthenticator (D51).
 - CVEs for `mariadb` targets. BDU and NVD now cover MariaDB, and a new
   `cve.mariadb.path` reads MariaDB's own fixed-CVE table
   (`community-server.md`), which knows the fix release per series. Merged

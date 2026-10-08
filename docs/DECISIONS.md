@@ -2718,3 +2718,40 @@ overlap limitation above.
 10.5.12 89 CVEs, 10.5.29 23 (ended series), 10.11.8 26, and 10.11.19,
 11.4.13 and 12.3.3 none.
 
+## D51 — `memcached`, `rabbitmq`, `cassandra`: each over its own protocol, each checked against live servers
+
+Asked for by a second fleet, all three running there in Docker.
+
+**memcached** speaks its text protocol on 11211: `version\r\n` →
+`VERSION 1.6.45\r\n` (memcached:1.6, captured byte for byte). The text
+protocol has no authentication, so the probe takes no credentials. A
+server started with SASL speaks only the binary protocol and refuses the
+text command; that is `ErrNotSupported`, not a guess.
+
+**rabbitmq** reads the management plugin's `GET /api/overview`, the one
+place RabbitMQ serves its version: the AMQP port has no pre-auth version
+exchange. It is never anonymous (rabbitmq:4-management answered 401), so
+credentials are required, `kind: basic`. `rabbitmq_version` is the
+version; `product_name`, `product_version`, `erlang_version` and
+`cluster_name` go into extra. The same fields are in 3.8.34's reply. The
+management API is plain HTTP on 15672 unless TLS is set up on it, and
+credentials over plain HTTP need `allow_insecure_transport`, as for every
+probe.
+
+**cassandra** has no HTTP API; it speaks the CQL native protocol on 9042,
+implemented here without a driver: STARTUP; READY, or AUTHENTICATE answered
+with one SASL PLAIN AUTH_RESPONSE (`kind: password`); then `SELECT
+release_version FROM system.local`, a one-row, one-column Rows result.
+OPTIONS/SUPPORTED, the only pre-auth exchange, carries CQL and protocol
+versions but not the server's. Protocol v4: the one every supported
+Cassandra speaks — 3.11 refused v5 ("Beta version of the protocol used"),
+5.0 accepts v4. Captured live: cassandra:3.11 without auth (3.11.19) and
+cassandra:5.0 with PasswordAuthenticator (5.0.9), including the real
+bad-credentials ERROR (0x0100 → `ErrAuth`). No credentials against a
+cluster that asks for them is `ErrAuth` naming the authenticator.
+Cassandra 2.x (protocol v3 at most) is long out of support and not
+attempted.
+
+All three have endoflife.date calendars (`memcached`, `rabbitmq`,
+`apache-cassandra`). CVE mappings for them are a separate step.
+

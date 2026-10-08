@@ -27,6 +27,10 @@ var builtin = []Probe{
 	&atlassianProbe{product: "bamboo", typeID: "bamboo", resolver: "bamboo", summary: "Atlassian Bamboo (Data Center)"},
 	&atlassianProbe{product: "bitbucket", typeID: "stash", resolver: "bitbucket", summary: "Atlassian Bitbucket (Data Center)"},
 	bitwardenFamilyProbe{product: "bitwarden", summary: "Bitwarden (self-hosted)", resolver: ResolverRef{Type: "github", ID: "bitwarden/server"}},
+	// CQL native protocol v4: STARTUP, optional SASL PLAIN, then
+	// system.local release_version. Verified live against cassandra:3.11
+	// (3.11.19) and cassandra:5.0 with PasswordAuthenticator (5.0.9).
+	cassandraProbe{},
 	// Legacy, EOL CentOS Linux (5/6/7/8) via /etc/redhat-release — real
 	// fleets still run these even though the product is dead. Not part of
 	// osReleaseFamilyProbe: confirmed live that centos:5 and :6 predate
@@ -97,6 +101,9 @@ var builtin = []Probe{
 	// is shared, see mariadb.go for exactly what differs (mysql.go).
 	mariadbProbe{},
 	mattermostProbe{},
+	// "version" over the text protocol. Verified live against memcached:1.6
+	// (1.6.45).
+	memcachedProbe{},
 	mongodbProbe{},
 	mysqlProbe{},
 	// Captured via vmactions/netbsd-vm (see uname.go): `uname -sr` -> "NetBSD 11.0".
@@ -156,6 +163,9 @@ var builtin = []Probe{
 	// GET /api2/json/version, authenticated with an API token. Verified
 	// live against a real Proxmox VE 9.2.2 host.
 	proxmoxProbe{},
+	// GET /api/overview on the management plugin, Basic auth. Verified live
+	// against rabbitmq:4-management (4.3.6).
+	rabbitmqProbe{},
 	redisProbe{},
 	// alrdockerhub/redos:7.3.1 (real RED OS content: HOME_URL/BUG_REPORT_URL
 	// point at red-soft.ru): ID="redos", VERSION_ID="7.3.1".

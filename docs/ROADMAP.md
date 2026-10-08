@@ -1197,6 +1197,13 @@ Not dates. Order of work, and what each step unblocks.
   be applied. Validated against `oscap oval eval` (Astra 1.7 205/205 CVEs,
   1.8 48/48, RED OS 7.3 53/53, 8.0 60/60). See `docs/DECISIONS.md` D46.
 
+- `memcached`, `rabbitmq`, `cassandra` probes — memcached's text
+  `version` command; RabbitMQ's management API `/api/overview` (Basic);
+  Cassandra over the CQL native protocol v4 with optional SASL PLAIN.
+  Each verified live (memcached 1.6.45; RabbitMQ 4.3.6 and 3.8.34;
+  Cassandra 3.11.19, and 5.0.9 with PasswordAuthenticator). See
+  `docs/DECISIONS.md` D51.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1233,13 +1240,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   sees the host's packages, not what's inside a container, so such a
   server only gets the product-level (NVD/BDU) match above. Nothing more
   is planned until a container-aware source is worth it
-- `rabbitmq` probe — management plugin's `GET /api/overview`
-  (`rabbitmq_version`), `kind: basic`; endoflife: `rabbitmq`
-- `memcached` probe — text protocol `version` command, no auth;
-  endoflife: `memcached`
-- `cassandra` probe — CQL native protocol, `system.local`
-  `release_version`; `kind: password` when the cluster requires auth;
-  endoflife: `apache-cassandra`
 - `weblate` probe — version from its API or about page; no endoflife.date
   page (404), so a GitHub resolver
 - `nginx` behind a rewritten `Server` header (headers-more's
