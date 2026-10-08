@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/EpicMorg/enodia/internal/probe"
@@ -288,5 +289,94 @@ targets:
 
 	if _, err := c.Build(nil); err == nil {
 		t.Fatal("expected an error for an unknown credential kind")
+	}
+}
+
+// kind: password is what an SQL/Redis/SSH probe reads; an HTTP probe such
+// as routeros only applies kind: basic, so a password credential there
+// used to go out as no Authorization header at all.
+func TestCredentialsKindNotAcceptedByProductErrors(t *testing.T) {
+	dir := t.TempDir()
+	c := loadConfig(t, dir, `
+schemaVersion: 1
+credentials:
+  router:
+    kind: password
+    username: enodia
+    password: x
+targets:
+  - id: router
+    product: routeros
+    address: https://router.example.com
+    credentials: router
+`)
+
+	_, err := c.Build(nil)
+	if !errors.Is(err, ErrCredentialKind) {
+		t.Fatalf("got %v, want ErrCredentialKind", err)
+	}
+	for _, want := range []string{`"router"`, "password", "routeros", "basic"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not mention %s", err, want)
+		}
+	}
+}
+
+func TestCredentialsKindAcceptedByProduct(t *testing.T) {
+	dir := t.TempDir()
+	c := loadConfig(t, dir, `
+schemaVersion: 1
+credentials:
+  router:
+    kind: basic
+    username: enodia
+    password: x
+  db:
+    kind: password
+    username: enodia
+    password: x
+  host:
+    kind: ssh-key
+    username: enodia
+    private_key_file: /dev/null
+targets:
+  - id: router
+    product: routeros
+    address: https://router.example.com
+    credentials: router
+  - id: db
+    product: postgresql
+    address: db.example.com:5432
+    credentials: db
+  - id: host
+    product: debian
+    address: host.example.com
+    credentials: host
+`)
+
+	if _, err := c.Build(nil); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+}
+
+// An unknown product is collect's to report per target, not a reason to
+// refuse the whole config here.
+func TestCredentialsKindUnknownProductLeftToCollect(t *testing.T) {
+	dir := t.TempDir()
+	c := loadConfig(t, dir, `
+schemaVersion: 1
+credentials:
+  tok:
+    kind: bearer
+    value: x
+targets:
+  - id: x
+    product: no-such-product
+    address: https://x.example.com
+    credentials: tok
+`)
+
+	if _, err := c.Build(nil); err != nil {
+		t.Fatalf("Build: %v", err)
 	}
 }

@@ -6,6 +6,16 @@ Notable changes to enodia, release by release. Tags follow this project's own
 change, not to sidestep a real version bump. Full reasoning behind any change
 below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
+## [Unreleased]
+
+### Fixed
+
+- A credential of a kind its product never sends is now a config error
+  instead of being dropped silently. `kind: password` on an HTTP product
+  (RouterOS, Harbor, ...) used to send the request with no `Authorization`
+  header at all; `config validate` now names the kinds the product accepts
+  — for a web login that is `kind: basic` (D48).
+
 ## [2.1.1+0] — 2026-10-08
 
 ### Fixed

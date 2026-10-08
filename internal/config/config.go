@@ -294,6 +294,9 @@ func (c *Config) Build(warn func(string)) ([]probe.Target, error) {
 		if err != nil {
 			return nil, fmt.Errorf("target %q: %w", ts.ID, err)
 		}
+		if err := checkCredentialKind(ts, creds); err != nil {
+			return nil, fmt.Errorf("target %q: %w", ts.ID, err)
+		}
 
 		tt := timeout
 		if ts.Timeout > 0 {
@@ -335,4 +338,35 @@ func (c *Config) Build(warn func(string)) ([]probe.Target, error) {
 		})
 	}
 	return out, nil
+}
+
+// checkCredentialKind rejects a credential its target's probe would never
+// send: each probe reads only the kinds its Meta().Auth lists (an HTTP
+// probe applies basic/bearer/token-header, an SSH one password/ssh-key), and
+// any other kind used to be dropped without a word. An unknown product is
+// left alone here — collect reports that per target, as it always has.
+func checkCredentialKind(ts TargetSpec, creds probe.Credentials) error {
+	if ts.Credentials == "" || creds.Kind == probe.AuthNone {
+		return nil
+	}
+	p, err := probe.Get(ts.Product)
+	if err != nil {
+		return nil
+	}
+	meta := p.Meta()
+	if meta.Auth.Accepts(creds.Kind) {
+		return nil
+	}
+	accepted := make([]string, 0, len(meta.Auth.Kinds))
+	for _, k := range meta.Auth.Kinds {
+		if k != probe.AuthNone {
+			accepted = append(accepted, string(k))
+		}
+	}
+	if len(accepted) == 0 {
+		return fmt.Errorf("%w: credential %q is kind %s, but %s takes no credentials",
+			ErrCredentialKind, ts.Credentials, creds.Kind, meta.Product)
+	}
+	return fmt.Errorf("%w: credential %q is kind %s, but %s accepts %s",
+		ErrCredentialKind, ts.Credentials, creds.Kind, meta.Product, strings.Join(accepted, ", "))
 }

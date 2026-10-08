@@ -2610,3 +2610,31 @@ mariadb:12 images: `11.4.13-MariaDB-ubu2404`, `12.3.3-MariaDB-ubu2404`.
 `mariadbServerVersion` now decides for both probes: a `5.5.5-` prefix
 (MariaDB 10.x, unmasked), or `-MariaDB` anywhere in the version (11.0+, as
 is). `mysql` rejects both, and `mariadb` accepts both.
+
+## D48 — A credential kind the product doesn't read is a config error
+
+**Found on a real fleet.** `kind: password` with a username/password on
+`routeros` and `harbor` sent no `Authorization` header at all: the HTTP
+layer (`applyCredentials`) only knows `basic`, `bearer` and
+`token-header`, and silently ignores every other kind. RouterOS answered
+401 and the target failed with an auth error that pointed nowhere near the
+cause. `kind: basic` worked. `password` is the kind for SQL/Redis AUTH and
+SSH, which is why it looked right.
+
+Every probe already declared the kinds it reads in `Meta().Auth.Kinds`, and
+`AuthSpec.Accepts` existed to check them — but nothing called it outside
+probe tests. `Config.Build` now does, per target. A mismatch fails the
+build with `ErrCredentialKind`, naming the credential, its kind, the
+product and the kinds it accepts, so `config validate` catches it offline
+and `check`/`collect` refuse to start rather than probe with credentials
+that will never be sent.
+
+**A hard error, not a warning.** A credential that is never sent is never
+what the operator meant; a warning would scroll past in a cron log while the
+target keeps failing (or, for a probe where auth is optional, keeps
+silently reporting an anonymous view). Unknown credential kinds were already
+a hard error in the same place, and this is the same class of mistake.
+
+An unknown `product` is still left to `collect`, which reports it per target
+as before: the check only applies when the product resolves.
+

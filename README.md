@@ -156,6 +156,14 @@ body. `kind: ssh-key` and `kind: password` credentials cover both auth shapes;
 host key verification reuses the same `pin_sha256`/`insecure` fields TLS
 targets already have.
 
+**A credential's `kind` has to match its transport.** HTTP products read
+`basic`, `bearer` or `token-header`; SSH probes read `ssh-key` or
+`password`; Redis, PostgreSQL and the other wire-protocol probes read
+`password`. A user/password pair for a web UI or REST API (RouterOS,
+Harbor, Jenkins, a BMC) is therefore `kind: basic`, not `kind: password`.
+`config validate` and every run reject a mismatch and name the kinds the
+product does accept (D48).
+
 ## Views
 
 `check` and `export` both render one of four focuses, picked with `--view`
