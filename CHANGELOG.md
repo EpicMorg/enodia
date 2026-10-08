@@ -8,6 +8,13 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ## [Unreleased]
 
+### Changed
+
+- `teamcity` works without credentials: with none configured it reads the
+  anonymous `/app/rest/server/version`, open on every TeamCity checked from
+  2017.2 to 2026.1 even with guest login off. A token still selects
+  `/app/rest/server` as before (D49).
+
 ### Fixed
 
 - A credential of a kind its product never sends is now a config error

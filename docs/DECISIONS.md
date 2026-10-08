@@ -2638,3 +2638,30 @@ a hard error in the same place, and this is the same class of mistake.
 An unknown `product` is still left to `collect`, which reports it per target
 as before: the check only applies when the product resolves.
 
+## D49 — `teamcity` reads the anonymous `/app/rest/server/version` when it has no credentials
+
+**Found by the operator, not the docs.** The probe was built on
+`/app/rest/server`, which is never anonymous (a fresh server answers 401
+with Basic and Bearer challenges), so every TeamCity target needed a token.
+TeamCity also serves `/app/rest/server/version` to anyone, as plain text:
+`2026.1.1 (build 222577)` — the same string `/app/rest/server` carries in
+its `version` field.
+
+**Checked across versions, with guest login off.** Fresh
+jetbrains/teamcity-server containers 2017.2.4, 2018.2.4, 2019.2.4,
+2020.2.4, 2024.03 and 2026.1.1, first-start wizard completed with the
+internal database and no administrator created: `/app/rest/server/version`
+(and the build-number-only `/app/rest/version`) answered 200 on all six,
+while `/app/rest/server` and the guest-only `/guestAuth/app/rest/projects`
+were refused — so this is not guest access. Also confirmed on seven
+production instances (2024.03 to 2026.1.3) with no credentials.
+
+**Which endpoint when.** No credentials → `/app/rest/server/version`. A
+token configured → `/app/rest/server` as before: the operator asked for an
+authenticated read, it carries `internalId` too, and a wrong token stays a
+visible auth error instead of being papered over by the anonymous path.
+
+**Reply validated, not trusted.** While starting up, TeamCity answers every
+path — this one included — with a 200 HTML maintenance page. The reply must
+match `YYYY.N[.N] (build N)` in full or the probe reports `ErrUnparseable`.
+
