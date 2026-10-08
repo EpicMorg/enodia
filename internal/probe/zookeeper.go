@@ -55,8 +55,10 @@ func (zookeeperProbe) Probe(ctx context.Context, t Target) (Observation, error) 
 	if _, err := conn.Write([]byte("srvr")); err != nil {
 		return obs, tcpErr(ctx, fmt.Errorf("%w: sending srvr: %w", ErrUnreachable, err))
 	}
+	// The server closes right after replying; a reset after a full reply
+	// is that close, not a failure.
 	reply, err := io.ReadAll(io.LimitReader(conn, zookeeperMaxReply))
-	if err != nil {
+	if err != nil && len(reply) == 0 {
 		return obs, tcpErr(ctx, fmt.Errorf("%w: reading srvr reply: %w", ErrUnreachable, err))
 	}
 	if err := parseZookeeperSrvr(string(reply), &obs); err != nil {
