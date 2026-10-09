@@ -19,10 +19,20 @@ import (
 // trimmed string is nothing but digits and dots.
 var cleanVersionPattern = regexp.MustCompile(`^\d+(?:\.\d+)*$`)
 
+// minioTimestampPattern is a MinIO release named by its UTC timestamp, the
+// way NVD and BDU both write MinIO's bounds ("2025-10-15t17-29-55z", in
+// either case). It folds into the same dotted "2025.10.15.17.29.55" that
+// version.Clean makes of the probed "RELEASE.2025-10-15T17-29-55Z". The T
+// and Z keep a plain date bound ("2015-04-01") out of it.
+var minioTimestampPattern = regexp.MustCompile(`^(?i)(\d{4})-(\d{2})-(\d{2})t(\d{2})-(\d{2})-(\d{2})z$`)
+
 // cleanVersionParts returns version.Parts(s) only when s, trimmed, is
 // wholly a dotted-number version with nothing else attached.
 func cleanVersionParts(s string) ([]int, bool) {
 	s = strings.TrimSpace(s)
+	if m := minioTimestampPattern.FindStringSubmatch(s); m != nil {
+		s = strings.Join(m[1:], ".")
+	}
 	if !cleanVersionPattern.MatchString(s) {
 		return nil, false
 	}

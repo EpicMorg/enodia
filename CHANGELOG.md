@@ -62,6 +62,12 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
   with BDU and NVD; where MariaDB's table knows a CVE, its verdict
   replaces their open-ended ranges, so the latest release of a maintained
   series is no longer flagged for CVEs fixed only in newer series (D50).
+- CVEs for 24 more products: cassandra, code-server, domainmod, doxygen,
+  ghost, greenbone, home-assistant, kafka, memcached, minio, netbox,
+  netdata, onlyoffice, openhab, pfsense, phpipam, qbittorrent, rabbitmq,
+  sentry, splunk, uptime-kuma, wapt, weblate, zookeeper. MinIO's
+  timestamp versions compare; pfSense CE and Splunk Enterprise skip
+  ranges for other editions; Confluent Kafka builds get no lookup (D68).
 - `PRIVACY.md`: what enodia connects to (your targets, endoflife.date,
   the GitHub API — product and repository names only) and what it stores
   (only your own files and a local cache). No telemetry.

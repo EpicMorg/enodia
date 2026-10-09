@@ -3,6 +3,7 @@
 package cve
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/EpicMorg/enodia/internal/version"
@@ -31,6 +32,18 @@ import (
 //     "Nextcloud Enterprise Server", "MongoDB Enterprise Server"
 //     products); each probe reports its server's own edition in the same
 //     Extra["enterprise"] key.
+//   - splunk: NVD splits splunk:splunk by sw_edition into "enterprise"
+//     and the long-retired "light"; the probe's Extra["productType"] is
+//     splunkd's own name for which one it is ("enterprise", "lite").
+//   - pfsense: NVD's netgate:pfsense mixes Community Edition (2.x) and
+//     Plus (calendar-numbered, "< 22.05") ranges under sw_edition; the
+//     probe reports CE only, so a Plus range never applies.
+//   - wapt: the probe reports WAPT's own edition, already in NVD's
+//     "community"/"enterprise" words.
+//   - kafka: a Confluent Platform build ("7.6.1-ccs") is numbered on
+//     Confluent's own scheme, which would read as far newer than every
+//     Apache Kafka bound — and the Kafka release it carries is known only
+//     to major.minor, not enough for a patch-level fix. No lookup.
 //
 // Every other product is its own CVE product, with no edition — grafana
 // included, whose CVE data splits by edition too but whose probed
@@ -55,10 +68,33 @@ func Subject(product, rawVersion string, extra map[string]string) (cveProduct, c
 		return product, version.Clean(rawVersion), gitlabEdition(rawVersion, extra), true
 	case "vault", "nextcloud", "mongodb":
 		return product, version.Clean(rawVersion), editionFromExtra(extra), true
+	case "splunk":
+		return product, version.Clean(rawVersion), splunkEditions[extra["productType"]], true
+	case "pfsense":
+		return product, version.Clean(rawVersion), "community", true
+	case "wapt":
+		e := extra["edition"]
+		if e != "community" && e != "enterprise" {
+			e = ""
+		}
+		return product, version.Clean(rawVersion), e, true
+	case "kafka":
+		if confluentBuild.MatchString(rawVersion) {
+			return "", "", "", false
+		}
+		return product, version.Clean(rawVersion), "", true
 	default:
 		return product, version.Clean(rawVersion), "", true
 	}
 }
+
+// splunkEditions maps splunkd's server/info product_type onto NVD's
+// sw_edition words for splunk:splunk.
+var splunkEditions = map[string]string{"enterprise": "enterprise", "lite": "light"}
+
+// confluentBuild is a Confluent Platform Kafka version, the same shape the
+// kafka probe recognises.
+var confluentBuild = regexp.MustCompile(`^\d+\.\d+\.\d+-(?:ccs|ce)$`)
 
 // editionFromExtra reads the Extra["enterprise"] fact the gitlab, vault,
 // nextcloud and mongodb probes all report from their own API (see each

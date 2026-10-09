@@ -29,6 +29,14 @@ func TestSubject(t *testing.T) {
 		{"nextcloud community", "nextcloud", "34.0.3", map[string]string{"enterprise": "false"}, "nextcloud", "34.0.3", "community", true},
 		{"mongodb edition unknown (older inventory)", "mongodb", "7.0.40", nil, "mongodb", "7.0.40", "", true},
 		{"grafana reports no edition", "grafana", "13.2.1", map[string]string{"enterprise": "true"}, "grafana", "13.2.1", "", true},
+		{"splunk enterprise", "splunk", "10.6.0", map[string]string{"productType": "enterprise"}, "splunk", "10.6.0", "enterprise", true},
+		{"splunk light", "splunk", "6.6.12", map[string]string{"productType": "lite"}, "splunk", "6.6.12", "light", true},
+		{"splunk unknown type", "splunk", "10.6.0", nil, "splunk", "10.6.0", "", true},
+		{"pfsense is community", "pfsense", "2.8.1-RELEASE", nil, "pfsense", "2.8.1", "community", true},
+		{"wapt edition", "wapt", "2.6.0.17421", map[string]string{"edition": "enterprise"}, "wapt", "2.6.0.17421", "enterprise", true},
+		{"wapt odd edition is unknown", "wapt", "2.6.0.17421", map[string]string{"edition": "discovery"}, "wapt", "2.6.0.17421", "", true},
+		{"apache kafka", "kafka", "4.1.1", nil, "kafka", "4.1.1", "", true},
+		{"confluent kafka gets no lookup", "kafka", "7.6.1-ccs", map[string]string{"apacheKafka": "3.6"}, "", "", "", false},
 		{"everything else is identity", "jira", "10.3.2", nil, "jira", "10.3.2", "", true},
 	}
 	for _, c := range cases {

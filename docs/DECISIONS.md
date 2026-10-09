@@ -3130,3 +3130,40 @@ web port. Resolver: endoflife `splunk`. A build newer than the calendar
 (10.6, when endoflife.date listed up to 10.4) reads as `cycle_unmatched`
 until the calendar catches up.
 
+
+## D68 — CVE mapping for the newer probes
+
+The probes added since D33 had no CVE products. Each candidate CPE and
+BDU name was checked against the full local exports (NVD 2002-2026, BDU
+`vulxml.zip`), with its version shape, before going into `productmap.go`:
+cassandra, code-server, domainmod, doxygen, ghost, greenbone (gsad's
+`greenbone_security_assistant`, not the `openvas_manager` daemon),
+home-assistant, kafka, memcached, minio, netbox, netdata, onlyoffice
+(`document_server`; `onlyoffice:server` is the separate Community
+Server), openhab, pfsense, phpipam, qbittorrent, rabbitmq (Pivotal,
+VMware and Broadcom CPEs), sentry, splunk, uptime-kuma (three CPE
+spellings), wapt, weblate, zookeeper.
+
+Left out: posthog (NVD bounds are commit hashes), euro-office (a fork
+with no entries of its own), libretranslate and torrserver (none),
+BDU's "LenelS2 NetBox" (a different product) and BDU's "Sentry" (the SDK).
+
+Four needed more than a table row:
+
+- **MinIO** bounds are release timestamps in both sources
+  ("2025-10-15t17-29-55z", either case). `cleanVersionParts` folds that
+  exact shape into the same dotted form `version.Clean` makes of a probed
+  `RELEASE.…Z`; a plain date bound still doesn't parse.
+- **pfSense**: `netgate:pfsense` holds Plus ranges ("< 22.05", sw_edition
+  `plus`) beside CE ones. The probe reports CE only, so Subject gives the
+  edition `community` and a Plus range never applies.
+- **Splunk**: `splunk:splunk` splits `enterprise` from the retired
+  `light`; splunkd's `product_type` ("enterprise", "lite") picks it.
+  Splunk Cloud has its own CPE and isn't mapped.
+- **Kafka**: a Confluent Platform build ("7.6.1-ccs") gets no lookup. Its
+  own numbering would compare as newer than every Apache bound, and the
+  Apache release it carries is known only to major.minor.
+
+WAPT's own edition ("community"/"enterprise") is passed through as is.
+Checked live against the full data: MinIO's last community release
+matches 8 findings, pfSense CE 2.8.1 none, Splunk 10.6.0 none and 9.4.1 134.
