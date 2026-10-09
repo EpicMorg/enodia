@@ -3028,3 +3028,31 @@ pre-release marker (`M2`, `b7`, `rc1` after a digit) or a separated word
 (`-alpha`, `-beta.1`, `-rc`, `-pre`). Letter patch releases ("1.1.1b")
 don't match: the marker must carry a number.
 
+## D63 — `kafka` over SSH from the broker's own jar; JMX not reimplemented
+
+D21 left Kafka waiting on JMX: the protocol's only anonymous exchange,
+ApiVersions, carries API version ranges and no software version. JMX does
+have it (`kafka.server:type=app-info`), but JMX is Java RMI over Java
+serialization — a client for it is a JVM protocol stack, not something to
+reimplement in Go for one string, and the port is off unless the operator
+turns it on. Jolokia or a Prometheus JMX exporter would be HTTP, but
+neither is there by default.
+
+So `kafka` runs a command over SSH, like `minio` (D56), with the same
+`options.container`. Every distribution ships `kafka_<scala>-<version>.jar`
+in its libs directory — apache/kafka: `/opt/kafka/libs/kafka_2.13-4.3.1.jar`;
+confluentinc/cp-kafka: `/usr/share/java/kafka/kafka_2.13-8.3.2-ccs.jar` —
+so the command lists that under `$KAFKA_HOME` and the usual install paths
+first: no JVM start. `kafka-topics(.sh) --version` (a JVM start, a few
+seconds; "4.3.1", "8.3.2-ccs") is the fallback. Both outputs are the
+fixtures; verified live through SSH into a host running Kafka in a Podman
+container.
+
+**Confluent Platform** numbers its builds on its own line: since 7.0, CP
+x.y ships Apache Kafka (x-4).y (7.6 → 3.6, 8.3 → 4.3); before that it
+didn't (6.0 was 2.6), and CP patch numbers are independent. endoflife.date
+has no Confluent calendar, and mapping the patch would invent a version. A
+`-ccs`/`-ce` build is reported as is with edition `confluent`, and for 7.0+
+the Apache Kafka line it carries goes into extra (`apacheKafka`: "4.3").
+Resolver: endoflife `apache-kafka`.
+

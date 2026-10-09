@@ -100,6 +100,9 @@ var builtin = []Probe{
 	// rolling-release snapshot, not a discrete version; no endoflife.date
 	// calendar exists for the same reason (confirmed 404).
 	osReleaseFamilyProbe{product: "kali-linux", summary: "Kali Linux", match: osReleaseIDEquals("kali")},
+	// The broker's own kafka_*.jar over SSH (optionally in a container).
+	// Verified against apache/kafka (4.3.1) and confluentinc/cp-kafka (8.3.2-ccs).
+	kafkaProbe{},
 	keycloakProbe{},
 	kibanaProbe{},
 	zouFamilyProbe{product: "kitsu", summary: "Kitsu (CG-Wire / Zou frontend)", resolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"}},

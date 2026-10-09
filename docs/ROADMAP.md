@@ -1257,6 +1257,11 @@ Not dates. Order of work, and what each step unblocks.
   anonymous REST root. The `github` resolver skips tags named as
   pre-releases (openHAB's "5.3.0.M2"). See `docs/DECISIONS.md` D62.
 
+- `kafka` probe — the broker's own `kafka_<scala>-<version>.jar` over
+  SSH (optionally in a container), `kafka-topics --version` as fallback;
+  Confluent builds reported on their own line. Unblocks what D21 left
+  waiting on JMX. See `docs/DECISIONS.md` D63.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1302,7 +1307,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   `server_tokens off` + `more_set_headers`: the 404 body is a bare
   `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
   there. Still unchecked against `server_tokens on` with a rewritten header
-- Kafka stays blocked on JMX — see Later and D21
 
 ## Later
 
@@ -1311,13 +1315,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   D18 (proprietary-product coverage, distro-package epoch mismatches).
   CVE correlation itself is no longer blocked: see Done above and
   DECISIONS.md D30 for the БДУ ФСТЭК-based implementation
-- `kafka` probe — the wire protocol's entire anonymous surface
-  (`ApiVersionsRequest`) is a list of per-API version-number ranges, no
-  software version string anywhere — confirmed live against a real
-  broker. Blocked pending JMX support (a materially different transport:
-  RMI, its own port, off by default), a new kind of probe this project
-  doesn't have yet — see DECISIONS.md D21 for what was tried and why an
-  ApiVersions-based guess was rejected, not just deferred
 - `redmine` probe — nowhere anonymous discloses the version at all
   (confirmed live: not the homepage, not headers, not the Atom feeds'
   own `<generator>` tag, which — unlike `wordpress`'s — carries no

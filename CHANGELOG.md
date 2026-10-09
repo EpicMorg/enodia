@@ -10,6 +10,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `kafka` probe: the broker's version over SSH from its own jar, optionally
+  in a container; Confluent Platform builds are reported as `confluent`
+  with the Apache Kafka line they carry (D63).
 - `home-assistant` probe: `/api/config` with a long-lived access token,
   `kind: bearer` (D62).
 - `openhab` probe: the anonymous REST root `/rest/` (D62).
