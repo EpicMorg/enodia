@@ -28,7 +28,7 @@ var (
 	// reMinIORelease is MinIO's release naming, a UTC timestamp:
 	// "RELEASE.2025-10-15T17-29-55Z" (its GitHub tags and `minio
 	// --version`), also with a builder's own marker after RELEASE, e.g.
-	// "RELEASE_SABER.2025-03-12T18-04-18Z" from a real in-house build.
+	// "RELEASE_INHOUSE.2025-03-12T18-04-18Z" from a real in-house build.
 	// Folded into a dotted, comparable "2025.10.15.17.29.55"; without it
 	// the only numeric spine Core found was the year.
 	reMinIORelease = regexp.MustCompile(`^RELEASE(?:_[A-Za-z0-9]+)?\.(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})Z`)

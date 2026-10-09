@@ -2862,8 +2862,9 @@ were already SSH targets. So `minio` runs `minio --version` (by name, then
 `/usr/local/bin/minio`) over SSH like `freeradius` (D45), with the same
 `options.container`/`container_runtime`, now a shared helper
 (`containerCommand`). Live, an in-house build said "minio version
-RELEASE_SABER.2025-03-12T18-04-18Z (commit-id=64d5bb49...)", then
-"Runtime: go1.24.4 linux/amd64". The builder's marker (SABER), commit and
+RELEASE_INHOUSE.2025-03-12T18-04-18Z (commit-id=01234567...)", then
+"Runtime: go1.24.4 linux/amd64" (the builder's own marker and commit are
+replaced by placeholders here and in the fixture). The marker, commit and
 Go runtime go into extra.
 
 **Comparable versions.** MinIO names releases by UTC timestamp,

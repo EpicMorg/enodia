@@ -21,11 +21,12 @@ func minioTarget(addr, fp string, options map[string]string) Target {
 	}
 }
 
-// minio_RELEASE_SABER.2025-03-12_version.txt is `minio --version` from a
-// real in-house MinIO build running as a systemd service.
+// minio_RELEASE_INHOUSE.2025-03-12_version.txt is `minio --version` from a
+// real in-house MinIO build running as a systemd service, its builder
+// marker and commit-id replaced by placeholders.
 func loadMinIOFixture(t *testing.T) string {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("testdata", "minio_RELEASE_SABER.2025-03-12_version.txt"))
+	raw, err := os.ReadFile(filepath.Join("testdata", "minio_RELEASE_INHOUSE.2025-03-12_version.txt"))
 	if err != nil {
 		t.Fatalf("fixture: %v", err)
 	}
@@ -38,8 +39,8 @@ func TestMinIOProbeOnHost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Probe: %v", err)
 	}
-	if obs.Version != "RELEASE_SABER.2025-03-12T18-04-18Z" || obs.Extra["build"] != "SABER" ||
-		obs.Extra["commit"] != "64d5bb494c0d917bce7bf2dd3419c3f9e2f30a6d" || obs.Extra["runtime"] != "go1.24.4" {
+	if obs.Version != "RELEASE_INHOUSE.2025-03-12T18-04-18Z" || obs.Extra["build"] != "INHOUSE" ||
+		obs.Extra["commit"] != "0123456789abcdef0123456789abcdef01234567" || obs.Extra["runtime"] != "go1.24.4" {
 		t.Fatalf("got %q %+v", obs.Version, obs.Extra)
 	}
 }

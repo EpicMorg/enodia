@@ -88,7 +88,7 @@ func TestJellyfinProbeMissingVersionField(t *testing.T) {
 // Id, LocalAddress), even if a server sends them.
 func TestJellyfinProbeNeverExposesInstanceIdentity(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"Version":"10.11.11","ProductName":"Jellyfin Server","ServerName":"S3D","Id":"e9a58f0d3b5a42d2988fc67a839eef43","LocalAddress":"http://127.0.0.1:8096"}`))
+		_, _ = w.Write([]byte(`{"Version":"10.11.11","ProductName":"Jellyfin Server","ServerName":"EXAMPLE","Id":"e9a58f0d3b5a42d2988fc67a839eef43","LocalAddress":"http://127.0.0.1:8096"}`))
 	}))
 	defer srv.Close()
 

@@ -65,8 +65,8 @@ func TestMattermostProbeNeverExposesInstanceIdentity(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{
 			"Version": "11.7.2",
-			"SiteName": "Saber Mattermost",
-			"SupportEmail": "noreply@saber.games",
+			"SiteName": "Example Mattermost",
+			"SupportEmail": "noreply@example.com",
 			"DiagnosticId": "ue9rabdqnt8imxo9jrnx1dktye",
 			"TelemetryId": "ue9rabdqnt8imxo9jrnx1dktye",
 			"AsymmetricSigningPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE..."

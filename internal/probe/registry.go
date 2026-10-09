@@ -111,7 +111,7 @@ var builtin = []Probe{
 	// (1.6.45).
 	memcachedProbe{},
 	// `minio --version` over SSH (optionally in a container). Verified live
-	// against an in-house build, RELEASE_SABER.2025-03-12T18-04-18Z.
+	// against an in-house build, RELEASE_INHOUSE.2025-03-12T18-04-18Z.
 	minioProbe{},
 	mongodbProbe{},
 	mysqlProbe{},

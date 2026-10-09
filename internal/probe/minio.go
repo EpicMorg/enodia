@@ -17,8 +17,8 @@ import (
 const minioVersionCommand = "minio --version 2>&1 || /usr/local/bin/minio --version 2>&1 || true"
 
 // minioVersionPattern reads `minio --version`'s first line, confirmed on
-// a real in-house build: "minio version RELEASE_SABER.2025-03-12T18-04-18Z
-// (commit-id=64d5bb494c0d917bce7bf2dd3419c3f9e2f30a6d)"; upstream builds
+// a real in-house build: "minio version RELEASE_INHOUSE.2025-03-12T18-04-18Z
+// (commit-id=0123456789abcdef0123456789abcdef01234567)"; upstream builds
 // say RELEASE.<timestamp>. version.Clean folds either into a comparable
 // "2025.03.12.18.04.18".
 var (

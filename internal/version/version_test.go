@@ -23,8 +23,8 @@ func TestClean(t *testing.T) {
 		"6.0 EP 25":             "6.0",     // a different, unhandled VMware shorthand — unaffected either way
 		"6.5 ESXi650-202403001": "6.5",     // ditto
 		// MinIO: its GitHub tag, and a real in-house build's own name.
-		"RELEASE.2025-10-15T17-29-55Z":       "2025.10.15.17.29.55",
-		"RELEASE_SABER.2025-03-12T18-04-18Z": "2025.03.12.18.04.18",
+		"RELEASE.2025-10-15T17-29-55Z":         "2025.10.15.17.29.55",
+		"RELEASE_INHOUSE.2025-03-12T18-04-18Z": "2025.03.12.18.04.18",
 	}
 	for in, want := range cases {
 		if got := Clean(in); got != want {

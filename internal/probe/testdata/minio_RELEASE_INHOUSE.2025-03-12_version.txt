@@ -1,4 +1,4 @@
-minio version RELEASE_SABER.2025-03-12T18-04-18Z (commit-id=64d5bb494c0d917bce7bf2dd3419c3f9e2f30a6d)
+minio version RELEASE_INHOUSE.2025-03-12T18-04-18Z (commit-id=0123456789abcdef0123456789abcdef01234567)
 Runtime: go1.24.4 linux/amd64
 License: GNU AGPLv3 - https://www.gnu.org/licenses/agpl-3.0.html
 Copyright: 2015-2025 MinIO, Inc.
