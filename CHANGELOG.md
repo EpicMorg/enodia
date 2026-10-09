@@ -94,6 +94,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Fixed
 
+- `jenkins` CVEs: a fixed LTS release is no longer flagged by the weekly
+  range of the same fix (LTS 2.568.3 by "before 2.580"). Weekly and LTS
+  ranges now apply only to their own release line (D70).
 - The `github` resolver no longer fails on repositories whose releases
   list is over 1MiB (minio/minio's is 3.4MB): it now reads up to 8MiB
   (D56).

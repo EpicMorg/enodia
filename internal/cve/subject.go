@@ -40,6 +40,10 @@ import (
 //     probe reports CE only, so a Plus range never applies.
 //   - wapt: the probe reports WAPT's own edition, already in NVD's
 //     "community"/"enterprise" words.
+//   - jenkins: weekly ("2.580") and LTS ("2.568.3") releases get the same
+//     fixes under different numbers, and NVD and BDU write a range for
+//     each; the version's own shape says which line it is (see
+//     findingEdition).
 //   - kafka: a Confluent Platform build ("7.6.1-ccs") is numbered on
 //     Confluent's own scheme, which would read as far newer than every
 //     Apache Kafka bound — and the Kafka release it carries is known only
@@ -78,6 +82,10 @@ func Subject(product, rawVersion string, extra map[string]string) (cveProduct, c
 			e = ""
 		}
 		return product, version.Clean(rawVersion), e, true
+	case "jenkins":
+		v := version.Clean(rawVersion)
+		parts, _ := cleanVersionParts(v)
+		return product, v, jenkinsChannel(parts), true
 	case "kafka":
 		if confluentBuild.MatchString(rawVersion) {
 			return "", "", "", false

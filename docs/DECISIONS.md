@@ -3211,3 +3211,28 @@ release of each maintained branch (Jira 10.3.26 and 11.3.12, Confluence
 three stray BDU findings on Jira are gone. Older releases gain many: Jira
 10.3.12 goes from 4 CVEs (NVD and BDU) to 119, almost all of them
 dependencies Atlassian fixed in later 10.3 releases.
+
+## D70 — Jenkins: weekly and LTS ranges kept apart; no update-center source
+
+Jenkins ships the same security fix twice under different numbers: weekly
+"2.580" and LTS "2.568.3". NVD writes one range for each, marking the LTS
+one `sw_edition: lts` and leaving the weekly one unmarked ("-"). BDU
+writes both with no marking at all. Lookup applied every range to every
+version, so a fixed LTS was flagged by the weekly bound: live, LTS 2.568.3
+got 14 CVEs from ranges like "before 2.580". The release line is in the
+version's own shape (weekly has two parts, LTS three), so Subject reports
+`weekly` or `lts` as the edition, and for jenkins a finding the source
+left unmarked takes its edition from the shape of its bound
+(`findingEdition`). After that, LTS 2.568.3 and 2.580.1 and weekly 2.585
+have no findings, and LTS 2.568.2 has the ten CVEs of the 2026-09-02
+advisory.
+
+**Jenkins' own data wasn't added as a source.** The update center's
+`warnings` (https://updates.jenkins.io/current/update-center.actual.json,
+55 core entries) carry a regex per release line and an advisory link,
+but no CVE ids. Without them they can't replace a BDU/NVD verdict the way
+MariaDB's and Atlassian's do (D50, D69). Added next to them, they would
+count the same bugs twice. Used instead as the check: for 246 versions
+(weekly 2.400–2.585, fifteen LTS lines .1–.4), "some core warning
+matches" and "NVD+BDU find something" agree on all but 2.408 and 2.465,
+two numbers Jenkins never released.

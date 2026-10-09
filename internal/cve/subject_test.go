@@ -35,6 +35,8 @@ func TestSubject(t *testing.T) {
 		{"pfsense is community", "pfsense", "2.8.1-RELEASE", nil, "pfsense", "2.8.1", "community", true},
 		{"wapt edition", "wapt", "2.6.0.17421", map[string]string{"edition": "enterprise"}, "wapt", "2.6.0.17421", "enterprise", true},
 		{"wapt odd edition is unknown", "wapt", "2.6.0.17421", map[string]string{"edition": "discovery"}, "wapt", "2.6.0.17421", "", true},
+		{"jenkins weekly", "jenkins", "2.580", nil, "jenkins", "2.580", "weekly", true},
+		{"jenkins lts", "jenkins", "2.568.3", nil, "jenkins", "2.568.3", "lts", true},
 		{"apache kafka", "kafka", "4.1.1", nil, "kafka", "4.1.1", "", true},
 		{"confluent kafka gets no lookup", "kafka", "7.6.1-ccs", map[string]string{"apacheKafka": "3.6"}, "", "", "", false},
 		{"everything else is identity", "jira", "10.3.2", nil, "jira", "10.3.2", "", true},

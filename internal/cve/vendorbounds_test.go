@@ -83,3 +83,40 @@ func TestCleanVersionPartsMinIOTimestamp(t *testing.T) {
 		t.Fatalf("parseBDUVersion of a MinIO timestamp range: %v %v", r, ok)
 	}
 }
+
+// testdata/nvd_jenkins.json is two real NVD records, each with an "lts"
+// range and an unmarked weekly one: CVE-2026-70427 (fixed in 2.576 and
+// LTS 2.568.2) and CVE-2026-84645 (2.580, LTS 2.568.3).
+func TestLookupJenkinsKeepsReleaseLinesApart(t *testing.T) {
+	for _, tc := range []struct {
+		version string
+		want    map[string]bool
+	}{
+		// Fixed LTS: inside both weekly ranges by number alone.
+		{"2.568.3", map[string]bool{}},
+		{"2.568.2", map[string]bool{"CVE-2026-84645": true}},
+		{"2.568.1", map[string]bool{"CVE-2026-84645": true, "CVE-2026-70427": true}},
+		{"2.580", map[string]bool{}},
+		{"2.579", map[string]bool{"CVE-2026-84645": true}},
+		{"2.575", map[string]bool{"CVE-2026-84645": true, "CVE-2026-70427": true}},
+	} {
+		idx, err := LoadNVD(filepath.Join("testdata", "nvd_jenkins.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		p, v, e, _ := Subject("jenkins", tc.version, nil)
+		got := map[string]bool{}
+		for _, f := range idx.Lookup(p, v, e) {
+			got[f.AdvisoryID] = true
+		}
+		if len(got) != len(tc.want) {
+			t.Errorf("jenkins %s: got %v, want %v", tc.version, got, tc.want)
+			continue
+		}
+		for id := range tc.want {
+			if !got[id] {
+				t.Errorf("jenkins %s: got %v, want %v", tc.version, got, tc.want)
+			}
+		}
+	}
+}

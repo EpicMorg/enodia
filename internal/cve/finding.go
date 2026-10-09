@@ -126,7 +126,7 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 	vendor := idx.vendorCVEs[product]
 	var out []Finding
 	for _, f := range idx.byProduct[product] {
-		if edition != "" && f.Edition != "" && f.Edition != edition {
+		if fe := findingEdition(product, f); edition != "" && fe != "" && fe != edition {
 			continue
 		}
 		if f.Matches(probed) {
@@ -163,6 +163,33 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 		kept = append(kept, f)
 	}
 	return kept
+}
+
+// findingEdition is f's Edition, or for jenkins, when the source left it
+// unset, the release line its bounds are written in (see jenkinsChannel):
+// NVD marks Jenkins LTS ranges "lts" but leaves weekly ones unmarked, and
+// BDU marks neither — so a weekly "before 2.580" would otherwise flag LTS
+// 2.568.3, which has the same fixes.
+func findingEdition(product string, f Finding) string {
+	if f.Edition != "" || product != "jenkins" {
+		return f.Edition
+	}
+	if f.rng.Hi != nil {
+		return jenkinsChannel(f.rng.Hi)
+	}
+	return jenkinsChannel(f.rng.Lo)
+}
+
+// jenkinsChannel is the Jenkins release line a version belongs to: weekly
+// releases are numbered "2.580", LTS releases "2.568.3".
+func jenkinsChannel(parts []int) string {
+	switch len(parts) {
+	case 2:
+		return "weekly"
+	case 3:
+		return "lts"
+	}
+	return ""
 }
 
 // vendorOverrides reports whether a BDU/NVD finding with these CVEs is
