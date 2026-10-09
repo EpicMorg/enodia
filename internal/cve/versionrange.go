@@ -26,6 +26,71 @@ var cleanVersionPattern = regexp.MustCompile(`^\d+(?:\.\d+)*$`)
 // and Z keep a plain date bound ("2015-04-01") out of it.
 var minioTimestampPattern = regexp.MustCompile(`^(?i)(\d{4})-(\d{2})-(\d{2})t(\d{2})-(\d{2})-(\d{2})z$`)
 
+// boundFolds rewrites one CVE product's version strings — the bounds in
+// both sources, and the probed version in Subject — into the dotted shape
+// cleanVersionParts reads, for a product numbered in a shape no other
+// product shares. rangeTexts turns the parsed parts back into that
+// product's own notation for the report.
+var (
+	boundFolds = map[string]func(string) string{"synology-dsm": foldSynologyBuilds}
+	rangeTexts = map[string]func([]int) string{"synology-dsm": synologyBuildText}
+)
+
+// synologyBuildPattern is a DSM release as Synology, NVD and BDU write it:
+// version, build, and optionally the Update ("7.2.1-69057-6"; once in NVD
+// "6.2.4-25556.4"). The release before the build may lack its patch
+// number ("7.2-64570").
+var synologyBuildPattern = regexp.MustCompile(`\b(\d+)\.(\d+)(?:\.(\d+))?-(\d{4,5})(?:[-.](\d+))?\b`)
+
+// foldSynologyBuilds rewrites every DSM release in s as
+// major.minor.patch.build.update, the missing patch and Update as 0, so
+// "7.2-64570-4" is 7.2.0.64570.4 and orders after a bare "7.2" bound and
+// before 7.2.1.
+func foldSynologyBuilds(s string) string {
+	return synologyBuildPattern.ReplaceAllStringFunc(s, func(m string) string {
+		g := synologyBuildPattern.FindStringSubmatch(m)
+		for _, i := range []int{3, 5} {
+			if g[i] == "" {
+				g[i] = "0"
+			}
+		}
+		return strings.Join([]string{g[1], g[2], g[3], g[4], g[5]}, ".")
+	})
+}
+
+// synologyBuildText writes folded DSM parts back as "7.2.1-69057-6".
+// DSM's releases have no x.y.0, so a 0 patch is the one the fold added.
+func synologyBuildText(parts []int) string {
+	if len(parts) < 4 {
+		return joinParts(parts)
+	}
+	out := joinParts(parts[:2])
+	if parts[2] != 0 {
+		out += "." + strconv.Itoa(parts[2])
+	}
+	out += "-" + strconv.Itoa(parts[3])
+	if len(parts) > 4 && parts[4] != 0 {
+		out += "-" + strconv.Itoa(parts[4])
+	}
+	return out
+}
+
+// foldBound applies product's entry in boundFolds to s, if it has one.
+func foldBound(product, s string) string {
+	if fold := boundFolds[product]; fold != nil {
+		return fold(s)
+	}
+	return s
+}
+
+// rangeText is r.String() in product's own notation.
+func rangeText(product string, r versionRange) string {
+	if text := rangeTexts[product]; text != nil {
+		return r.format(text)
+	}
+	return r.String()
+}
+
 // cleanVersionParts returns version.Parts(s) only when s, trimmed, is
 // wholly a dotted-number version with nothing else attached.
 func cleanVersionParts(s string) ([]int, bool) {
@@ -113,7 +178,9 @@ func comparePartsSlices(a, b []int) int {
 
 // String renders r as a human-readable range, for diagnostics only — never
 // re-parsed, purely for a person to read in a --view or export field.
-func (r versionRange) String() string {
+func (r versionRange) String() string { return r.format(joinParts) }
+
+func (r versionRange) format(joinParts func([]int) string) string {
 	switch {
 	case r.Lo == nil && r.Hi == nil:
 		return "any version"

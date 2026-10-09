@@ -1,0 +1,199 @@
+{
+  "resultsPerPage": 4,
+  "startIndex": 0,
+  "totalResults": 4,
+  "format": "NVD_CVE",
+  "version": "2.0",
+  "vulnerabilities": [
+    {
+      "cve": {
+        "id": "CVE-2019-3764",
+        "vulnStatus": "Modified",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Dell EMC iDRAC7 versions prior to 2.65.65.65, iDRAC8 versions prior to 2.70.70.70 and iDRAC9 versions prior to 3.36.36.36 contain an improper authorization vulnerability. A remote authenticated malicious iDRAC user with low privileges may potentially exploit this vulnerability to obtain sensitive information such as password hashes."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Primary",
+              "cvssData": {
+                "baseScore": 4.3,
+                "baseSeverity": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:dell:idrac7_firmware:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "2.65.65.65"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:dell:idrac8_firmware:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "2.70.70.70"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:dell:idrac9_firmware:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "3.36.36.36"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2023-28083",
+        "vulnStatus": "Modified",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "A remote Cross-site Scripting vulnerability was discovered in HPE Integrated Lights-Out 6 (iLO 6), Integrated Lights-Out 5 (iLO 5) and Integrated Lights-Out 4 (iLO 4). HPE has provided software updates to resolve this vulnerability in HPE Integrated Lights-Out."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Secondary",
+              "cvssData": {
+                "baseScore": 8.3,
+                "baseSeverity": "HIGH"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:hp:integrated_lights-out_4:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "2.82"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2025-1021",
+        "vulnStatus": "Analyzed",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Missing authorization vulnerability in synocopy in Synology DiskStation Manager (DSM) before 7.1.1-42962-8, 7.2.1-69057-7 and 7.2.2-72806-3 allows remote attackers to read arbitrary files via unspecified vectors."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Secondary",
+              "cvssData": {
+                "baseScore": 7.5,
+                "baseSeverity": "HIGH"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:synology:diskstation_manager:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "7.1",
+                    "versionEndExcluding": "7.1.1-42962-8"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:synology:diskstation_manager:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "7.2.1-69057",
+                    "versionEndExcluding": "7.2.1-69057-7"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:synology:diskstation_manager:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "7.2.2",
+                    "versionEndExcluding": "7.2.2-72806-3"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2025-22397",
+        "vulnStatus": "Analyzed",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Dell Integrated Dell Remote Access Controller 9, 14G versions prior to 7.00.00.181, 15G and 16G versions 6.10.80.00 through 7.20.10.50 and Dell Integrated Dell Remote Access Controller 10, 17G versions prior to 1.20.25.00, contain an Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') vulnerability. A high privileged attacker with remote access could potentially exploit this vulnerability, leading to Unauthorized access."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Secondary",
+              "cvssData": {
+                "baseScore": 6.7,
+                "baseSeverity": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:dell:idrac9_firmware:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "6.10.80.00",
+                    "versionEndExcluding": "7.00.00.181"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:dell:idrac9_firmware:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "7.00.00.183",
+                    "versionEndExcluding": "7.20.10.50"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

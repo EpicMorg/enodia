@@ -3288,3 +3288,47 @@ https://nginx.org/en/security_advisories.html as HTML. Each advisory has
 
 Live: 1.30.5 and 1.31.6 have no findings. 1.30.4 and 1.31.5 get
 CVE-2026-90439, which isn't in NVD or BDU yet.
+
+## D72 — CVEs for iLO 4, iDRAC and Synology DSM
+
+The three were the remaining probes with usable ranges in NVD and BDU.
+
+**iLO 4** (`hp-ilo4`): NVD's `hp:integrated_lights-out_4` and
+`_firmware` (29 CVEs, "< 2.82"), BDU's "HP iLO 4". The probe's "2.82"
+compares as is.
+
+**iDRAC** (`dell-idrac`): both sources name each generation as its own
+product — `idrac6_firmware` … `idrac10_firmware`, plus `idrac7`,
+`emc_idrac8`, `integrated_dell_remote_access_controller_9_firmware` and
+the like; BDU's "iDRAC7" … "iDRAC10". The numbers overlap: iDRAC7 and
+iDRAC8 both run 2.x with different fixes (CVE-2019-3764: < 2.65.65.65 and
+< 2.70.70.70), iDRAC6 is 1.x–2.x, iDRAC10 1.x. Subject reads the
+generation from the probe's Extra["model"], Redfish's Manager Model ("12G
+Modular"): 11G is iDRAC6, 12G iDRAC7, 13G iDRAC8, 14G–16G iDRAC9, 17G
+iDRAC10. Without a model, 3.x and later can only be iDRAC9 and are looked
+up; anything else isn't.
+
+**Synology DSM** (`synology-dsm`), left out in D33: a release is version,
+build and Update. Synology writes "DSM 7.2.1-69057 Update 6"; NVD and BDU
+bound it as "7.2.1-69057-6" (once "6.2.4-25556.4"), sometimes without the
+patch number ("7.2-64570-4"). For this product only (`boundFolds`), both
+sources' bounds and the probed version fold to
+major.minor.patch.build.update, a missing patch or Update as 0:
+7.2-64570-4 is 7.2.0.64570.4, after a bare "7.2" bound and before 7.2.1.
+The report writes ranges back in Synology's notation. The probe now
+reports the Update in Extra["update"]; Version stays "7.2.1-69057", so
+drift and lifecycle still compare the release. An inventory from before
+reads as Update 0: fixed Updates may be flagged, none is missed.
+
+Live: iLO 4 2.82, iDRAC8 2.86.86.86, iDRAC9 7.20.30.50, iDRAC10
+1.30.10.50 and DSM 7.3.2-86009 Update 4 have no findings; iLO 4 2.70 gets
+20, iDRAC9 6.10.30.00 10.
+
+**Not fixed: BDU's branch bounds.** BDU writes DSM's per-branch fixes as
+separate open-lower ranges ("до 7.2-64570-4", "до 7.2.1-69057-6", "до
+7.2.2-72806-1"). Under D30's rule, the newest branch's bound flags every
+older branch's fixed releases: 7.2.1-69057 Update 8 gets 5 BDU findings,
+7.1.1-42962 Update 9 gets 13. NVD bounds each branch and is right. This
+is the same limitation as Confluence's in D30, left as it is here; if
+it is lifted, it should be lifted for every product at once.
+

@@ -65,7 +65,7 @@ type synoDSMInfo struct {
 
 // synologyVersionPattern matches SYNO.DSM.Info's own "DSM <version>
 // Update <n>" shape, confirmed live: "DSM 7.3.2-86009 Update 4".
-var synologyVersionPattern = regexp.MustCompile(`^DSM (\S+)`)
+var synologyVersionPattern = regexp.MustCompile(`^DSM (\S+)(?: Update (\d+))?`)
 
 func synoCall(ctx context.Context, t Target, params url.Values) (synoResponse, error) {
 	var out synoResponse
@@ -144,6 +144,12 @@ func (synologyDSMProbe) Probe(ctx context.Context, t Target) (Observation, error
 	}
 
 	obs.Version = m[1]
+	// The Update is part of the release CVE fixes are numbered by
+	// ("7.2.1-69057-6"); kept apart from Version so drift and lifecycle
+	// still compare the release itself.
+	if m[2] != "" {
+		obs.Extra = map[string]string{"update": m[2]}
+	}
 	obs.Endpoint = "/webapi/entry.cgi (SYNO.DSM.Info)"
 	obs.DurationMS = time.Since(start).Milliseconds()
 	return obs, nil

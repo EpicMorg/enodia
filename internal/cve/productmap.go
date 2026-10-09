@@ -14,9 +14,11 @@ package cve
 // CVEs are package-level; a release number can't say which packages are
 // patched), the BSDs and Solaris (base-system CVEs, but keyed on patch
 // levels in the CPE "update" field this package doesn't read), ESXi and
-// vCenter (same "update" field problem), Synology DSM (build-suffixed
-// bounds like "6.2.4-25556-3" the strict bound parser rejects), and every
-// probe with no real entries in either source at all.
+// vCenter (same "update" field problem), and every probe with no real
+// entries in either source at all. Synology DSM, left out there for its
+// build-suffixed bounds ("6.2.4-25556-3"), is in since D72 (boundFolds);
+// dell-idrac is one CVE product per iDRAC generation (idrac6 … idrac10,
+// see Subject).
 
 // bduName is one BDU <soft> (vendor, name) pair. Matching on the vendor
 // too, not the name alone, is what keeps e.g. Oracle's own "HTTP Server"
@@ -51,7 +53,12 @@ var productSoftNames = map[string][]bduName{
 	"grafana":       {{"Grafana Labs", "Grafana", ""}},
 	"graylog":       {{"Graylog, Inc", "Graylog", ""}},
 	"haproxy":       {{"Willy Terreau", "HAProxy", ""}},
+	"hp-ilo4":       {{"HP Inc.", "HP iLO 4", ""}},
 	"harbor":        {{"Project Harbor", "harbor", ""}},
+	"idrac10":       {{"Dell Technologies", "iDRAC10", ""}},
+	"idrac7":        {{"Dell Technologies", "iDRAC7", ""}},
+	"idrac8":        {{"Dell Technologies", "iDRAC8", ""}},
+	"idrac9":        {{"Dell Technologies", "iDRAC9", ""}},
 	"jenkins":       {{"CD Foundation", "Jenkins", ""}},
 	"jira":          {{"Atlassian", "Jira", ""}, {"Atlassian", "Jira Server", ""}, {"Atlassian", "Jira Data Center", ""}, {"Atlassian", "Jira Software Data Center and Server", ""}, {"Atlassian", "Jira Software Server", ""}},
 	"kafka":         {{"Apache Software Foundation", "Kafka", ""}},
@@ -89,6 +96,7 @@ var productSoftNames = map[string][]bduName{
 	"routeros":      {{"MikroTik", "RouterOS", ""}},
 	"sonarqube":     {{"SonarSource", "SonarQube", ""}},
 	"splunk":        {{"Splunk Inc.", "Splunk Enterprise", ""}},
+	"synology-dsm":  {{"Synology Inc.", "DiskStation Manager (DSM)", ""}},
 	"teamcity":      {{"JetBrains", "TeamCity", ""}},
 	"traefik":       {{"Containous", "Traefik", ""}},
 	"vault":         {{"HashiCorp", "Vault", ""}, {"HashiCorp", "Vault Enterprise", "enterprise"}, {"HashiCorp", "Vault Community Edition", "community"}},
@@ -124,6 +132,12 @@ var productCPENames = map[string][]cpeName{
 	"haproxy":        {{"haproxy", "haproxy"}},
 	"harbor":         {{"linuxfoundation", "harbor"}},
 	"home-assistant": {{"home-assistant", "home-assistant"}},
+	"hp-ilo4":        {{"hp", "integrated_lights-out_4"}, {"hp", "integrated_lights-out_4_firmware"}},
+	"idrac10":        {{"dell", "idrac10_firmware"}},
+	"idrac6":         {{"dell", "idrac6_firmware"}, {"dell", "idrac6_modular"}, {"dell", "idrac6_monolithic"}},
+	"idrac7":         {{"dell", "idrac7_firmware"}, {"dell", "idrac7"}, {"dell", "emc_idrac7"}},
+	"idrac8":         {{"dell", "idrac8_firmware"}, {"dell", "idrac8"}, {"dell", "emc_idrac8"}, {"dell", "emc_idrac8_firmware"}, {"dell", "integrated_dell_remote_access_controller_8_firmware"}},
+	"idrac9":         {{"dell", "idrac9_firmware"}, {"dell", "idrac9"}, {"dell", "emc_idrac9_firmware"}, {"dell", "integrated_dell_remote_access_controller_9_firmware"}},
 	"jaeger":         {{"linuxfoundation", "jaeger"}},
 	"jellyfin":       {{"jellyfin", "jellyfin"}},
 	"jenkins":        {{"jenkins", "jenkins"}},
@@ -167,6 +181,7 @@ var productCPENames = map[string][]cpeName{
 	"sentry":         {{"sentry", "sentry"}},
 	"sonarqube":      {{"sonarsource", "sonarqube"}},
 	"splunk":         {{"splunk", "splunk"}},
+	"synology-dsm":   {{"synology", "diskstation_manager"}},
 	"teamcity":       {{"jetbrains", "teamcity"}},
 	"testrail":       {{"gurock", "testrail"}},
 	"traefik":        {{"traefik", "traefik"}},

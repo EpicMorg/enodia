@@ -68,6 +68,11 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
   sentry, splunk, uptime-kuma, wapt, weblate, zookeeper. MinIO's
   timestamp versions compare; pfSense CE and Splunk Enterprise skip
   ranges for other editions; Confluent Kafka builds get no lookup (D68).
+- CVEs for `hp-ilo4`, `dell-idrac` and `synology-dsm`. iDRAC is matched
+  per generation, read from the Redfish model ("13G" is iDRAC8); with no
+  model only iDRAC9's 3.x and later are looked up. DSM compares version,
+  build and Update ("7.2.1-69057-6"); the probe now reports the Update
+  in `Extra["update"]` (D72).
 - `cve.atlassian.path`: Atlassian's own per-release CVE data
   (vuln-transparency API) for `jira`, `confluence`, `bitbucket` and
   `bamboo`, third-party dependency CVEs included. Judged within each
