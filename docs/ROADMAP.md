@@ -1275,9 +1275,13 @@ Not dates. Order of work, and what each step unblocks.
   (`codeServerVersion`). Verified live (4.141.0). See
   `docs/DECISIONS.md` D66.
 
+- `splunk` probe — splunkd's `/services/server/info` on the management
+  port (8089) with a Splunk user or token. Verified live (10.6.0.5; a
+  production 9.4.1 for the unauthenticated shape). See
+  `docs/DECISIONS.md` D67.
+
 ## Next
 
-- `splunk` probe — asked for; needs the Splunk license accepted to stand one up for a capture, or a real instance
 
 Everything found running 2.0 against a real ~600-target fleet is done
 (see above). Requests from a second, ~90-target fleet:

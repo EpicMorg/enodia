@@ -3110,3 +3110,23 @@ password and `/healthz` has no version. The probe reads `/login`,
 unescapes the attribute and decodes it. Resolver: `github`
 coder/code-server.
 
+## D67 — `splunk` asks splunkd's management API, with credentials
+
+Splunk's web UI (8000) is the wrong place: in the deployment this was
+asked for it sits behind a CDN that challenges or rewrites it, and its
+login page carries no version to rely on. splunkd's management port (8089)
+is direct, and `GET /services/server/info?output_mode=json` returns
+`entry[0].content` with `version` ("10.6.0.5"), `build`, `product_type`,
+`isFree`/`isTrial` — but only with credentials. Without them splunkd answers
+401 with an XML `<msg type="ERROR">Unauthorized</msg>` and `Server:
+Splunkd` (seen on a production 9.4.1 and on splunk/splunk:latest, run
+locally with the Splunk General Terms accepted for the capture). So
+credentials are required: a Splunk user (`kind: basic`) or a Splunk
+authentication token (`kind: bearer`). Build, product type and
+free/trial go into extra.
+
+An address without a port gets 8089: the probe has nothing to read on the
+web port. Resolver: endoflife `splunk`. A build newer than the calendar
+(10.6, when endoflife.date listed up to 10.4) reads as `cycle_unmatched`
+until the calendar catches up.
+

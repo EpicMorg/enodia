@@ -226,6 +226,9 @@ var builtin = []Probe{
 	// /etc/os-release, despite historical docs saying it doesn't.
 	osReleaseFamilyProbe{product: "slackware", summary: "Slackware", resolver: ResolverRef{Type: "endoflife", ID: "slackware"}, match: osReleaseIDEquals("slackware")},
 	sonarqubeProbe{},
+	// splunkd /services/server/info on 8089, Basic or token. Verified live
+	// against splunk/splunk (10.6.0.5) and a production 9.4.1 (401 shape).
+	splunkProbe{},
 	sshProbe{},
 	// Real ISO rootfs capture — SteamOS 2 (Debian-based "brewmaster"):
 	// ID=steamos, VERSION_ID="2". SteamOS 3.x (Arch-based, current Steam

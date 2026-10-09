@@ -10,6 +10,8 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `splunk` probe: splunkd's management API on 8089 with Basic or a Splunk
+  token (D67).
 - `code-server` probe: `codeServerVersion` from the login page (D66).
 - `phpipam` probe: the login page's footer and asset version (D65).
 - `domainmod` probe: the CHANGELOG in its web root (D65).

@@ -5,6 +5,8 @@ package probe
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -90,5 +92,50 @@ func TestCodeServerProbe(t *testing.T) {
 	}
 	if _, err := (codeServerProbe{}).Probe(context.Background(), target(pageServer(t, "/login", 200, []byte("<html></html>")), "code-server")); !errors.Is(err, ErrNotSupported) {
 		t.Fatalf("got %v, want ErrNotSupported", err)
+	}
+}
+
+// splunk_10.6.0.5_server_info.json is splunk/splunk:latest's authenticated
+// /services/server/info?output_mode=json, reduced to the keys read.
+func TestSplunkProbe(t *testing.T) {
+	raw := readFixture(t, "splunk_10.6.0.5_server_info.json")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/services/server/info" || r.URL.Query().Get("output_mode") != "json" {
+			t.Errorf("got %s", r.URL)
+		}
+		if u, p, ok := r.BasicAuth(); !ok || u != "admin" || p != "secret" {
+			// what splunkd answered without valid credentials, live
+			w.Header().Set("Server", "Splunkd")
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?><response><messages><msg type="ERROR">Unauthorized</msg></messages></response>`))
+			return
+		}
+		_, _ = w.Write(raw)
+	}))
+	defer srv.Close()
+
+	tt := target(srv.URL, "splunk")
+	tt.Creds = Credentials{Kind: AuthBasic, Username: "admin", Password: "secret"}
+	tt.AllowInsecureTransport = true
+	obs, err := splunkProbe{}.Probe(context.Background(), tt)
+	if err != nil || obs.Version != "10.6.0.5" || obs.Extra["build"] != "86587d4e3b27" || obs.Extra["license"] != "trial" || obs.Extra["productType"] != "enterprise" {
+		t.Fatalf("got %q %+v, %v", obs.Version, obs.Extra, err)
+	}
+	tt.Creds.Password = "wrong"
+	if _, err := (splunkProbe{}).Probe(context.Background(), tt); !errors.Is(err, ErrAuth) {
+		t.Fatalf("got %v, want ErrAuth", err)
+	}
+}
+
+func TestSplunkManagementAddress(t *testing.T) {
+	for in, want := range map[string]string{
+		"splunk.example.com":             "https://splunk.example.com:8089",
+		"https://splunk.example.com":     "https://splunk.example.com:8089",
+		"https://splunk.example.com:443": "https://splunk.example.com:443",
+		"splunk.example.com:18089":       "splunk.example.com:18089",
+	} {
+		if got := splunkManagementAddress(in); got != want {
+			t.Errorf("splunkManagementAddress(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
