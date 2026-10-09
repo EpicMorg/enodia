@@ -192,6 +192,9 @@ func Plan(p Paths, w Wants, now time.Time, allYears bool) ([]Item, []error) {
 					}
 				}
 			}
+			if len(releases) == 0 {
+				errs = append(errs, fmt.Errorf("cve.oval.path %s: no OVAL release to fetch (none on disk, in --from or --oval), and the CVE lookup refuses an empty directory; name a release or drop the key", p.OVAL))
+			}
 			seen := map[string]bool{}
 			for _, r := range releases {
 				product, rel, err := ParseOVALRelease(r)
@@ -220,6 +223,9 @@ func Plan(p Paths, w Wants, now time.Time, allYears bool) ([]Item, []error) {
 				if m := alpineFile.FindStringSubmatch(name); m != nil {
 					branches = append(branches, m[1])
 				}
+			}
+			if len(branches) == 0 {
+				errs = append(errs, fmt.Errorf("cve.alpine.path %s: no Alpine branch to fetch (none on disk, in --from or --alpine), and the CVE lookup refuses an empty directory; name a branch or drop the key", p.Alpine))
 			}
 			for _, b := range dedupe(branches) {
 				if !alpineBranch.MatchString(b) {
@@ -282,20 +288,6 @@ func ParseOVALRelease(s string) (product, release string, err error) {
 		return "", "", fmt.Errorf("oval release %q: %q isn't a %s release", s, release, product)
 	}
 	return product, release, nil
-}
-
-// Dirs lists the configured paths cve update treats as directories. They
-// are created even when nothing is planned for them (no OVAL release or
-// Alpine branch known yet): the CVE lookup refuses a configured path that
-// doesn't exist, so an empty directory keeps check working.
-func (p Paths) Dirs() []string {
-	var dirs []string
-	for _, d := range []string{p.NVD, p.OVAL, p.Alpine, p.PostgreSQL} {
-		if d != "" && isDir(d) {
-			dirs = append(dirs, d)
-		}
-	}
-	return dirs
 }
 
 // isDir reports whether p is a directory, or would be one: a path that

@@ -127,12 +127,6 @@ func runCVEUpdateCmd(cmd *cobra.Command, _ []string) error {
 	}
 
 	failed := len(planErrs)
-	for _, d := range paths.Dirs() {
-		if err := os.MkdirAll(d, 0o755); err != nil {
-			failed++
-			warn(err.Error())
-		}
-	}
 	for _, it := range items {
 		r := client.Fetch(cmd.Context(), it)
 		switch r.Status {

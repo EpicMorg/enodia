@@ -3412,3 +3412,12 @@ script added that mirrors this for the sources each version reads. 2.0.0
 gets NVD and BDU; 2.1.x adds Debian, OVAL and Alpine. Its BDU default is
 `-k`, the user's choice for a script with no config.
 
+**Nothing to fetch for OVAL or Alpine** (after the 2.2.0 rollouts). On a
+fleet with no Alpine host, `cve.alpine.path` set and no `--alpine`, 2.2.0
+planned nothing, exited 0, and `check` then refused the config: first for
+the missing directory, and with the directory made by hand for having no
+`.json` in it. The loaders keep refusing an empty directory, since that is
+what a wrong mount looks like. Instead `cve update` now reports such a
+path as an error, telling the user to name a release or branch or drop the
+key, and exits 1.
+
