@@ -1316,16 +1316,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   User-Agent gets 200 with Last-Modified/ETag. Once it ships, the Docker
   image drops its baked-in databases and the hosts' own update scripts
   go; images for older versions keep a plain download script
-- GitHub repository security advisories as one more vendor source, with
-  `enodia cve update`: `GET /repos/{owner}/{repo}/security-advisories`
-  gives per-branch ranges with fixes (grafana ">=9.2.0 <9.2.10 >=9.3.0
-  <9.3.4") for about twenty probed products — grafana, redis, harbor,
-  traefik, keycloak, jellyfin, vaultwarden, gitea, portainer,
-  oauth2-proxy, nextcloud, ghost, weblate, uptime-kuma, home-assistant,
-  minio, netbox, sentry, code-server. It is one request per repository
-  and wants a GitHub token for the rate limit, so it waits for the
-  download command instead of asking operators for twenty files. Merged
-  like the other vendor sources (D50, D69, D71)
 - CVEs for a database running from a Docker image — the distro's OVAL
   sees the host's packages, not what's inside a container, so such a
   server only gets the product-level (NVD/BDU) match above. Nothing more
