@@ -12,8 +12,8 @@ import (
 // netdataProbe reads the agent's GET /api/v1/info, served without a login
 // by default: {"version": "v2.12.1", "release-channel": "stable", ...}
 // (confirmed live on netdata/netdata:stable). The same reply describes the
-// host — uid, kernel, labels, hardware — so only version, release channel,
-// architecture and container are read, and the fixture keeps only those.
+// host — uid, kernel, labels, hardware — so only version and release channel
+// are read, and the fixture keeps little else (architecture, container).
 type netdataProbe struct{}
 
 func (netdataProbe) Meta() Meta {

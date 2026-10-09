@@ -8,13 +8,21 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ## [Unreleased]
 
+### Fixed
+
+- `kafka` started `kafka-topics --version` (a JVM, a few seconds) on every
+  run when it was on PATH, even with the broker's jar found; it now runs
+  only when no jar is (D63).
+
 ## [2.2.0+0] — 2026-10-09
 
 `enodia cve update` downloads the CVE databases itself, vendor security
 pages (MariaDB, Atlassian, PostgreSQL, nginx) join BDU and NVD, CVE
 matching reaches iLO 4, iDRAC and Synology DSM, and 27 new probes land.
-Nothing breaks: every new `cve:` key is optional, and 2.1 configs and
-inventories work unchanged.
+Every new `cve:` key is optional and 2.1 inventories work unchanged. One
+config can stop loading: a credential of a kind its product never sends
+is now an error instead of being dropped silently (D48) — run
+`enodia config validate` before upgrading.
 
 ### Added
 

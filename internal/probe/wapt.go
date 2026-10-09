@@ -16,7 +16,8 @@ import (
 // "community", "api_version": "v3", ...}} (confirmed live on a production
 // WAPT 1.8.2 server; see testdata/wapt_1.8.2_ping.json). git_hash starts
 // with the full build number (1.8.2.7334), which is used as the version
-// when it extends "version"; edition and api_version go into extra.
+// when it extends "version"; edition, api_version and git_hash go into
+// extra.
 //
 // No lifecycle source: WAPT has no endoflife.date page, and Tranquil IT's
 // GitHub tags stopped at 1.5 — releases are published on their own site.
