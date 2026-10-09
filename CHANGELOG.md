@@ -73,6 +73,11 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
   `bamboo`, third-party dependency CVEs included. Judged within each
   branch, merged with BDU and NVD; for a release Atlassian lists, its
   verdict wins (D69).
+- `cve.postgresql.path` and `cve.nginx.path`: the projects' own security
+  pages (HTML, saved as is), with the fix release per branch. Merged with
+  BDU and NVD; where they know a CVE, their verdict wins. Current
+  PostgreSQL 17/16/15/14 releases and nginx 1.30.5 no longer show BDU's
+  branchless ranges (D71).
 - `PRIVACY.md`: what enodia connects to (your targets, endoflife.date,
   the GitHub API — product and repository names only) and what it stores
   (only your own files and a local cache). No telemetry.

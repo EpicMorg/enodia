@@ -3236,3 +3236,55 @@ count the same bugs twice. Used instead as the check: for 246 versions
 (weekly 2.400–2.585, fifteen LTS lines .1–.4), "some core warning
 matches" and "NVD+BDU find something" agree on all but 2.408 and 2.465,
 two numbers Jenkins never released.
+
+## D71 — PostgreSQL's and nginx's own security pages
+
+BDU writes most PostgreSQL ranges with no lower bound and only the newest
+major's fix ("до 18.5"). Every older major's latest release falls inside:
+live, 17.11, 16.15, 15.19 and 14.24 got 46–55 CVEs each from BDU, every
+one fixed on its own branch. nginx has the same problem: BDU bounds a fix
+by the mainline release ("от 1.0.0 до 1.31.0"), so stable 1.30.5 got six
+CVEs it has the fix for. NVD was right on both. Both projects publish the
+per-branch truth, and these are two more sources merged the way MariaDB's
+is (D50).
+
+**PostgreSQL** (`cve.postgresql.path`):
+https://www.postgresql.org/support/security/ as HTML. Each row has the
+CVE, the affected majors ("18, 17, 16, 15, 14"), the fix in each ("18.6,
+17.11, …"), the component and CVSS score, and the release announcement
+link. A major is "17", or "9.6" before 10. The main page names only the
+majors supported today. Each per-major page (`/support/security/13/`)
+names its own major too, so the path may be a directory of pages. Rows
+for the same CVE are merged across pages: each page's majors and fixes
+are added.
+
+- The verdict covers only majors the pages name (`vendorCovers`, the
+  same mechanism D69 added for Atlassian's listed releases). With the
+  main page alone, 13 keeps BDU's and NVD's findings.
+- An ended major is never named for a CVE published after it ended. The
+  oldest major an announcement fixed is the oldest one supported then. If
+  a CVE reaches back to that major, the named majors older than it are
+  flagged in full, with no fix. The fix listed is the lowest fix in a
+  supported major. This is the same rule as MariaDB's ended series.
+- `packaging` rows (an installer or RPM build) are tracked but not
+  flagged: they are about one build, not the release.
+
+Live, main page plus the 13 and 9.6 pages: 18.6, 17.11, 16.15, 15.19 and
+14.24 have no findings (they had 0, 46, 52, 52 and 55). 18.5 gets the
+28 CVEs fixed in 18.6, which neither NVD nor BDU had yet. 13.23 (ended)
+gets 37.
+
+**nginx** (`cve.nginx.path`):
+https://nginx.org/en/security_advisories.html as HTML. Each advisory has
+"Vulnerable: 0.9.6-1.31.2" (sometimes several spans, "1.25.0-1.25.5,
+1.26.0") and "Not vulnerable: 1.31.3+, 1.30.4+".
+
+- A `X+` entry covers the rest of X's own branch. The newest one also
+  covers everything after it.
+- What the spans keep after removing those is vulnerable. Ended branches
+  (1.29.x for a fix in 1.31.3/1.30.4) stay flagged.
+- Skipped: advisories for nginx/Windows only, and the 2009 "all"/"none"
+  entry.
+
+Live: 1.30.5 and 1.31.6 have no findings. 1.30.4 and 1.31.5 get
+CVE-2026-90439, which isn't in NVD or BDU yet.

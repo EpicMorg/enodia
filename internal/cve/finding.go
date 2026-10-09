@@ -102,15 +102,15 @@ type Index struct {
 	// (MariaDB's, cve.mariadb.path; Atlassian's, cve.atlassian.path). For
 	// those CVEs the vendor's verdict replaces BDU's and NVD's — see Lookup.
 	vendorCVEs map[string]map[string]bool
-	// vendorVersions is, per product, every release a vendor's data lists,
-	// as joinParts strings — set only for a vendor that lists releases one
-	// by one (Atlassian). Its verdict then holds only for those releases:
-	// one it hasn't listed yet keeps BDU's and NVD's findings.
-	vendorVersions map[string]map[string]bool
+	// vendorCovers is, per product, which releases a vendor's data speaks
+	// for, when that isn't all of them: Atlassian's, only the releases it
+	// lists; PostgreSQL's, only the majors its table names. Its verdict
+	// holds only there — any other release keeps BDU's and NVD's findings.
+	vendorCovers map[string]func(parts []int) bool
 }
 
 // vendorSources are the Finding.Source values of vendors' own data.
-var vendorSources = map[string]bool{mariadbSource: true, atlassianSource: true}
+var vendorSources = map[string]bool{mariadbSource: true, atlassianSource: true, postgresqlSource: true, nginxSource: true}
 
 // Lookup returns every finding for product whose range contains probed
 // and whose edition applies. edition is the observation's own edition
@@ -136,9 +136,9 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 	if vendor == nil {
 		return out
 	}
-	if listed := idx.vendorVersions[product]; listed != nil {
+	if covers := idx.vendorCovers[product]; covers != nil {
 		parts, ok := cleanVersionParts(version.Core(probed))
-		if !ok || !listed[joinParts(parts)] {
+		if !ok || !covers(parts) {
 			return out
 		}
 	}
@@ -237,11 +237,11 @@ func MergeIndex(a, b *Index) *Index {
 		}
 		a.vendorCVEs[product] = ids
 	}
-	for product, vs := range b.vendorVersions {
-		if a.vendorVersions == nil {
-			a.vendorVersions = map[string]map[string]bool{}
+	for product, covers := range b.vendorCovers {
+		if a.vendorCovers == nil {
+			a.vendorCovers = map[string]func([]int) bool{}
 		}
-		a.vendorVersions[product] = vs
+		a.vendorCovers[product] = covers
 	}
 	return a
 }

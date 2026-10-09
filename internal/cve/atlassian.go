@@ -61,9 +61,9 @@ func LoadAtlassian(path string) (*Index, error) {
 	}
 
 	idx := &Index{
-		byProduct:      map[string][]Finding{},
-		vendorCVEs:     map[string]map[string]bool{},
-		vendorVersions: map[string]map[string]bool{},
+		byProduct:    map[string][]Finding{},
+		vendorCVEs:   map[string]map[string]bool{},
+		vendorCovers: map[string]func([]int) bool{},
 	}
 	// Every CVE the export lists for any product: Atlassian lists each
 	// release with every CVE that affects it, so a CVE it tracks but never
@@ -119,7 +119,7 @@ func LoadAtlassian(path string) (*Index, error) {
 		for _, r := range releases {
 			known[joinParts(r.parts)] = true
 		}
-		idx.vendorVersions[product] = known
+		idx.vendorCovers[product] = func(parts []int) bool { return known[joinParts(parts)] }
 		idx.vendorCVEs[product] = tracked
 
 		ids := make([]string, 0, len(status))

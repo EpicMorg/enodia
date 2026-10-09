@@ -377,6 +377,10 @@ cve:
     path: /var/lib/enodia/cve/mariadb.md       # https://mariadb.com/docs/server/security/cve/community-server.md
   atlassian:
     path: /var/lib/enodia/cve/atlassian.json   # https://api.atlassian.com/vuln-transparency/v1/products
+  postgresql:
+    path: /var/lib/enodia/cve/postgresql       # https://www.postgresql.org/support/security/ (+ /<major>/ pages)
+  nginx:
+    path: /var/lib/enodia/cve/nginx.html       # https://nginx.org/en/security_advisories.html
 ```
 
 Each block works alone. `bdu.path` is the export as published (`.zip`),
@@ -451,6 +455,24 @@ fix listed after an affected release is flagged to its end. It merges with
 BDU and NVD like MariaDB's table: for a release Atlassian lists, its
 verdict wins on every CVE it tracks; a release newer than the file keeps
 BDU's and NVD's findings.
+
+`postgresql.path` is the PostgreSQL project's security page saved as
+HTML, or a directory of such pages. The main page names, for every CVE,
+the supported majors it affects and the release that fixes each. A major
+no longer supported isn't named there; save its own page
+(`/support/security/13/`) into the same directory to cover it. A major
+that had ended before a CVE came out, when the CVE reaches back to the
+oldest major still supported then, is flagged with no fix. For a major
+the pages name, the project's verdict replaces BDU's, whose PostgreSQL
+ranges have no lower bound ("до 18.5") and flag every older major's
+latest release.
+
+`nginx.path` is nginx's security advisories page saved as HTML. Each
+advisory lists the vulnerable versions and, per branch, the first fixed
+release ("1.31.6+, 1.30.5+"). A stable release with the fix (1.30.5) is no
+longer flagged by a range written up to the mainline fix ("до 1.31.0").
+Branches that never got the fix stay flagged. Advisories for
+nginx/Windows only are skipped.
 
 A Proxmox VE host gets package findings as a second, SSH `debian` target
 alongside its API `proxmox` one.

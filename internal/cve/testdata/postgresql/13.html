@@ -1,0 +1,53 @@
+<!-- pg13.html trimmed: https://www.postgresql.org/support/security/ -->
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Reference</th>
+      <th>Affected</th>
+      <th>Fixed</th>
+      <th><a href="#comp">Component</a> & CVSS v3 Base Score</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+      <tr>
+        <td>
+          <span class="nobr"><a href="/support/security/CVE-2025-1094/">CVE-2025-1094</a></span><br/>
+          <a href="/about/news/postgresql-173-167-1511-1416-and-1319-released-3015/">Announcement</a><br/>
+        </td>
+        <td>17, 16, 15, 14, 13</td>
+        <td>17.3, 16.7, 15.11, 14.16, 13.19</td>
+        <td>core server<br/>
+          <a href="https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H">8.1</a><br/><span class="cvssvector">AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H</span>
+    </td>
+        <td>PostgreSQL quoting APIs miss neutralizing quoting syntax in text that fails encoding validation<br/><br/><a href="/support/security/CVE-2025-1094/">more details</a></td>
+      </tr>
+    
+      <tr>
+        <td>
+          <span class="nobr"><a href="/support/security/CVE-2024-10979/">CVE-2024-10979</a></span><br/>
+          <a href="/about/news/postgresql-171-165-159-1414-1317-and-1221-released-2955/">Announcement</a><br/>
+        </td>
+        <td>17, 16, 15, 14, 13, 12</td>
+        <td>17.1, 16.5, 15.9, 14.14, 13.17, 12.21</td>
+        <td>core server<br/>
+          <a href="https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H">8.8</a><br/><span class="cvssvector">AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H</span>
+    </td>
+        <td>PostgreSQL PL/Perl environment variable changes execute arbitrary code<br/><br/><a href="/support/security/CVE-2024-10979/">more details</a></td>
+      </tr>
+    
+      <tr>
+        <td>
+          <span class="nobr"><a href="/support/security/CVE-2020-25694/">CVE-2020-25694</a></span><br/>
+          <a href="/about/news/postgresql-131-125-1110-1015-9620-and-9524-released-2111/">Announcement</a><br/>
+        </td>
+        <td>13, 12, 11, 10, 9.6, 9.5</td>
+        <td>13.1, 12.5, 11.10, 10.15, 9.6.20, 9.5.24</td>
+        <td>client<br/>
+          <a href="https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H">8.1</a><br/><span class="cvssvector">AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H</span>
+    </td>
+        <td>Reconnection can downgrade connection security settings<br/><br/><a href="/support/security/CVE-2020-25694/">more details</a></td>
+      </tr>
+  </tbody>
+</table>

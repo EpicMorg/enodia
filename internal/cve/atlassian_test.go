@@ -23,7 +23,7 @@ func loadAtlassianSample(t *testing.T) *Index {
 	return idx
 }
 
-func atlassianFinding(fs []Finding, id string) *Finding {
+func findingByID(fs []Finding, id string) *Finding {
 	for i := range fs {
 		if fs[i].AdvisoryID == id {
 			return &fs[i]
@@ -51,7 +51,7 @@ func TestLoadAtlassianRanges(t *testing.T) {
 		{"jira", "10.3.26", "CVE-2023-45133", false, ""},
 		{"jira", "11.3.10", "CVE-2023-45133", false, ""},
 	} {
-		f := atlassianFinding(idx.Lookup(tc.product, tc.version, ""), tc.cve)
+		f := findingByID(idx.Lookup(tc.product, tc.version, ""), tc.cve)
 		if (f != nil) != tc.want {
 			t.Errorf("%s %s: %s found = %v, want %v", tc.product, tc.version, tc.cve, f != nil, tc.want)
 			continue
@@ -60,7 +60,7 @@ func TestLoadAtlassianRanges(t *testing.T) {
 			t.Errorf("%s %s: %s fixed in %q, want %q", tc.product, tc.version, tc.cve, f.FixedVersion, tc.fixed)
 		}
 	}
-	f := atlassianFinding(idx.Lookup("confluence", "8.5.1", ""), "CVE-2023-22515")
+	f := findingByID(idx.Lookup("confluence", "8.5.1", ""), "CVE-2023-22515")
 	if f.Source != atlassianSource || f.CVSS.Score != 10 || f.AdvisoryURL == "" {
 		t.Errorf("CVE-2023-22515 finding = %+v", f)
 	}
@@ -75,10 +75,10 @@ func TestAtlassianOverridesOnlyListedReleases(t *testing.T) {
 		Source: "bdu", AdvisoryID: "BDU:2024-00702", CVEIDs: []string{"CVE-2024-21672"}, rng: r,
 	}}}}
 	idx := MergeIndex(bdu, loadAtlassianSample(t))
-	if f := atlassianFinding(idx.Lookup("jira", "10.3.26", ""), "BDU:2024-00702"); f != nil {
+	if f := findingByID(idx.Lookup("jira", "10.3.26", ""), "BDU:2024-00702"); f != nil {
 		t.Error("BDU's CVE-2024-21672 must not survive for Jira 10.3.26, which Atlassian lists without it")
 	}
-	if f := atlassianFinding(idx.Lookup("jira", "10.3.99", ""), "BDU:2024-00702"); f == nil {
+	if f := findingByID(idx.Lookup("jira", "10.3.99", ""), "BDU:2024-00702"); f == nil {
 		t.Error("a release Atlassian hasn't listed must keep BDU's finding")
 	}
 }

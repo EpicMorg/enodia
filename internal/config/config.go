@@ -47,13 +47,15 @@ type Config struct {
 // rather than settings.yaml (display preferences), and why enodia never
 // fetches the underlying data itself.
 type CVESpec struct {
-	BDU       BDUSpec       `yaml:"bdu,omitempty"`
-	NVD       NVDSpec       `yaml:"nvd,omitempty"`
-	Debian    DebianSpec    `yaml:"debian,omitempty"`
-	OVAL      OVALSpec      `yaml:"oval,omitempty"`
-	Alpine    AlpineSpec    `yaml:"alpine,omitempty"`
-	MariaDB   MariaDBSpec   `yaml:"mariadb,omitempty"`
-	Atlassian AtlassianSpec `yaml:"atlassian,omitempty"`
+	BDU        BDUSpec        `yaml:"bdu,omitempty"`
+	NVD        NVDSpec        `yaml:"nvd,omitempty"`
+	Debian     DebianSpec     `yaml:"debian,omitempty"`
+	OVAL       OVALSpec       `yaml:"oval,omitempty"`
+	Alpine     AlpineSpec     `yaml:"alpine,omitempty"`
+	MariaDB    MariaDBSpec    `yaml:"mariadb,omitempty"`
+	Atlassian  AtlassianSpec  `yaml:"atlassian,omitempty"`
+	PostgreSQL PostgreSQLSpec `yaml:"postgresql,omitempty"`
+	Nginx      NginxSpec      `yaml:"nginx,omitempty"`
 }
 
 // BDUSpec points at a local copy of FSTEC's БДУ export the operator
@@ -122,6 +124,25 @@ type AtlassianSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
+// PostgreSQLSpec points at the PostgreSQL project's security table the
+// operator saved themselves (https://www.postgresql.org/support/security/,
+// optionally with the per-major pages beside it in a directory) — the
+// fix release per major for postgresql targets, merged with BDU and NVD,
+// see docs/DECISIONS.md D71. Relative to the config file like
+// BDUSpec.Path.
+type PostgreSQLSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
+// NginxSpec points at nginx's security advisories page the operator saved
+// themselves (https://nginx.org/en/security_advisories.html) — vulnerable
+// and fixed releases per branch for nginx targets, merged with BDU and
+// NVD, see docs/DECISIONS.md D71. Relative to the config file like
+// BDUSpec.Path.
+type NginxSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
 // BDUPath returns the configured BDU export path, resolved relative to
 // the config file's own directory if it isn't already absolute — the same
 // rule resolveCredentialsFile applies to CredentialsFile. ok is false when
@@ -158,6 +179,16 @@ func (c *Config) MariaDBPath() (path string, ok bool) {
 // AtlassianPath is BDUPath's counterpart for cve.atlassian.path.
 func (c *Config) AtlassianPath() (path string, ok bool) {
 	return resolvePathRelativeToConfig(c.path, c.CVE.Atlassian.Path)
+}
+
+// PostgreSQLPath is BDUPath's counterpart for cve.postgresql.path.
+func (c *Config) PostgreSQLPath() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.PostgreSQL.Path)
+}
+
+// NginxPath is BDUPath's counterpart for cve.nginx.path.
+func (c *Config) NginxPath() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.Nginx.Path)
 }
 
 func resolvePathRelativeToConfig(configPath, p string) (path string, ok bool) {
@@ -273,13 +304,15 @@ func (c *Config) Validate() error {
 	}
 
 	for key, p := range map[string]string{
-		"cve.bdu.path":       c.CVE.BDU.Path,
-		"cve.nvd.path":       c.CVE.NVD.Path,
-		"cve.debian.path":    c.CVE.Debian.Path,
-		"cve.oval.path":      c.CVE.OVAL.Path,
-		"cve.alpine.path":    c.CVE.Alpine.Path,
-		"cve.mariadb.path":   c.CVE.MariaDB.Path,
-		"cve.atlassian.path": c.CVE.Atlassian.Path,
+		"cve.bdu.path":        c.CVE.BDU.Path,
+		"cve.nvd.path":        c.CVE.NVD.Path,
+		"cve.debian.path":     c.CVE.Debian.Path,
+		"cve.oval.path":       c.CVE.OVAL.Path,
+		"cve.alpine.path":     c.CVE.Alpine.Path,
+		"cve.mariadb.path":    c.CVE.MariaDB.Path,
+		"cve.atlassian.path":  c.CVE.Atlassian.Path,
+		"cve.postgresql.path": c.CVE.PostgreSQL.Path,
+		"cve.nginx.path":      c.CVE.Nginx.Path,
 	} {
 		if strings.ContainsFunc(p, unicode.IsControl) {
 			return fmt.Errorf("%s: %s %q contains a control character — a Windows path in double quotes "+
