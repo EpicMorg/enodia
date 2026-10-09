@@ -34,9 +34,10 @@ You describe your services once. Enodia handles the rest.
 > **[docs.enodia.sh](https://docs.enodia.sh)** · full docs, config reference,
 > and per-product probe notes.
 
-> **Status: 2.1.** The full pipeline (collect → inventory → evaluate →
-> render), 96 probes, CVE correlation against BDU ФСТЭК and NVD and, for
-> twelve Linux distributions, per installed package,
+> **Status: 2.2.** The full pipeline (collect → inventory → evaluate →
+> render), 123 probes, CVE correlation against BDU ФСТЭК, NVD and vendors'
+> own advisories and, for twelve Linux distributions, per installed package,
+> `enodia cve update` for the databases,
 > `settings.yaml`, and the release/packaging pipeline are all implemented
 > and used against real production infrastructure. See
 > [`CHANGELOG.md`](CHANGELOG.md) for release history, or the

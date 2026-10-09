@@ -8,6 +8,14 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ## [Unreleased]
 
+## [2.2.0+0] — 2026-10-09
+
+`enodia cve update` downloads the CVE databases itself, vendor security
+pages (MariaDB, Atlassian, PostgreSQL, nginx) join BDU and NVD, CVE
+matching reaches iLO 4, iDRAC and Synology DSM, and 27 new probes land.
+Nothing breaks: every new `cve:` key is optional, and 2.1 configs and
+inventories work unchanged.
+
 ### Added
 
 - `enodia cve update`: downloads the CVE databases every configured
