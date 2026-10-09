@@ -1252,6 +1252,11 @@ Not dates. Order of work, and what each step unblocks.
   login. The `github` resolver now reads "Release_1_18_0" and
   "release-5.2.4" tags as versions. See `docs/DECISIONS.md` D61.
 
+- `home-assistant` and `openhab` probes — Home Assistant's `/api/config`
+  with a long-lived token (nothing anonymous has the version), openHAB's
+  anonymous REST root. The `github` resolver skips tags named as
+  pre-releases (openHAB's "5.3.0.M2"). See `docs/DECISIONS.md` D62.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done

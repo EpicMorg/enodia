@@ -79,7 +79,7 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 	// Releases are returned newest first; the first non-draft, non-prerelease
 	// entry is "latest" in the sense every other product uses that word.
 	for _, rel := range releases {
-		if rel.Draft || rel.Prerelease {
+		if rel.Draft || rel.Prerelease || preReleaseName.MatchString(rel.TagName) {
 			continue
 		}
 		tag := githubReleaseTag(rel.TagName, ref.ID)
@@ -97,6 +97,12 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 // underscoreTag is a release tag spelled with underscores for dots behind a
 // word: doxygen/doxygen tags "Release_1_18_0".
 var underscoreTag = regexp.MustCompile(`^[A-Za-z]+_\d+(?:_\d+)+$`)
+
+// preReleaseName is a tag that names a pre-release even when the release
+// isn't flagged as one: openhab/openhab-distro publishes milestones
+// ("5.3.0.M2") as ordinary releases, which would otherwise read as newer
+// than the stable 5.2.2.
+var preReleaseName = regexp.MustCompile(`(?i)(?:\d[.\-_]?(?:m|rc|a|b)\d+|[.\-_](?:alpha|beta|rc|pre)(?:[.\-_]?\d+)?)$`)
 
 // releaseWordTag is a tag spelled "release-5.2.4" (qbittorrent/qBittorrent).
 var releaseWordTag = regexp.MustCompile(`^(?i:release)-(\d.*)$`)

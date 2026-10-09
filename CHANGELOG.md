@@ -10,6 +10,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `home-assistant` probe: `/api/config` with a long-lived access token,
+  `kind: bearer` (D62).
+- `openhab` probe: the anonymous REST root `/rest/` (D62).
 - `doxygen` probe: which Doxygen generated a docs site, from its generator
   mark (D61).
 - `qbittorrent` probe: the Web UI API after a form login, `kind: password`
@@ -54,6 +57,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Changed
 
+- The `github` resolver skips releases whose tag names a pre-release
+  (`5.3.0.M2`, `2026.10.0b7`, `-rc1`, `-beta.1`) even when GitHub doesn't
+  flag them (D62).
 - The `github` resolver reads underscore-spelled (`Release_1_18_0`) and
   `release-`-prefixed (`release-5.2.4`) tags as versions (D61).
 - The `github` resolver drops a leading `<repo>-`/`<repo>_` from release

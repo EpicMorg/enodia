@@ -150,3 +150,15 @@ func TestGithubReleaseTag(t *testing.T) {
 		}
 	}
 }
+
+func TestPreReleaseName(t *testing.T) {
+	for tag, want := range map[string]bool{
+		"5.3.0.M2": true, "2026.10.0b7": true, "release-5.3.0rc1": true, "v2.0.0-beta.1": true, "v3.0.0-rc": true,
+		"5.2.2": false, "v4.7.2": false, "1.1.1b": false, "RELEASE.2025-10-15T17-29-55Z": false,
+		"Release_1_18_0": false, "weblate-2026.10": false, "v1.0.68": false,
+	} {
+		if got := preReleaseName.MatchString(tag); got != want {
+			t.Errorf("preReleaseName(%q) = %v, want %v", tag, got, want)
+		}
+	}
+}

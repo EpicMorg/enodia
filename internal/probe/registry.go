@@ -83,6 +83,8 @@ var builtin = []Probe{
 	// gsad's <envelope><version> on /gmp, even in its 401. Verified live on a
 	// production Greenbone Community Edition (gsad 24.12.0).
 	greenboneProbe{},
+	// GET /api/config with a long-lived token. Verified live (2026.10.0).
+	homeAssistantProbe{},
 	grafanaProbe{},
 	graylogProbe{},
 	haproxyProbe{},
@@ -143,6 +145,8 @@ var builtin = []Probe{
 	// default release): ID="openEuler" (capital E, confirmed live — not
 	// lowercase), VERSION_ID="24.03".
 	osReleaseFamilyProbe{product: "openeuler", summary: "openEuler", match: osReleaseIDEquals("openEuler")},
+	// The anonymous REST root /rest/, runtimeInfo.version. Verified live (5.2.2).
+	openhabProbe{},
 	opensearchProbe{},
 	// opensuse/leap:latest: ID="opensuse-leap", VERSION_ID="16.0". Tumbleweed
 	// (ID="opensuse-tumbleweed") isn't covered by a real fixture here but

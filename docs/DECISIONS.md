@@ -3000,3 +3000,31 @@ same `normalizeRELTag` github-tags uses) and drops a leading "release-",
 after the repo-name prefix of D52. Other tags are left for
 `version.Clean`.
 
+## D62 — `home-assistant` with a token, `openhab` anonymously; pre-release tag names skipped
+
+**home-assistant.** Nothing anonymous carries Home Assistant's version:
+`/api/` and `/api/config` answer 401, and `/manifest.json`,
+`/auth/providers` and the onboarding endpoints have none (live on
+ghcr.io/home-assistant/home-assistant:stable). The REST API's documented
+auth is a long-lived access token as `Authorization: Bearer`, so that is
+the credential (`kind: bearer`, required); `GET /api/config` then returns
+`version` ("2026.10.0"). The same reply carries the home's coordinates,
+paths and URLs — only version, state and safe/recovery mode are read, and
+the fixture keeps just those. Resolver: `github` on home-assistant/core.
+
+**openhab.** `GET /rest/` answers without a login: the REST API's own
+version ("8") and `runtimeInfo` {"version": "5.2.2", "buildString":
+"Release Build"} (live on openhab/openhab:latest, whose
+version.properties said openhab-distro 5.2.2). `runtimeInfo.version` is
+the version; `/rest/systeminfo` needs a login. Bearer or Basic credentials
+are passed if configured, for an instance that turns anonymous access
+off. Resolver: `github` on openhab/openhab-distro.
+
+**Pre-release names.** openhab-distro publishes milestones ("5.3.0.M2")
+as ordinary GitHub releases, not flagged as pre-releases; one landing
+first would make every stable openHAB read as behind. The `github`
+resolver now also skips a release whose tag ends in a numbered
+pre-release marker (`M2`, `b7`, `rc1` after a digit) or a separated word
+(`-alpha`, `-beta.1`, `-rc`, `-pre`). Letter patch releases ("1.1.1b")
+don't match: the marker must carry a number.
+
