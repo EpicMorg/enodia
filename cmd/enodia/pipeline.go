@@ -162,7 +162,7 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 	return out
 }
 
-// loadCVEIndex returns the merged BDU/NVD/Debian/OVAL/Alpine/MariaDB vulnerability index
+// loadCVEIndex returns the merged BDU/NVD/Debian/OVAL/Alpine/MariaDB/Atlassian vulnerability index
 // the active config's cve.*.path entries name, or nil if none is
 // configured — the normal case for most installs. "The active
 // config" is the same file collection itself uses (config.Locate:
@@ -234,6 +234,13 @@ func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
 			return nil, err
 		}
 		idx = cve.MergeIndex(idx, mariadbIdx)
+	}
+	if atlassianPath, ok := cfg.AtlassianPath(); ok {
+		atlassianIdx, err := cve.LoadAtlassian(atlassianPath)
+		if err != nil {
+			return nil, err
+		}
+		idx = cve.MergeIndex(idx, atlassianIdx)
 	}
 	return idx, nil
 }

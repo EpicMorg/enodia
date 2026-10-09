@@ -375,6 +375,8 @@ cve:
     path: /var/lib/enodia/cve/alpine           # https://secdb.alpinelinux.org/<branch>/{main,community}.json
   mariadb:
     path: /var/lib/enodia/cve/mariadb.md       # https://mariadb.com/docs/server/security/cve/community-server.md
+  atlassian:
+    path: /var/lib/enodia/cve/atlassian.json   # https://api.atlassian.com/vuln-transparency/v1/products
 ```
 
 Each block works alone. `bdu.path` is the export as published (`.zip`),
@@ -438,6 +440,17 @@ cover `mariadb`): for a CVE MariaDB's table knows, its verdict wins,
 because BDU's and NVD's per-series ranges often reach into series the bug
 never existed in. CVEs the table doesn't list yet still come from BDU and
 NVD.
+
+`atlassian.path` is Atlassian's vulnerability transparency export, the
+JSON that URL returns, saved as is. It lists Jira, Confluence, Bitbucket
+and Bamboo releases (Server and Data Center) with the CVEs each is
+affected by and the release that fixes each, third-party dependencies
+included. A target is judged within its own branch: Jira 10.3.26 is not
+flagged for a CVE Atlassian lists only for 10.1 and 11.3. A branch with no
+fix listed after an affected release is flagged to its end. It merges with
+BDU and NVD like MariaDB's table: for a release Atlassian lists, its
+verdict wins on every CVE it tracks; a release newer than the file keeps
+BDU's and NVD's findings.
 
 A Proxmox VE host gets package findings as a second, SSH `debian` target
 alongside its API `proxmox` one.

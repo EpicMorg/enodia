@@ -68,6 +68,11 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
   sentry, splunk, uptime-kuma, wapt, weblate, zookeeper. MinIO's
   timestamp versions compare; pfSense CE and Splunk Enterprise skip
   ranges for other editions; Confluent Kafka builds get no lookup (D68).
+- `cve.atlassian.path`: Atlassian's own per-release CVE data
+  (vuln-transparency API) for `jira`, `confluence`, `bitbucket` and
+  `bamboo`, third-party dependency CVEs included. Judged within each
+  branch, merged with BDU and NVD; for a release Atlassian lists, its
+  verdict wins (D69).
 - `PRIVACY.md`: what enodia connects to (your targets, endoflife.date,
   the GitHub API — product and repository names only) and what it stores
   (only your own files and a local cache). No telemetry.

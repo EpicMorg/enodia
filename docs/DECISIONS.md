@@ -3167,3 +3167,47 @@ Four needed more than a table row:
 WAPT's own edition ("community"/"enterprise") is passed through as is.
 Checked live against the full data: MinIO's last community release
 matches 8 findings, pfSense CE 2.8.1 none, Splunk 10.6.0 none and 9.4.1 134.
+
+## D69 — Atlassian's own per-release CVE data (`cve.atlassian.path`)
+
+Atlassian publishes, with no login,
+`https://api.atlassian.com/vuln-transparency/v1/products`: for Jira
+Software, Jira Core, Jira Service Management, Confluence, Bitbucket,
+Bamboo, Crowd, Fisheye and Crucible (Server and Data Center each), every
+release with the CVEs it is `AFFECTED` by or that were `FIXED` in it, plus
+a summary, CVSS score and tracking issue per CVE. 2.3MB, 419 CVEs, from
+July 2023 on, most of them in third-party dependencies that NVD's
+Atlassian CPEs never list. The operator downloads it like the MariaDB
+table; `LoadAtlassian` reads it.
+
+Mapped: jira (Jira Software and Jira Core), confluence, bitbucket,
+bamboo. The probe can't tell Server from Data Center, so both lists are
+read and either one's `AFFECTED` counts. Jira Service Management numbers
+its releases on its own (5.x beside Jira 9.x) and isn't mapped. Release
+candidates and EAPs ("10.0.0-rc3") are skipped.
+
+**The export is sparse.** A CVE is usually listed at the first affected
+release of a branch and at its fix ("8.5.0 AFFECTED", "8.5.10 FIXED"),
+not at every release between. Reading only the listed points would miss
+8.5.1–8.5.9. Reading a span to the next fix across branches flagged Jira
+10.3.26 for CVE-2023-45133, which is listed for 10.1.1 and fixed in
+11.3.10 but never listed for 10.3. So spans stay within a major.minor
+branch: from an affected release to the next one listed as fixing it, or
+to the branch's end when no fix follows (an ended or non-LTS branch).
+A branch the CVE never names isn't affected.
+
+**Merging** works like MariaDB's (D50), with one difference. Atlassian
+lists releases one by one, so its verdict holds only for a release it
+lists. A newer release (or one it skipped) keeps BDU's and NVD's findings.
+For a listed release, a BDU/NVD finding whose CVEs Atlassian tracks but
+doesn't flag there is dropped. "Tracks" means listed for any product in
+the export: BDU files Confluence's CVE-2024-21672..21674 under "Jira Data
+Center" (with a bound typed "19.07.18"), and Atlassian's per-release lists
+say Jira was never affected.
+
+Checked against the full export plus full NVD and BDU: the newest
+release of each maintained branch (Jira 10.3.26 and 11.3.12, Confluence
+9.2.26 and 10.2.19, Bitbucket 9.4.26) has no Atlassian findings, and the
+three stray BDU findings on Jira are gone. Older releases gain many: Jira
+10.3.12 goes from 4 CVEs (NVD and BDU) to 119, almost all of them
+dependencies Atlassian fixed in later 10.3 releases.

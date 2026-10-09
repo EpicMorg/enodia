@@ -47,12 +47,13 @@ type Config struct {
 // rather than settings.yaml (display preferences), and why enodia never
 // fetches the underlying data itself.
 type CVESpec struct {
-	BDU     BDUSpec     `yaml:"bdu,omitempty"`
-	NVD     NVDSpec     `yaml:"nvd,omitempty"`
-	Debian  DebianSpec  `yaml:"debian,omitempty"`
-	OVAL    OVALSpec    `yaml:"oval,omitempty"`
-	Alpine  AlpineSpec  `yaml:"alpine,omitempty"`
-	MariaDB MariaDBSpec `yaml:"mariadb,omitempty"`
+	BDU       BDUSpec       `yaml:"bdu,omitempty"`
+	NVD       NVDSpec       `yaml:"nvd,omitempty"`
+	Debian    DebianSpec    `yaml:"debian,omitempty"`
+	OVAL      OVALSpec      `yaml:"oval,omitempty"`
+	Alpine    AlpineSpec    `yaml:"alpine,omitempty"`
+	MariaDB   MariaDBSpec   `yaml:"mariadb,omitempty"`
+	Atlassian AtlassianSpec `yaml:"atlassian,omitempty"`
 }
 
 // BDUSpec points at a local copy of FSTEC's БДУ export the operator
@@ -111,6 +112,16 @@ type MariaDBSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
+// AtlassianSpec points at Atlassian's vulnerability transparency export
+// the operator downloaded themselves
+// (https://api.atlassian.com/vuln-transparency/v1/products) — per-release
+// CVE status for jira, confluence, bitbucket and bamboo targets, merged
+// with BDU and NVD, see docs/DECISIONS.md D69. Relative to the config file
+// like BDUSpec.Path.
+type AtlassianSpec struct {
+	Path string `yaml:"path,omitempty"`
+}
+
 // BDUPath returns the configured BDU export path, resolved relative to
 // the config file's own directory if it isn't already absolute — the same
 // rule resolveCredentialsFile applies to CredentialsFile. ok is false when
@@ -142,6 +153,11 @@ func (c *Config) AlpinePath() (path string, ok bool) {
 // MariaDBPath is BDUPath's counterpart for cve.mariadb.path.
 func (c *Config) MariaDBPath() (path string, ok bool) {
 	return resolvePathRelativeToConfig(c.path, c.CVE.MariaDB.Path)
+}
+
+// AtlassianPath is BDUPath's counterpart for cve.atlassian.path.
+func (c *Config) AtlassianPath() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.Atlassian.Path)
 }
 
 func resolvePathRelativeToConfig(configPath, p string) (path string, ok bool) {
@@ -257,12 +273,13 @@ func (c *Config) Validate() error {
 	}
 
 	for key, p := range map[string]string{
-		"cve.bdu.path":     c.CVE.BDU.Path,
-		"cve.nvd.path":     c.CVE.NVD.Path,
-		"cve.debian.path":  c.CVE.Debian.Path,
-		"cve.oval.path":    c.CVE.OVAL.Path,
-		"cve.alpine.path":  c.CVE.Alpine.Path,
-		"cve.mariadb.path": c.CVE.MariaDB.Path,
+		"cve.bdu.path":       c.CVE.BDU.Path,
+		"cve.nvd.path":       c.CVE.NVD.Path,
+		"cve.debian.path":    c.CVE.Debian.Path,
+		"cve.oval.path":      c.CVE.OVAL.Path,
+		"cve.alpine.path":    c.CVE.Alpine.Path,
+		"cve.mariadb.path":   c.CVE.MariaDB.Path,
+		"cve.atlassian.path": c.CVE.Atlassian.Path,
 	} {
 		if strings.ContainsFunc(p, unicode.IsControl) {
 			return fmt.Errorf("%s: %s %q contains a control character — a Windows path in double quotes "+

@@ -10,7 +10,7 @@ import "github.com/EpicMorg/enodia/internal/version"
 // facts, not a verdict) — Severity is the source's own published rating,
 // not something this project computed.
 type Finding struct {
-	Source      string   // "bdu", "nvd", "mariadb", or a package-level source (see InstalledVersion)
+	Source      string   // "bdu", "nvd", "mariadb", "atlassian", or a package-level source (see InstalledVersion)
 	AdvisoryID  string   // the source's own advisory id: "BDU:2023-06364" for BDU; for NVD, the CVE id again — NVD has no separate advisory id of its own
 	CVEIDs      []string // e.g. ["CVE-2023-22515"]; may be empty — not every BDU entry cites one
 	Title       string
@@ -98,11 +98,19 @@ type Index struct {
 	debian    debianTracker           // nil unless cve.debian.path is configured
 	oval      map[string]*ovalRelease // by ovalReleaseKey; nil unless cve.oval.path is configured
 	alpine    alpineSecdb             // nil unless cve.alpine.path is configured
-	// vendorCVEs is, per product, every CVE a vendor's own fixed-versions
-	// data covers (today: MariaDB's, cve.mariadb.path). For those CVEs the
-	// vendor's verdict replaces BDU's and NVD's — see Lookup.
+	// vendorCVEs is, per product, every CVE a vendor's own data covers
+	// (MariaDB's, cve.mariadb.path; Atlassian's, cve.atlassian.path). For
+	// those CVEs the vendor's verdict replaces BDU's and NVD's — see Lookup.
 	vendorCVEs map[string]map[string]bool
+	// vendorVersions is, per product, every release a vendor's data lists,
+	// as joinParts strings — set only for a vendor that lists releases one
+	// by one (Atlassian). Its verdict then holds only for those releases:
+	// one it hasn't listed yet keeps BDU's and NVD's findings.
+	vendorVersions map[string]map[string]bool
 }
+
+// vendorSources are the Finding.Source values of vendors' own data.
+var vendorSources = map[string]bool{mariadbSource: true, atlassianSource: true}
 
 // Lookup returns every finding for product whose range contains probed
 // and whose edition applies. edition is the observation's own edition
@@ -128,6 +136,12 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 	if vendor == nil {
 		return out
 	}
+	if listed := idx.vendorVersions[product]; listed != nil {
+		parts, ok := cleanVersionParts(version.Core(probed))
+		if !ok || !listed[joinParts(parts)] {
+			return out
+		}
+	}
 	// The vendor's own data knows which series each CVE was fixed in;
 	// BDU's and NVD's ranges for the same CVE often don't (D50). A BDU/NVD
 	// finding survives only when the vendor flags this version for one of
@@ -135,7 +149,7 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 	// all (newer than the vendor's table, or BDU-only).
 	flagged := map[string]bool{}
 	for _, f := range out {
-		if f.Source == mariadbSource {
+		if vendorSources[f.Source] {
 			for _, id := range f.CVEIDs {
 				flagged[id] = true
 			}
@@ -143,7 +157,7 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 	}
 	kept := out[:0]
 	for _, f := range out {
-		if f.Source != mariadbSource && vendorOverrides(f.CVEIDs, vendor, flagged) {
+		if !vendorSources[f.Source] && vendorOverrides(f.CVEIDs, vendor, flagged) {
 			continue
 		}
 		kept = append(kept, f)
@@ -195,6 +209,12 @@ func MergeIndex(a, b *Index) *Index {
 			a.vendorCVEs = map[string]map[string]bool{}
 		}
 		a.vendorCVEs[product] = ids
+	}
+	for product, vs := range b.vendorVersions {
+		if a.vendorVersions == nil {
+			a.vendorVersions = map[string]map[string]bool{}
+		}
+		a.vendorVersions[product] = vs
 	}
 	return a
 }
