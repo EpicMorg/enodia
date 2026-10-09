@@ -50,6 +50,8 @@ var builtin = []Probe{
 	// Confirmed live: /redfish/v1 carries Oem.Dell, the Manager resource
 	// itself carries none — see dellidrac.go for why this is 2 requests.
 	dellIDRACProbe{},
+	// The CHANGELOG served from its web root. Verified live (4.23.0).
+	domainmodProbe{},
 	// <meta name="generator" content="Doxygen X"> on a generated docs site.
 	// Verified against doxygen.nl's own manual (1.19.0).
 	doxygenProbe{},
@@ -176,6 +178,8 @@ var builtin = []Probe{
 	perforceSwarmProbe{},
 	pfsenseProbe{},
 	pgadminProbe{},
+	// The login page footer "[v1.8.3]" and ?v= asset suffix. Verified live (1.8.3).
+	phpipamProbe{},
 	// Official top-level photon:5.0 (Docker's Official Images program,
 	// not vmware/photon's own stale repo which stops at 2.0): ID=photon,
 	// VERSION_ID=5.0.

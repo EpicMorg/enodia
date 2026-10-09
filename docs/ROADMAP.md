@@ -1267,9 +1267,13 @@ Not dates. Order of work, and what each step unblocks.
   `/spec`, TorrServer's `/echo`. Verified live. See `docs/DECISIONS.md`
   D64.
 
+- `phpipam` and `domainmod` probes — phpIPAM's login page (footer and
+  `?v=` asset suffix), DomainMOD's CHANGELOG served from its web root.
+  Verified live. See `docs/DECISIONS.md` D65.
+
 ## Next
 
-- `phpipam`, `domainmod`, `splunk` probes — asked for, in progress
+- `splunk` probe — asked for; needs the Splunk license accepted to stand one up for a capture, or a real instance
 
 Everything found running 2.0 against a real ~600-target fleet is done
 (see above). Requests from a second, ~90-target fleet:

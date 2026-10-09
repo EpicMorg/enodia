@@ -10,6 +10,8 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `phpipam` probe: the login page's footer and asset version (D65).
+- `domainmod` probe: the CHANGELOG in its web root (D65).
 - `netdata` probe: the agent's anonymous `/api/v1/info` (D64).
 - `libretranslate` probe: the public OpenAPI document `/spec` (D64).
 - `torrserver` probe: `/echo` (D64).

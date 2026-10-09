@@ -42,3 +42,32 @@ func TestTorrServerProbe(t *testing.T) {
 		t.Fatalf("got %v, want ErrNotSupported", err)
 	}
 }
+
+// phpipam_1.8.3_login.html is a live phpipam-www's login page head and
+// footer.
+func TestPHPIPAMProbe(t *testing.T) {
+	srv := pageServer(t, "/index.php", 200, readFixture(t, "phpipam_1.8.3_login.html"))
+	obs, err := phpipamProbe{}.Probe(context.Background(), target(srv, "phpipam"))
+	if err != nil || obs.Version != "1.8.3" || obs.Extra["revision"] != "002" || obs.Extra["dbVersion"] != "46" {
+		t.Fatalf("got %q %+v, %v", obs.Version, obs.Extra, err)
+	}
+	assetOnly := []byte(`<link href="css/x.css?v=1.7.4_r001_v40">`)
+	if obs, err := (phpipamProbe{}).Probe(context.Background(), target(pageServer(t, "/index.php", 200, assetOnly), "phpipam")); err != nil || obs.Version != "1.7.4" {
+		t.Fatalf("asset fallback: got %q, %v", obs.Version, err)
+	}
+	if _, err := (phpipamProbe{}).Probe(context.Background(), target(pageServer(t, "/index.php", 200, []byte("<html></html>")), "phpipam")); !errors.Is(err, ErrNotSupported) {
+		t.Fatalf("got %v, want ErrNotSupported", err)
+	}
+}
+
+// domainmod_4.23.0_CHANGELOG.txt is the head of a live container's
+// /CHANGELOG.
+func TestDomainMODProbe(t *testing.T) {
+	obs, err := domainmodProbe{}.Probe(context.Background(), target(pageServer(t, "/CHANGELOG", 200, readFixture(t, "domainmod_4.23.0_CHANGELOG.txt")), "domainmod"))
+	if err != nil || obs.Version != "4.23.0" {
+		t.Fatalf("got %q, %v", obs.Version, err)
+	}
+	if _, err := (domainmodProbe{}).Probe(context.Background(), target(pageServer(t, "/CHANGELOG", 200, []byte("# Changelog\n## 1.0\n")), "domainmod")); !errors.Is(err, ErrNotSupported) {
+		t.Fatalf("got %v, want ErrNotSupported", err)
+	}
+}

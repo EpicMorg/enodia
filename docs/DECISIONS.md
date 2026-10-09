@@ -3080,3 +3080,23 @@ MatriX.145.2). It is kept as is; `version.Core` compares the numbers after
 the codename, on both sides. Basic credentials pass through for an
 instance with auth on. Resolver: `github` YouROK/TorrServer.
 
+## D65 — `phpipam` from its login page, `domainmod` from its served CHANGELOG
+
+**phpipam.** The login page's footer reads "phpIPAM IP address management
+[v1.8.3]", and every stylesheet and script is loaded with
+`?v=1.8.3_r002_v46` — phpIPAM's own SCRIPT_PREFIX: VERSION_VISIBLE, the
+code revision and the database schema version (functions/version.php).
+Confirmed live on phpipam/phpipam-www:latest with MariaDB, before and after
+the schema was installed. The footer gives the version; the asset suffix
+is the fallback and gives revision and schema version for extra. Resolver:
+`github` phpipam/phpipam.
+
+**domainmod.** DomainMOD shows "Version 4.23.0" only in the logged-in
+layout's footer, but its web root ships the CHANGELOG, served as a static
+file: "DomainMOD CHANGELOG", a rule, then the newest entry first —
+"v4.23.0     2025-01-04" (domainmod/domainmod:latest, live, whose
+software.inc.php says SOFTWARE_VERSION = '4.23.0'). The probe requires
+that heading, so another app's changelog isn't read as DomainMOD's; a web
+server that blocks the file makes it `ErrNotSupported`. Resolver: `github`
+domainmod/domainmod.
+
