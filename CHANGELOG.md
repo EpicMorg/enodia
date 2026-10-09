@@ -10,6 +10,10 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Fixed
 
+- `cve update` now creates every configured directory (`cve.nvd`, `oval`,
+  `alpine`, `postgresql`) even when nothing is to be fetched into it yet —
+  `cve.alpine.path` set on a fleet with no Alpine host left the directory
+  missing, and `check` refused the config (D73).
 - `kafka` started `kafka-topics --version` (a JVM, a few seconds) on every
   run when it was on PATH, even with the broker's jar found; it now runs
   only when no jar is (D63).

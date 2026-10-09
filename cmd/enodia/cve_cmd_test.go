@@ -4,6 +4,7 @@ package main
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -79,5 +80,27 @@ cve:
 	cmd, _, _ := testCmd(t)
 	if err := runCVEUpdateCmd(cmd, nil); err == nil || !strings.Contains(err.Error(), "ca_file") {
 		t.Fatalf("got %v, want a ca_file error", err)
+	}
+}
+
+func TestCVEUpdateCreatesEmptyDirs(t *testing.T) {
+	// No Alpine host known yet: nothing to fetch, but check must still find
+	// the configured directory.
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, cfgPath, `schemaVersion: 1
+targets: []
+cve:
+  alpine: {path: cve/alpine}
+`)
+	withConfigFlag(t, cfgPath)
+	withCVEUpdateFlags(t, nil, nil, false)
+
+	cmd, _, _ := testCmd(t)
+	if err := runCVEUpdateCmd(cmd, nil); err != nil {
+		t.Fatalf("runCVEUpdateCmd: %v", err)
+	}
+	if st, err := os.Stat(filepath.Join(dir, "cve", "alpine")); err != nil || !st.IsDir() {
+		t.Fatalf("cve/alpine not created: %v", err)
 	}
 }

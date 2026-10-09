@@ -284,6 +284,20 @@ func ParseOVALRelease(s string) (product, release string, err error) {
 	return product, release, nil
 }
 
+// Dirs lists the configured paths cve update treats as directories. They
+// are created even when nothing is planned for them (no OVAL release or
+// Alpine branch known yet): the CVE lookup refuses a configured path that
+// doesn't exist, so an empty directory keeps check working.
+func (p Paths) Dirs() []string {
+	var dirs []string
+	for _, d := range []string{p.NVD, p.OVAL, p.Alpine, p.PostgreSQL} {
+		if d != "" && isDir(d) {
+			dirs = append(dirs, d)
+		}
+	}
+	return dirs
+}
+
 // isDir reports whether p is a directory, or would be one: a path that
 // doesn't exist yet and has no file extension.
 func isDir(p string) bool {
