@@ -10,6 +10,8 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `posthog` probe: self-hosted PostHog's git commit from its anonymous
+  login page (D59).
 - `uptime-kuma` probe: logs in over Uptime Kuma's socket.io API with a
   username and password (`kind: password`) and reads the version it sends
   after login (D58).

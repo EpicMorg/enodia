@@ -2928,3 +2928,20 @@ failed on 2.5.5 and passed on every run after. `latestVersion` (Kuma's own
 update check) and `dbType` go into extra; lifecycle comes from the `github`
 resolver on louislam/uptime-kuma.
 
+## D59 — `posthog`: the git commit is the version
+
+PostHog stopped shipping numbered releases; a self-hosted (hobby) install
+tracks the main branch, and the only identifier it exposes is the commit
+it was built from. The login page embeds `window.POSTHOG_APP_CONTEXT =
+JSON.parse("{...}")` — a JSON document inside a JS string literal, quotes
+escaped as `\u0022` — and its `commit_sha` is that commit (confirmed live,
+anonymously, on a production self-hosted instance). The probe decodes the
+string literal as a JSON string, then the document, and reports the commit
+as the version, with the realm ("hosted-clickhouse") in extra.
+`/_preflight/` is anonymous too but carries only service health and the
+realm; `/api/instance_status` needs a login.
+
+No resolver: there are no releases to compare a commit with. How far
+behind main a commit is would take GitHub's compare API — a resolver of a
+different kind than any here; not done.
+

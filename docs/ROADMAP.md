@@ -1238,6 +1238,10 @@ Not dates. Order of work, and what each step unblocks.
   anonymous carries it. Verified live on 1.23.17 and 2.5.5. See
   `docs/DECISIONS.md` D58.
 
+- `posthog` probe — self-hosted PostHog has no numbered releases; the
+  login page's `POSTHOG_APP_CONTEXT.commit_sha` is its version. Inventory
+  only. See `docs/DECISIONS.md` D59.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done

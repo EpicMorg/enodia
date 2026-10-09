@@ -163,6 +163,9 @@ var builtin = []Probe{
 	osReleaseFamilyProbe{product: "photon", summary: "VMware Photon OS", resolver: ResolverRef{Type: "endoflife", ID: "photon"}, match: osReleaseIDEquals("photon")},
 	phpmyadminProbe{},
 	portainerProbe{},
+	// window.POSTHOG_APP_CONTEXT.commit_sha on /login, anonymous. Verified
+	// live on a production self-hosted instance.
+	posthogProbe{},
 	postgresExporterProbe{},
 	postgresProbe{},
 	// Real ISO rootfs capture: ID="postmarketos", VERSION_ID="v26.06" — the
