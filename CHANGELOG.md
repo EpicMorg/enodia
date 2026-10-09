@@ -10,6 +10,7 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `wapt` probe: the WAPT server's anonymous `/ping` (D57).
 - `minio` probe: `minio --version` over SSH, optionally in a container;
   MinIO's `RELEASE.<timestamp>` names now compare as versions (D56).
 - `sentry` probe: self-hosted Sentry's version from its anonymous login

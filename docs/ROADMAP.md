@@ -1229,6 +1229,10 @@ Not dates. Order of work, and what each step unblocks.
   container; `RELEASE.<timestamp>` names fold into comparable versions.
   Verified live on an in-house build. See `docs/DECISIONS.md` D56.
 
+- `wapt` probe — the WAPT server's anonymous `/ping` (version, build from
+  git_hash, edition). No lifecycle source. Verified live (1.8.2.7334). See
+  `docs/DECISIONS.md` D57.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1281,8 +1285,7 @@ Everything found running 2.0 against a real ~600-target fleet is done
   long-polling client and a username/password socket.io login (which 2FA
   blocks)
 - Kafka stays blocked on JMX — see Later and D21
-- More probes asked for, not yet looked at: `wapt` (WAPT server),
-  `posthog` (self-hosted), `qbittorrent` (Web UI API), `doxygen` (a
+- More probes asked for, not yet looked at: `posthog` (self-hosted), `qbittorrent` (Web UI API), `doxygen` (a
   generated site — the version is in each page's footer comment),
   `netbox`, `openvas` (Greenbone)
 

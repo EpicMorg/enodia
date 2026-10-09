@@ -2881,3 +2881,18 @@ carries every release's full changelog, and minio/minio's 30 latest came
 to 3.4MB, cut mid-JSON by the resolver's 1MiB read cap. The `github`
 resolver's own cap is now 8MiB.
 
+## D57 — `wapt` reads the server's anonymous `/ping`; no lifecycle source
+
+The WAPT server (Tranquil IT) answers `GET /ping` without a session:
+`{"msg": "WAPT Server running", "result": {"version": "1.8.2", "git_hash":
+"1.8.2.7334-2d15afd9-debian-10-amd64", "edition": "community",
+"api_version": "v3", ...}}` — confirmed live on a production 1.8.2 server.
+`git_hash` starts with the full build number, so 1.8.2.7334 is the version
+when it extends `version`; edition, API version and git_hash go into
+extra.
+
+No resolver: there is no endoflife.date page, and Tranquil IT's GitHub
+repository's tags stopped at 1.5 years ago; releases are published on
+their own site, which no resolver here reads. Inventory only, like the BMC
+probes (D40).
+
