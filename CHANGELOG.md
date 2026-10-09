@@ -10,6 +10,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `uptime-kuma` probe: logs in over Uptime Kuma's socket.io API with a
+  username and password (`kind: password`) and reads the version it sends
+  after login (D58).
 - `wapt` probe: the WAPT server's anonymous `/ping` (D57).
 - `minio` probe: `minio --version` over SSH, optionally in a container;
   MinIO's `RELEASE.<timestamp>` names now compare as versions (D56).

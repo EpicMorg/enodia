@@ -222,6 +222,9 @@ var builtin = []Probe{
 	// ubuntuProbe, not osReleaseFamilyProbe: VERSION_ID never carries the
 	// point release ("22.04", not "22.04.5") — see ubuntu.go for why.
 	ubuntuProbe{},
+	// Logs in over socket.io (Engine.IO long-polling) and reads the version
+	// from the post-login info event. Verified live on 1.23.17 and 2.5.5.
+	uptimeKumaProbe{},
 	vaultProbe{},
 	bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden", resolver: ResolverRef{Type: "github", ID: "dani-garcia/vaultwarden"}},
 	vcenterProbe{},

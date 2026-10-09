@@ -2896,3 +2896,34 @@ repository's tags stopped at 1.5 years ago; releases are published on
 their own site, which no resolver here reads. Inventory only, like the BMC
 probes (D40).
 
+## D58 — `uptime-kuma` logs in over socket.io; nothing anonymous has the version
+
+**Where the version isn't.** Uptime Kuma's UI talks to its server over
+socket.io, and the server's "info" event carries `version` — but a fresh
+connection gets it without: `sendInfo(socket, hideVersion)` in
+server/client.js hides it until the socket is logged in. `/metrics` has no
+version series, and API keys open only `/metrics`. Confirmed live on
+louislam/uptime-kuma 1.23.17 and 2.5.5 and on a production instance's
+public status page, whose `/api/status-page/*` and socket carry none
+either.
+
+**So the probe logs in** (`kind: password`, required), speaking just
+enough of Engine.IO v4's HTTP long-polling transport, through FetchHTTP:
+GET opens a session (`0{"sid":...}`), POST `40` connects the default
+namespace, POST `420["login",{"username","password","token":""}]` emits
+the login with an ack, then GETs are polled — answering Engine.IO pings
+(`2` → `3`) — until an "info" event with `version` arrives (then `41`
+disconnects), or the ack (`430[...]`) refuses. 1.23.17 sent the ack, then
+`monitorList`, `maintenanceList` and the versioned "info"; 2.5.5 sent the
+versioned "info" before the ack — both orders are handled, and the
+recorded transcripts are the fixtures (JWT in the ack replaced). A refused
+login is `ErrAuth` with Kuma's own message ("Incorrect username or
+password."); an ack asking for a token means the user has 2FA, reported as
+`ErrNotSupported` — use a monitoring user without it. Plain-HTTP Kuma
+needs `allow_insecure_transport`, as for any credential.
+
+Kuma rate-limits logins: a run right after several wrong passwords once
+failed on 2.5.5 and passed on every run after. `latestVersion` (Kuma's own
+update check) and `dbType` go into extra; lifecycle comes from the `github`
+resolver on louislam/uptime-kuma.
+

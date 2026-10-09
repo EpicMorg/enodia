@@ -1233,6 +1233,11 @@ Not dates. Order of work, and what each step unblocks.
   git_hash, edition). No lifecycle source. Verified live (1.8.2.7334). See
   `docs/DECISIONS.md` D57.
 
+- `uptime-kuma` probe — logs in over socket.io (Engine.IO long-polling)
+  and reads the version from the post-login `info` event; nothing
+  anonymous carries it. Verified live on 1.23.17 and 2.5.5. See
+  `docs/DECISIONS.md` D58.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1278,12 +1283,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   `server_tokens off` + `more_set_headers`: the 404 body is a bare
   `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
   there. Still unchecked against `server_tokens on` with a rewritten header
-- `uptime-kuma` probe — no anonymous version anywhere: the socket.io
-  `info` event hides it before login (`sendInfo(socket, hideVersion)`,
-  confirmed live on 1.23.17), `/metrics` has no version series (1.23.17,
-  2.5.5), and API keys only open `/metrics`. Needs an Engine.IO
-  long-polling client and a username/password socket.io login (which 2FA
-  blocks)
 - Kafka stays blocked on JMX — see Later and D21
 - More probes asked for, not yet looked at: `posthog` (self-hosted), `qbittorrent` (Web UI API), `doxygen` (a
   generated site — the version is in each page's footer comment),
