@@ -17,7 +17,6 @@ runs no server that enodia talks to and receives nothing from it.
   — for products whose releases are published on GitHub. Same as above:
   only the public repository name is in the request. If you set
   `GITHUB_TOKEN`, it is sent to GitHub only, to raise the rate limit.
-
 - **CVE database publishers**, only when you run `enodia cve update`, and
   only those your `cve.*.path` entries name: nvd.nist.gov, bdu.fstec.ru,
   security-tracker.debian.org, the OVAL publishers (Canonical, Red Hat,
