@@ -1271,6 +1271,10 @@ Not dates. Order of work, and what each step unblocks.
   `?v=` asset suffix), DomainMOD's CHANGELOG served from its web root.
   Verified live. See `docs/DECISIONS.md` D65.
 
+- `code-server` probe — the login page's coder-options meta
+  (`codeServerVersion`). Verified live (4.141.0). See
+  `docs/DECISIONS.md` D66.
+
 ## Next
 
 - `splunk` probe — asked for; needs the Splunk license accepted to stand one up for a capture, or a real instance

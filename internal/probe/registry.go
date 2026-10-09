@@ -42,6 +42,8 @@ var builtin = []Probe{
 		return f["ID"] == "centos" && f["NAME"] == "CentOS Stream"
 	}},
 	clickhouseProbe{},
+	// coder-options codeServerVersion on the login page. Verified live (4.141.0).
+	codeServerProbe{},
 	&atlassianProbe{product: "confluence", typeID: "confluence", resolver: "confluence", summary: "Atlassian Confluence (Data Center)"},
 	// debianProbe, not osReleaseFamilyProbe: /etc/os-release's VERSION_ID
 	// never carries Debian's point release ("13", not "13.6") — see

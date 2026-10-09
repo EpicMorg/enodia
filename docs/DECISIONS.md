@@ -3100,3 +3100,13 @@ that heading, so another app's changelog isn't read as DomainMOD's; a web
 server that blocks the file makes it `ErrNotSupported`. Resolver: `github`
 domainmod/domainmod.
 
+## D66 — `code-server` reads the options its login page embeds
+
+code-server's login page carries `<meta id="coder-options"
+data-settings="{...}">`, HTML-escaped JSON with `codeServerVersion`
+("4.141.0") — live on codercom/code-server:latest, whose `code-server
+--version` said "4.141.0 ... with Code 1.141.0". `/version` needs the
+password and `/healthz` has no version. The probe reads `/login`,
+unescapes the attribute and decodes it. Resolver: `github`
+coder/code-server.
+

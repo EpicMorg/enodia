@@ -71,3 +71,15 @@ func TestDomainMODProbe(t *testing.T) {
 		t.Fatalf("got %v, want ErrNotSupported", err)
 	}
 }
+
+// code-server_4.141.0_login.html is the head of a live
+// codercom/code-server's /login.
+func TestCodeServerProbe(t *testing.T) {
+	obs, err := codeServerProbe{}.Probe(context.Background(), target(pageServer(t, "/login", 200, readFixture(t, "code-server_4.141.0_login.html")), "code-server"))
+	if err != nil || obs.Version != "4.141.0" {
+		t.Fatalf("got %q, %v", obs.Version, err)
+	}
+	if _, err := (codeServerProbe{}).Probe(context.Background(), target(pageServer(t, "/login", 200, []byte("<html></html>")), "code-server")); !errors.Is(err, ErrNotSupported) {
+		t.Fatalf("got %v, want ErrNotSupported", err)
+	}
+}
