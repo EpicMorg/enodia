@@ -77,6 +77,9 @@ var builtin = []Probe{
 	// Verified live against ghost:6 (6.69).
 	ghostProbe{},
 	gitlabProbe{},
+	// gsad's <envelope><version> on /gmp, even in its 401. Verified live on a
+	// production Greenbone Community Edition (gsad 24.12.0).
+	greenboneProbe{},
 	grafanaProbe{},
 	graylogProbe{},
 	haproxyProbe{},
@@ -117,6 +120,8 @@ var builtin = []Probe{
 	mysqlProbe{},
 	// Captured via vmactions/netbsd-vm (see uname.go): `uname -sr` -> "NetBSD 11.0".
 	unameFamilyProbe{product: "netbsd", summary: "NetBSD", resolver: ResolverRef{Type: "endoflife", ID: "netbsd"}, unameName: "NetBSD"},
+	// data-netbox-version on /login/, anonymous. Verified live (4.3.3).
+	netboxProbe{},
 	nextcloudProbe{},
 	nexusProbe{},
 	nginxProbe{},

@@ -2945,3 +2945,25 @@ No resolver: there are no releases to compare a commit with. How far
 behind main a commit is would take GitHub's compare API — a resolver of a
 different kind than any here; not done.
 
+## D60 — `netbox` from its login page, `greenbone` from gsad's 401
+
+**netbox.** The login page's root element carries
+`data-netbox-version="4.3.3-Docker-3.3.0"`, and the bundle loads as
+`/static/netbox.js?v=4.3.3` — both anonymous, confirmed live on a
+production NetBox run from netbox-docker. The part before `-Docker-` is
+NetBox's version; the rest, netbox-docker's image version, goes into extra.
+The asset's `?v=` is the fallback for pages without the attribute. The REST
+API (`/api/status/`) needs a token. Resolver: `github` on
+netbox-community/netbox (no endoflife.date page).
+
+**greenbone.** Greenbone Community Edition (OpenVAS behind the Greenbone
+Security Assistant) answers through gsad, which wraps every `/gmp` reply in
+`<envelope><version>24.12.0</version><vendor_version/>...` — the 401 for a
+request with no session included ("Authentication required ... (GSA
+24.12.0)"), confirmed live on a production instance. The probe accepts that
+401 (`OKStatuses`) and reads the envelope. The UI itself is a static React
+bundle with no version. Product `greenbone`, aliases `openvas` and `gsad`;
+the version is gsad's, compared against greenbone/gsad's GitHub releases
+(no endoflife.date page). The scanner (openvas-scanner) and gvmd behind it
+version separately and aren't visible without a login.
+

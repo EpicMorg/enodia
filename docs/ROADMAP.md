@@ -1242,6 +1242,11 @@ Not dates. Order of work, and what each step unblocks.
   login page's `POSTHOG_APP_CONTEXT.commit_sha` is its version. Inventory
   only. See `docs/DECISIONS.md` D59.
 
+- `netbox` and `greenbone` probes — NetBox's anonymous login page
+  (`data-netbox-version`), and gsad's `<envelope><version>` on `/gmp`, in
+  its 401 too (aliases `openvas`, `gsad`). Verified live (NetBox 4.3.3,
+  gsad 24.12.0). See `docs/DECISIONS.md` D60.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
