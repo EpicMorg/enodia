@@ -55,6 +55,11 @@ func TestPHPIPAMProbe(t *testing.T) {
 	if obs, err := (phpipamProbe{}).Probe(context.Background(), target(pageServer(t, "/index.php", 200, assetOnly), "phpipam")); err != nil || obs.Version != "1.7.4" {
 		t.Fatalf("asset fallback: got %q, %v", obs.Version, err)
 	}
+	// 1.7.3's assets, as a production instance served them: no _r/_v.
+	bare := []byte(`<link href="css/x.css?v=1.7.3">`)
+	if obs, err := (phpipamProbe{}).Probe(context.Background(), target(pageServer(t, "/index.php", 200, bare), "phpipam")); err != nil || obs.Version != "1.7.3" || obs.Extra != nil {
+		t.Fatalf("bare asset version: got %q %+v, %v", obs.Version, obs.Extra, err)
+	}
 	if _, err := (phpipamProbe{}).Probe(context.Background(), target(pageServer(t, "/index.php", 200, []byte("<html></html>")), "phpipam")); !errors.Is(err, ErrNotSupported) {
 		t.Fatalf("got %v, want ErrNotSupported", err)
 	}
@@ -78,6 +83,10 @@ func TestCodeServerProbe(t *testing.T) {
 	obs, err := codeServerProbe{}.Probe(context.Background(), target(pageServer(t, "/login", 200, readFixture(t, "code-server_4.141.0_login.html")), "code-server"))
 	if err != nil || obs.Version != "4.141.0" {
 		t.Fatalf("got %q, %v", obs.Version, err)
+	}
+	// code-server_4.92.2_meta.html: the same element from 4.92.2's /login.
+	if obs, err := (codeServerProbe{}).Probe(context.Background(), target(pageServer(t, "/login", 200, readFixture(t, "code-server_4.92.2_meta.html")), "code-server")); err != nil || obs.Version != "4.92.2" {
+		t.Fatalf("4.92.2: got %q, %v", obs.Version, err)
 	}
 	if _, err := (codeServerProbe{}).Probe(context.Background(), target(pageServer(t, "/login", 200, []byte("<html></html>")), "code-server")); !errors.Is(err, ErrNotSupported) {
 		t.Fatalf("got %v, want ErrNotSupported", err)

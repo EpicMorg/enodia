@@ -14,7 +14,9 @@ import (
 // stylesheet and script is loaded with ?v=1.8.3_r002_v46 — the version, the
 // code revision and the database schema version (phpIPAM's own
 // SCRIPT_PREFIX). Confirmed live on phpipam/phpipam-www:latest (1.8.3).
-// The asset suffix is the fallback when the footer is customised away.
+// The asset suffix is the fallback when the footer is customised away;
+// 1.7.3 (live, on a production instance) loads assets with a bare
+// ?v=1.7.3, without the revision and schema parts.
 type phpipamProbe struct{}
 
 func (phpipamProbe) Meta() Meta {
@@ -29,7 +31,7 @@ func (phpipamProbe) Meta() Meta {
 
 var (
 	phpipamFooterPattern = regexp.MustCompile(`phpIPAM IP address management \[v(\d+(?:\.\d+)+)\]`)
-	phpipamAssetPattern  = regexp.MustCompile(`\?v=(\d+(?:\.\d+)+)_r(\d+)_v(\d+)`)
+	phpipamAssetPattern  = regexp.MustCompile(`\?v=(\d+(?:\.\d+)+)(?:_r(\d+)_v(\d+))?`)
 )
 
 func (phpipamProbe) Probe(ctx context.Context, t Target) (Observation, error) {
@@ -57,7 +59,7 @@ func (phpipamProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	} else {
 		return obs, fmt.Errorf("%w: no phpIPAM footer or ?v= asset version on the login page", ErrNotSupported)
 	}
-	if asset != nil {
+	if asset != nil && len(asset[2]) > 0 {
 		obs.Extra = map[string]string{"revision": string(asset[2]), "dbVersion": string(asset[3])}
 	}
 	return obs, nil
