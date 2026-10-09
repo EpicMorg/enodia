@@ -77,8 +77,8 @@ func TestFreeradiusProbeMissingContainerIsErrNotSupported(t *testing.T) {
 	}
 }
 
-func TestFreeradiusCommandOptions(t *testing.T) {
-	cmd, err := freeradiusCommand(Target{Options: map[string]string{"container": "radius-1", "container_runtime": "podman"}})
+func TestContainerCommandOptions(t *testing.T) {
+	cmd, err := containerCommand(Target{Options: map[string]string{"container": "radius-1", "container_runtime": "podman"}}, freeradiusVersionCommand)
 	if err != nil || cmd != "podman exec radius-1 sh -c '"+freeradiusVersionCommand+"'" {
 		t.Fatalf("got %q, %v", cmd, err)
 	}
@@ -86,7 +86,7 @@ func TestFreeradiusCommandOptions(t *testing.T) {
 		{"container": "x; rm -rf /"},
 		{"container": "x", "container_runtime": "nerdctl"},
 	} {
-		if _, err := freeradiusCommand(Target{Options: opts}); !errors.Is(err, ErrNotSupported) {
+		if _, err := containerCommand(Target{Options: opts}, freeradiusVersionCommand); !errors.Is(err, ErrNotSupported) {
 			t.Errorf("%v: got %v, want ErrNotSupported", opts, err)
 		}
 	}

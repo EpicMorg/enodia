@@ -1,0 +1,20 @@
+{
+ "msg": "WAPT Server running",
+ "result": {
+  "application_root": "",
+  "platform": "Linux",
+  "edition": "community",
+  "version": "1.8.2",
+  "architecture": [
+   "64bit",
+   "ELF"
+  ],
+  "api_root": "/api/",
+  "date": "2026-10-09T00:00:00.000000",
+  "git_hash": "1.8.2.7334-2d15afd9-debian-10-amd64",
+  "api_version": "v3",
+  "uuid": "00000000-0000-0000-0000-000000000000"
+ },
+ "success": true,
+ "request_time": null
+}

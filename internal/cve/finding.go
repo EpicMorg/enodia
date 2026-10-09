@@ -10,7 +10,7 @@ import "github.com/EpicMorg/enodia/internal/version"
 // facts, not a verdict) — Severity is the source's own published rating,
 // not something this project computed.
 type Finding struct {
-	Source      string   // "bdu" or "nvd"
+	Source      string   // "bdu", "nvd", "mariadb", "atlassian", or a package-level source (see InstalledVersion)
 	AdvisoryID  string   // the source's own advisory id: "BDU:2023-06364" for BDU; for NVD, the CVE id again — NVD has no separate advisory id of its own
 	CVEIDs      []string // e.g. ["CVE-2023-22515"]; may be empty — not every BDU entry cites one
 	Title       string
@@ -98,7 +98,19 @@ type Index struct {
 	debian    debianTracker           // nil unless cve.debian.path is configured
 	oval      map[string]*ovalRelease // by ovalReleaseKey; nil unless cve.oval.path is configured
 	alpine    alpineSecdb             // nil unless cve.alpine.path is configured
+	// vendorCVEs is, per product, every CVE a vendor's own data covers
+	// (MariaDB's, cve.mariadb.path; Atlassian's, cve.atlassian.path). For
+	// those CVEs the vendor's verdict replaces BDU's and NVD's — see Lookup.
+	vendorCVEs map[string]map[string]bool
+	// vendorCovers is, per product, which releases a vendor's data speaks
+	// for, when that isn't all of them: Atlassian's, only the releases it
+	// lists; PostgreSQL's, only the majors its table names. Its verdict
+	// holds only there — any other release keeps BDU's and NVD's findings.
+	vendorCovers map[string]func(parts []int) bool
 }
+
+// vendorSources are the Finding.Source values of vendors' own data.
+var vendorSources = map[string]bool{mariadbSource: true, atlassianSource: true, postgresqlSource: true, nginxSource: true}
 
 // Lookup returns every finding for product whose range contains probed
 // and whose edition applies. edition is the observation's own edition
@@ -111,16 +123,88 @@ func (idx *Index) Lookup(product, probed, edition string) []Finding {
 	if idx == nil {
 		return nil
 	}
+	vendor := idx.vendorCVEs[product]
 	var out []Finding
 	for _, f := range idx.byProduct[product] {
-		if edition != "" && f.Edition != "" && f.Edition != edition {
+		if fe := findingEdition(product, f); edition != "" && fe != "" && fe != edition {
 			continue
 		}
 		if f.Matches(probed) {
 			out = append(out, f)
 		}
 	}
-	return out
+	if vendor == nil {
+		return out
+	}
+	if covers := idx.vendorCovers[product]; covers != nil {
+		parts, ok := cleanVersionParts(version.Core(probed))
+		if !ok || !covers(parts) {
+			return out
+		}
+	}
+	// The vendor's own data knows which series each CVE was fixed in;
+	// BDU's and NVD's ranges for the same CVE often don't (D50). A BDU/NVD
+	// finding survives only when the vendor flags this version for one of
+	// its CVEs too, or when none of its CVEs are in the vendor's data at
+	// all (newer than the vendor's table, or BDU-only).
+	flagged := map[string]bool{}
+	for _, f := range out {
+		if vendorSources[f.Source] {
+			for _, id := range f.CVEIDs {
+				flagged[id] = true
+			}
+		}
+	}
+	kept := out[:0]
+	for _, f := range out {
+		if !vendorSources[f.Source] && vendorOverrides(f.CVEIDs, vendor, flagged) {
+			continue
+		}
+		kept = append(kept, f)
+	}
+	return kept
+}
+
+// findingEdition is f's Edition, or for jenkins, when the source left it
+// unset, the release line its bounds are written in (see jenkinsChannel):
+// NVD marks Jenkins LTS ranges "lts" but leaves weekly ones unmarked, and
+// BDU marks neither — so a weekly "before 2.580" would otherwise flag LTS
+// 2.568.3, which has the same fixes.
+func findingEdition(product string, f Finding) string {
+	if f.Edition != "" || product != "jenkins" {
+		return f.Edition
+	}
+	if f.rng.Hi != nil {
+		return jenkinsChannel(f.rng.Hi)
+	}
+	return jenkinsChannel(f.rng.Lo)
+}
+
+// jenkinsChannel is the Jenkins release line a version belongs to: weekly
+// releases are numbered "2.580", LTS releases "2.568.3".
+func jenkinsChannel(parts []int) string {
+	switch len(parts) {
+	case 2:
+		return "weekly"
+	case 3:
+		return "lts"
+	}
+	return ""
+}
+
+// vendorOverrides reports whether a BDU/NVD finding with these CVEs is
+// contradicted by the vendor's data: every CVE is known to the vendor,
+// and the vendor flags none of them for this version.
+func vendorOverrides(ids []string, known, flagged map[string]bool) bool {
+	if len(ids) == 0 {
+		return false
+	}
+	for _, id := range ids {
+		if !known[id] || flagged[id] {
+			return false
+		}
+	}
+	return true
 }
 
 // MergeIndex combines a and b into one Index, mutating and returning
@@ -146,6 +230,18 @@ func MergeIndex(a, b *Index) *Index {
 	}
 	if a.alpine == nil {
 		a.alpine = b.alpine
+	}
+	for product, ids := range b.vendorCVEs {
+		if a.vendorCVEs == nil {
+			a.vendorCVEs = map[string]map[string]bool{}
+		}
+		a.vendorCVEs[product] = ids
+	}
+	for product, covers := range b.vendorCovers {
+		if a.vendorCovers == nil {
+			a.vendorCovers = map[string]func([]int) bool{}
+		}
+		a.vendorCovers[product] = covers
 	}
 	return a
 }

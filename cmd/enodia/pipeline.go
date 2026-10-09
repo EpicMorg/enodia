@@ -162,7 +162,7 @@ func assess(ctx context.Context, inv *inventory.File, policy evaluate.Policy, re
 	return out
 }
 
-// loadCVEIndex returns the merged BDU/NVD/Debian/OVAL vulnerability index
+// loadCVEIndex returns the merged BDU/NVD/Debian/OVAL/Alpine and vendor vulnerability index
 // the active config's cve.*.path entries name, or nil if none is
 // configured — the normal case for most installs. "The active
 // config" is the same file collection itself uses (config.Locate:
@@ -227,6 +227,23 @@ func loadCVEIndex(cmd *cobra.Command) (*cve.Index, error) {
 			return nil, err
 		}
 		idx = cve.MergeIndex(idx, alpineIdx)
+	}
+	for _, vendor := range []struct {
+		path func() (string, bool)
+		load func(string) (*cve.Index, error)
+	}{
+		{cfg.MariaDBPath, cve.LoadMariaDB},
+		{cfg.AtlassianPath, cve.LoadAtlassian},
+		{cfg.PostgreSQLPath, cve.LoadPostgreSQL},
+		{cfg.NginxPath, cve.LoadNginx},
+	} {
+		if p, ok := vendor.path(); ok {
+			vendorIdx, err := vendor.load(p)
+			if err != nil {
+				return nil, err
+			}
+			idx = cve.MergeIndex(idx, vendorIdx)
+		}
 	}
 	return idx, nil
 }

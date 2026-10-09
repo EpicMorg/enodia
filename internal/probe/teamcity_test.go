@@ -9,8 +9,18 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+// teamcityAuthedTarget carries a token, which is what sends the probe to
+// /app/rest/server rather than the anonymous /app/rest/server/version.
+func teamcityAuthedTarget(addr string) Target {
+	tt := target(addr, "teamcity")
+	tt.Creds = Credentials{Kind: AuthBearer, Value: "token"}
+	tt.AllowInsecureTransport = true // httptest is plain HTTP
+	return tt
+}
 
 func loadTeamCityFixture(t *testing.T) []byte {
 	t.Helper()
@@ -42,7 +52,7 @@ func TestTeamCityProbeParsesRealFixture(t *testing.T) {
 	defer srv.Close()
 
 	p := teamcityProbe{}
-	obs, err := p.Probe(context.Background(), target(srv.URL, "teamcity"))
+	obs, err := p.Probe(context.Background(), teamcityAuthedTarget(srv.URL))
 	if err != nil {
 		t.Fatalf("Probe: %v", err)
 	}
@@ -55,9 +65,9 @@ func TestTeamCityProbeParsesRealFixture(t *testing.T) {
 }
 
 func TestTeamCityProbeUnauthorizedIsErrAuth(t *testing.T) {
-	// A fresh TeamCity install answers exactly this way: 401 with both
-	// Basic and Bearer challenges, guest access off by default — confirmed
-	// live, not assumed.
+	// A fresh TeamCity install answers /app/rest/server exactly this way:
+	// 401 with both Basic and Bearer challenges — confirmed live, not
+	// assumed. With a token configured that is a real auth failure.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("WWW-Authenticate", `Basic realm="TeamCity"`)
 		w.Header().Add("WWW-Authenticate", `Bearer realm="TeamCity"`)
@@ -66,7 +76,7 @@ func TestTeamCityProbeUnauthorizedIsErrAuth(t *testing.T) {
 	defer srv.Close()
 
 	p := teamcityProbe{}
-	_, err := p.Probe(context.Background(), target(srv.URL, "teamcity"))
+	_, err := p.Probe(context.Background(), teamcityAuthedTarget(srv.URL))
 	if !errors.Is(err, ErrAuth) {
 		t.Fatalf("got %v, want ErrAuth", err)
 	}
@@ -79,7 +89,7 @@ func TestTeamCityProbeMalformedJSON(t *testing.T) {
 	defer srv.Close()
 
 	p := teamcityProbe{}
-	_, err := p.Probe(context.Background(), target(srv.URL, "teamcity"))
+	_, err := p.Probe(context.Background(), teamcityAuthedTarget(srv.URL))
 	if !errors.Is(err, ErrUnparseable) {
 		t.Fatalf("got %v, want ErrUnparseable", err)
 	}
@@ -92,7 +102,7 @@ func TestTeamCityProbeMissingVersionField(t *testing.T) {
 	defer srv.Close()
 
 	p := teamcityProbe{}
-	_, err := p.Probe(context.Background(), target(srv.URL, "teamcity"))
+	_, err := p.Probe(context.Background(), teamcityAuthedTarget(srv.URL))
 	if !errors.Is(err, ErrUnparseable) {
 		t.Fatalf("got %v, want ErrUnparseable", err)
 	}
@@ -114,5 +124,63 @@ func TestTeamCityProbeMeta(t *testing.T) {
 	}
 	if m.DefaultResolver.Type != "" {
 		t.Fatalf("got resolver %+v, want none (endoflife.date has no teamcity calendar)", m.DefaultResolver)
+	}
+}
+
+// The reply /app/rest/server/version gave anonymously on fresh 2017.2.4
+// through 2026.1.1 containers: plain text, no trailing newline.
+func TestTeamCityProbeAnonymousVersion(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/app/rest/server/version" {
+			t.Errorf("got path %q, want /app/rest/server/version", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "" {
+			t.Errorf("anonymous request sent Authorization %q", got)
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("2026.1.1 (build 222577)"))
+	}))
+	defer srv.Close()
+
+	obs, err := teamcityProbe{}.Probe(context.Background(), target(srv.URL, "teamcity"))
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	if obs.Version != "2026.1.1 (build 222577)" || obs.Extra["buildNumber"] != "222577" {
+		t.Fatalf("got version %q extra %+v", obs.Version, obs.Extra)
+	}
+	if obs.Endpoint != "/app/rest/server/version" {
+		t.Fatalf("got endpoint %q", obs.Endpoint)
+	}
+}
+
+func TestTeamCityProbeAnonymousOlderVersionShapes(t *testing.T) {
+	for _, reply := range []string{"2024.03 (build 156166)", "2017.2.4 (build 51228)\n"} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(reply))
+		}))
+		obs, err := teamcityProbe{}.Probe(context.Background(), target(srv.URL, "teamcity"))
+		srv.Close()
+		if err != nil {
+			t.Fatalf("%q: Probe: %v", reply, err)
+		}
+		if want := strings.TrimSpace(reply); obs.Version != want {
+			t.Fatalf("got %q, want %q", obs.Version, want)
+		}
+	}
+}
+
+// While TeamCity starts up it answers every path, this one included, with
+// an HTML maintenance page — seen live on each fresh container.
+func TestTeamCityProbeAnonymousStartupPageIsUnparseable(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("<!-- Page: maintenance-welcome Stage: APPLICATION_STARTING -->\n<html>build 222577</html>"))
+	}))
+	defer srv.Close()
+
+	_, err := teamcityProbe{}.Probe(context.Background(), target(srv.URL, "teamcity"))
+	if !errors.Is(err, ErrUnparseable) {
+		t.Fatalf("got %v, want ErrUnparseable", err)
 	}
 }

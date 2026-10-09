@@ -1,0 +1,169 @@
+{
+  "resultsPerPage": 4,
+  "startIndex": 0,
+  "totalResults": 4,
+  "format": "NVD_CVE",
+  "version": "2.0",
+  "vulnerabilities": [
+    {
+      "cve": {
+        "id": "CVE-2022-29273",
+        "vulnStatus": "Modified",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "pfSense CE through 2.6.0 and pfSense Plus before 22.05 allow XSS in the WebGUI via URL Table Alias URL parameters."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Primary",
+              "cvssData": {
+                "baseScore": 6.1,
+                "baseSeverity": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:netgate:pfsense:*:*:*:*:community:*:*:*",
+                    "versionEndIncluding": "2.6.0"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:netgate:pfsense:*:*:*:*:plus:*:*:*",
+                    "versionEndExcluding": "22.05"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2023-25812",
+        "vulnStatus": "Modified",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Minio is a Multi-Cloud Object Storage framework. Affected versions do not correctly honor a `Deny` policy on ByPassGoverance. Ideally, minio should return \"Access Denied\" to all users attempting to DELETE a versionId  with the special header `X-Amz-Bypass-Governance-Retention: true`.  However, this was not honored instead the request will be honored and an object under governance would be incorrectly deleted.  All users are advised to upgrade. There are no known workarounds for this issue.\n"
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Secondary",
+              "cvssData": {
+                "baseScore": 6.5,
+                "baseSeverity": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:minio:minio:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "2020-04-10t03-34-42z",
+                    "versionEndExcluding": "2023-02-17t17-52-43z"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2026-33322",
+        "vulnStatus": "Analyzed",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "MinIO is a high-performance object storage system. From RELEASE.2022-11-08T05-27-07Z to before RELEASE.2026-03-17T21-25-16Z, a JWT algorithm confusion vulnerability in MinIO's OpenID Connect authentication allows an attacker who knows the OIDC ClientSecret to forge arbitrary identity tokens and obtain S3 credentials with any policy, including consoleAdmin. This issue has been patched in RELEASE.2026-03-17T21-25-16Z."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Primary",
+              "cvssData": {
+                "baseScore": 9.8,
+                "baseSeverity": "CRITICAL"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:minio:minio:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "2022-11-08t05-27-07z",
+                    "versionEndExcluding": "2026-03-17t21-25-16z"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2026-39414",
+        "vulnStatus": "Analyzed",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "MinIO is a high-performance object storage system. From RELEASE.2018-08-18T03-49-57Z to before RELEASE.2025-12-20T04-58-37Z, MinIO's S3 Select feature is vulnerable to memory exhaustion when processing CSV files containing lines longer than available memory. The CSV reader's nextSplit() function calls bufio.Reader.ReadBytes('\\n') with no size limit, buffering the entire input in memory until a newline is found. A CSV file with no newline characters causes the entire contents to be read into a single allocation, leading to an OOM crash of the MinIO server process. This is exploitable by any authenticated user with s3:PutObject and s3:GetObject permissions. The attack is especially practical when combined with compression: a ~2 MB gzip-compressed CSV can decompress to gigabytes of data without newlines, allowing a small upload to cause large memory consumption on the server. However, compression is not required — a sufficiently large uncompressed CSV with no newlines triggers the same issue."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Primary",
+              "cvssData": {
+                "baseScore": 6.5,
+                "baseSeverity": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:minio:minio:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "2018-08-18t03-49-57z",
+                    "versionEndIncluding": "2025-10-15t17-29-55z"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

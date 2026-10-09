@@ -27,6 +27,10 @@ var builtin = []Probe{
 	&atlassianProbe{product: "bamboo", typeID: "bamboo", resolver: "bamboo", summary: "Atlassian Bamboo (Data Center)"},
 	&atlassianProbe{product: "bitbucket", typeID: "stash", resolver: "bitbucket", summary: "Atlassian Bitbucket (Data Center)"},
 	bitwardenFamilyProbe{product: "bitwarden", summary: "Bitwarden (self-hosted)", resolver: ResolverRef{Type: "github", ID: "bitwarden/server"}},
+	// CQL native protocol v4: STARTUP, optional SASL PLAIN, then
+	// system.local release_version. Verified live against cassandra:3.11
+	// (3.11.19) and cassandra:5.0 with PasswordAuthenticator (5.0.9).
+	cassandraProbe{},
 	// Legacy, EOL CentOS Linux (5/6/7/8) via /etc/redhat-release — real
 	// fleets still run these even though the product is dead. Not part of
 	// osReleaseFamilyProbe: confirmed live that centos:5 and :6 predate
@@ -38,6 +42,8 @@ var builtin = []Probe{
 		return f["ID"] == "centos" && f["NAME"] == "CentOS Stream"
 	}},
 	clickhouseProbe{},
+	// coder-options codeServerVersion on the login page. Verified live (4.141.0).
+	codeServerProbe{},
 	&atlassianProbe{product: "confluence", typeID: "confluence", resolver: "confluence", summary: "Atlassian Confluence (Data Center)"},
 	// debianProbe, not osReleaseFamilyProbe: /etc/os-release's VERSION_ID
 	// never carries Debian's point release ("13", not "13.6") — see
@@ -46,10 +52,18 @@ var builtin = []Probe{
 	// Confirmed live: /redfish/v1 carries Oem.Dell, the Manager resource
 	// itself carries none — see dellidrac.go for why this is 2 requests.
 	dellIDRACProbe{},
+	// The CHANGELOG served from its web root. Verified live (4.23.0).
+	domainmodProbe{},
+	// <meta name="generator" content="Doxygen X"> on a generated docs site.
+	// Verified against doxygen.nl's own manual (1.19.0).
+	doxygenProbe{},
 	elasticsearchProbe{},
 	esxiProbe{},
 	// Real ISO rootfs capture (not a Docker image — none exists): ID="eurolinux", VERSION_ID="8.10".
 	osReleaseFamilyProbe{product: "eurolinux", summary: "EuroLinux", resolver: ResolverRef{Type: "endoflife", ID: "eurolinux"}, match: osReleaseIDEquals("eurolinux")},
+	// ONLYOFFICE Docs' Euro-Office fork, its own release line. Verified
+	// live: nextcloud/aio-eurooffice (9.3.1).
+	onlyofficeFamilyProbe{product: "euro-office", summary: "Euro-Office Docs (ONLYOFFICE fork)", brand: "Euro-Office", resolver: ResolverRef{Type: "github", ID: "Euro-Office/DocumentServer"}},
 	// fedora:latest: ID=fedora, VERSION_ID=44.
 	osReleaseFamilyProbe{product: "fedora", summary: "Fedora Linux", resolver: ResolverRef{Type: "endoflife", ID: "fedora"}, match: osReleaseIDEquals("fedora")},
 	forgejoProbe{},
@@ -66,7 +80,15 @@ var builtin = []Probe{
 	// the traditional sense (Gentoo is rolling-release; no endoflife.date
 	// calendar exists, confirmed 404, for the same reason).
 	osReleaseFamilyProbe{product: "gentoo", summary: "Gentoo Linux", match: osReleaseIDEquals("gentoo")},
+	// The anonymous Admin API /ghost/api/admin/site/ (major.minor only).
+	// Verified live against ghost:6 (6.69).
+	ghostProbe{},
 	gitlabProbe{},
+	// gsad's <envelope><version> on /gmp, even in its 401. Verified live on a
+	// production Greenbone Community Edition (gsad 24.12.0).
+	greenboneProbe{},
+	// GET /api/config with a long-lived token. Verified live (2026.10.0).
+	homeAssistantProbe{},
 	grafanaProbe{},
 	graylogProbe{},
 	haproxyProbe{},
@@ -82,9 +104,14 @@ var builtin = []Probe{
 	// rolling-release snapshot, not a discrete version; no endoflife.date
 	// calendar exists for the same reason (confirmed 404).
 	osReleaseFamilyProbe{product: "kali-linux", summary: "Kali Linux", match: osReleaseIDEquals("kali")},
+	// The broker's own kafka_*.jar over SSH (optionally in a container).
+	// Verified against apache/kafka (4.3.1) and confluentinc/cp-kafka (8.3.2-ccs).
+	kafkaProbe{},
 	keycloakProbe{},
 	kibanaProbe{},
 	zouFamilyProbe{product: "kitsu", summary: "Kitsu (CG-Wire / Zou frontend)", resolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"}},
+	// info.version of the public OpenAPI document /spec. Verified live (1.9.6).
+	libretranslateProbe{},
 	// Real ISO rootfs capture: ID=linuxmint, VERSION_ID="22.3" — unlike the
 	// only Docker Hub image found earlier (linuxmintd/mint22-amd64, Mint's
 	// own CI build chroot, which reports the underlying Ubuntu instead),
@@ -97,10 +124,20 @@ var builtin = []Probe{
 	// is shared, see mariadb.go for exactly what differs (mysql.go).
 	mariadbProbe{},
 	mattermostProbe{},
+	// "version" over the text protocol. Verified live against memcached:1.6
+	// (1.6.45).
+	memcachedProbe{},
+	// `minio --version` over SSH (optionally in a container). Verified live
+	// against an in-house build, RELEASE_INHOUSE.2025-03-12T18-04-18Z.
+	minioProbe{},
 	mongodbProbe{},
 	mysqlProbe{},
 	// Captured via vmactions/netbsd-vm (see uname.go): `uname -sr` -> "NetBSD 11.0".
 	unameFamilyProbe{product: "netbsd", summary: "NetBSD", resolver: ResolverRef{Type: "endoflife", ID: "netbsd"}, unameName: "NetBSD"},
+	// data-netbox-version on /login/, anonymous. Verified live (4.3.3).
+	netboxProbe{},
+	// The anonymous agent API /api/v1/info. Verified live (v2.12.1).
+	netdataProbe{},
 	nextcloudProbe{},
 	nexusProbe{},
 	nginxProbe{},
@@ -110,12 +147,17 @@ var builtin = []Probe{
 	// ID=nixos, VERSION_ID="26.05".
 	osReleaseFamilyProbe{product: "nixos", summary: "NixOS", resolver: ResolverRef{Type: "endoflife", ID: "nixos"}, match: osReleaseIDEquals("nixos")},
 	oauth2ProxyProbe{},
+	// /index.html (version, build, package type) plus /welcome/'s title for
+	// the brand. Verified live: onlyoffice/documentserver:latest (9.4.0).
+	onlyofficeFamilyProbe{product: "onlyoffice", summary: "ONLYOFFICE Docs (Document Server)", brand: "ONLYOFFICE", resolver: ResolverRef{Type: "github", ID: "ONLYOFFICE/DocumentServer"}},
 	// Captured via vmactions/openbsd-vm (see uname.go): `uname -sr` -> "OpenBSD 7.9".
 	unameFamilyProbe{product: "openbsd", summary: "OpenBSD", resolver: ResolverRef{Type: "endoflife", ID: "openbsd"}, unameName: "OpenBSD"},
 	// Captured via vmactions/openeuler-vm (24.03-LTS-SP4, the action's
 	// default release): ID="openEuler" (capital E, confirmed live — not
 	// lowercase), VERSION_ID="24.03".
 	osReleaseFamilyProbe{product: "openeuler", summary: "openEuler", match: osReleaseIDEquals("openEuler")},
+	// The anonymous REST root /rest/, runtimeInfo.version. Verified live (5.2.2).
+	openhabProbe{},
 	opensearchProbe{},
 	// opensuse/leap:latest: ID="opensuse-leap", VERSION_ID="16.0". Tumbleweed
 	// (ID="opensuse-tumbleweed") isn't covered by a real fixture here but
@@ -138,12 +180,17 @@ var builtin = []Probe{
 	perforceSwarmProbe{},
 	pfsenseProbe{},
 	pgadminProbe{},
+	// The login page footer "[v1.8.3]" and ?v= asset suffix. Verified live (1.8.3).
+	phpipamProbe{},
 	// Official top-level photon:5.0 (Docker's Official Images program,
 	// not vmware/photon's own stale repo which stops at 2.0): ID=photon,
 	// VERSION_ID=5.0.
 	osReleaseFamilyProbe{product: "photon", summary: "VMware Photon OS", resolver: ResolverRef{Type: "endoflife", ID: "photon"}, match: osReleaseIDEquals("photon")},
 	phpmyadminProbe{},
 	portainerProbe{},
+	// window.POSTHOG_APP_CONTEXT.commit_sha on /login, anonymous. Verified
+	// live on a production self-hosted instance.
+	posthogProbe{},
 	postgresExporterProbe{},
 	postgresProbe{},
 	// Real ISO rootfs capture: ID="postmarketos", VERSION_ID="v26.06" — the
@@ -156,6 +203,12 @@ var builtin = []Probe{
 	// GET /api2/json/version, authenticated with an API token. Verified
 	// live against a real Proxmox VE 9.2.2 host.
 	proxmoxProbe{},
+	// Web UI API: form login, then /api/v2/app/version. Verified live
+	// against linuxserver/qbittorrent 5.2.4.
+	qbittorrentProbe{},
+	// GET /api/overview on the management plugin, Basic auth. Verified live
+	// against rabbitmq:4-management (4.3.6).
+	rabbitmqProbe{},
 	redisProbe{},
 	// alrdockerhub/redos:7.3.1 (real RED OS content: HOME_URL/BUG_REPORT_URL
 	// point at red-soft.ru): ID="redos", VERSION_ID="7.3.1".
@@ -166,10 +219,16 @@ var builtin = []Probe{
 	// rockylinux:9: ID="rocky", VERSION_ID="9.3".
 	osReleaseFamilyProbe{product: "rocky-linux", summary: "Rocky Linux", resolver: ResolverRef{Type: "endoflife", ID: "rocky-linux"}, match: osReleaseIDEquals("rocky"), packages: packagesRPM},
 	routerosProbe{},
+	// window.__initialData.version on the login page, anonymous. Verified
+	// live against a production self-hosted Sentry 26.2.1.
+	sentryProbe{},
 	// vbatts/slackware:14.2: ID=slackware, VERSION_ID=14.2 — it does ship
 	// /etc/os-release, despite historical docs saying it doesn't.
 	osReleaseFamilyProbe{product: "slackware", summary: "Slackware", resolver: ResolverRef{Type: "endoflife", ID: "slackware"}, match: osReleaseIDEquals("slackware")},
 	sonarqubeProbe{},
+	// splunkd /services/server/info on 8089, Basic or token. Verified live
+	// against splunk/splunk (10.6.0.5) and a production 9.4.1 (401 shape).
+	splunkProbe{},
 	sshProbe{},
 	// Real ISO rootfs capture — SteamOS 2 (Debian-based "brewmaster"):
 	// ID=steamos, VERSION_ID="2". SteamOS 3.x (Arch-based, current Steam
@@ -187,6 +246,8 @@ var builtin = []Probe{
 	synologyDSMProbe{},
 	teamcityProbe{},
 	testrailProbe{},
+	// GET /echo, plain text "MatriX.146". Verified live.
+	torrserverProbe{},
 	traefikProbe{},
 	// GET /api/v2.0/system/info, authenticated with an API key as a plain
 	// bearer token. Verified live against a real TrueNAS 25.10.7 host —
@@ -197,12 +258,23 @@ var builtin = []Probe{
 	// ubuntuProbe, not osReleaseFamilyProbe: VERSION_ID never carries the
 	// point release ("22.04", not "22.04.5") — see ubuntu.go for why.
 	ubuntuProbe{},
+	// Logs in over socket.io (Engine.IO long-polling) and reads the version
+	// from the post-login info event. Verified live on 1.23.17 and 2.5.5.
+	uptimeKumaProbe{},
 	vaultProbe{},
 	bitwardenFamilyProbe{product: "vaultwarden", summary: "Vaultwarden", resolver: ResolverRef{Type: "github", ID: "dani-garcia/vaultwarden"}},
 	vcenterProbe{},
+	// GET /ping, anonymous. Verified live on a production WAPT 1.8.2 server.
+	waptProbe{},
+	// Anonymous: the "Powered by Weblate" footer on /about/. Verified live
+	// against weblate/weblate:latest (2026.10).
+	weblateProbe{},
 	wordpressProbe{},
 	youtrackProbe{},
 	zabbixProbe{},
+	// "srvr", the one four-letter word allowed by default. Verified live
+	// against zookeeper:3.9 (3.9.6).
+	zookeeperProbe{},
 	zouFamilyProbe{product: "zou", summary: "Zou (CG-Wire API backend)"},
 }
 

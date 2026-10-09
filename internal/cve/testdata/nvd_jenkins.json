@@ -1,0 +1,95 @@
+{
+  "resultsPerPage": 2,
+  "startIndex": 0,
+  "totalResults": 2,
+  "format": "NVD_CVE",
+  "version": "2.0",
+  "vulnerabilities": [
+    {
+      "cve": {
+        "id": "CVE-2026-70427",
+        "vulnStatus": "Analyzed",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Jenkins 2.575 and earlier, LTS 2.568.1 and earlier does not safely handle symbolic links with effectively empty names during the extraction of `.tar` and `.tar.gz` archives, allowing attackers able to control agent processes to provide crafted archives to the controller to write files to arbitrary locations on the file system, restricted only by file system access permissions of the user running Jenkins."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Secondary",
+              "cvssData": {
+                "baseScore": 4.3,
+                "baseSeverity": "MEDIUM"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:jenkins:jenkins:*:*:*:*:lts:*:*:*",
+                    "versionEndExcluding": "2.568.2"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:jenkins:jenkins:*:*:*:*:-:*:*:*",
+                    "versionEndExcluding": "2.576"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2026-84645",
+        "vulnStatus": "Analyzed",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "In Jenkins 2.579 and earlier, LTS 2.568.2 and earlier, objects of types marked as storing their configuration in independent top-level configuration files in Jenkins (such as the global configuration and jobs) can appear as nested field values in user-submitted `config.xml` documents and subsequently handle HTTP requests via Stapler, resulting in remote code execution."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "type": "Secondary",
+              "cvssData": {
+                "baseScore": 8.8,
+                "baseSeverity": "HIGH"
+              }
+            }
+          ]
+        },
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:jenkins:jenkins:*:*:*:*:lts:*:*:*",
+                    "versionEndExcluding": "2.568.3"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:jenkins:jenkins:*:*:*:*:-:*:*:*",
+                    "versionEndExcluding": "2.580"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

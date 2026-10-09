@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -65,7 +66,7 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 		return nil, fmt.Errorf("%w: HTTP %d", ErrUnreachable, resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, githubMaxBody))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUnreachable, err)
 	}
@@ -78,10 +79,11 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 	// Releases are returned newest first; the first non-draft, non-prerelease
 	// entry is "latest" in the sense every other product uses that word.
 	for _, rel := range releases {
-		if rel.Draft || rel.Prerelease {
+		if rel.Draft || rel.Prerelease || preReleaseName.MatchString(rel.TagName) {
 			continue
 		}
-		c := Cycle{Cycle: rel.TagName, Latest: rel.TagName}
+		tag := githubReleaseTag(rel.TagName, ref.ID)
+		c := Cycle{Cycle: tag, Latest: tag}
 		if rel.PublishedAt != nil {
 			d := Date{Time: *rel.PublishedAt}
 			c.ReleaseDate = &d
@@ -91,3 +93,54 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 	}
 	return nil, fmt.Errorf("%w: %q has no published, non-prerelease release", ErrUnknownProduct, ref.ID)
 }
+
+// underscoreTag is a release tag spelled with underscores for dots behind a
+// word: doxygen/doxygen tags "Release_1_18_0".
+var underscoreTag = regexp.MustCompile(`^[A-Za-z]+_\d+(?:_\d+)+$`)
+
+// preReleaseName is a tag that names a pre-release even when the release
+// isn't flagged as one: openhab/openhab-distro publishes milestones
+// ("5.3.0.M2") as ordinary releases, which would otherwise read as newer
+// than the stable 5.2.2.
+var preReleaseName = regexp.MustCompile(`(?i)(?:\d[.\-_]?(?:m|rc|a|b)\d+|[.\-_](?:alpha|beta|rc|pre)(?:[.\-_]?\d+)?)$`)
+
+// releaseWordTag is a tag spelled "release-5.2.4" (qbittorrent/qBittorrent).
+var releaseWordTag = regexp.MustCompile(`^(?i:release)-(\d.*)$`)
+
+// githubReleaseTag is a release tag as a version: a repo-name prefix
+// dropped (trimRepoPrefix), a "release-" prefix dropped, and an
+// underscore-spelled tag made dotted the
+// way github-tags does for "REL-9_17" (normalizeRELTag). Anything else is
+// left for version.Clean.
+func githubReleaseTag(tag, ownerRepo string) string {
+	tag = trimRepoPrefix(tag, ownerRepo)
+	if m := releaseWordTag.FindStringSubmatch(tag); m != nil {
+		return m[1]
+	}
+	if underscoreTag.MatchString(tag) {
+		if v, ok := normalizeRELTag(tag); ok {
+			return v
+		}
+	}
+	return tag
+}
+
+// trimRepoPrefix drops a leading "<repo>-" or "<repo>_" from a release
+// tag, case-insensitively: WeblateOrg/weblate tags its releases
+// "weblate-2026.10", which version.Clean (it strips only a "v") would leave
+// as is — in the report's LATEST/CYCLE columns and in the comparison.
+func trimRepoPrefix(tag, ownerRepo string) string {
+	_, repo, ok := strings.Cut(ownerRepo, "/")
+	if !ok || len(tag) <= len(repo)+1 {
+		return tag
+	}
+	if strings.EqualFold(tag[:len(repo)], repo) && (tag[len(repo)] == '-' || tag[len(repo)] == '_') {
+		return tag[len(repo)+1:]
+	}
+	return tag
+}
+
+// githubMaxBody caps a releases list. Each release carries its full
+// changelog: minio/minio's 30 latest came to 3.4MB, which maxBody (1MiB)
+// cut mid-JSON — the resolver then failed to parse at all.
+const githubMaxBody = 8 << 20

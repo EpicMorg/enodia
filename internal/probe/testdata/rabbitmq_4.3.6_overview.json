@@ -1,0 +1,178 @@
+{
+ "management_version": "4.3.6",
+ "rates_mode": "basic",
+ "sample_retention_policies": {
+  "global": [
+   600,
+   3600,
+   28800,
+   86400
+  ],
+  "basic": [
+   600,
+   3600
+  ],
+  "detailed": [
+   600
+  ]
+ },
+ "exchange_types": [
+  {
+   "name": "direct",
+   "description": "AMQP direct exchange, as per the AMQP specification",
+   "enabled": true
+  },
+  {
+   "name": "fanout",
+   "description": "AMQP fanout exchange, as per the AMQP specification",
+   "enabled": true
+  },
+  {
+   "name": "headers",
+   "description": "AMQP headers exchange, as per the AMQP specification",
+   "enabled": true
+  },
+  {
+   "name": "topic",
+   "description": "AMQP topic exchange, as per the AMQP specification",
+   "enabled": true
+  },
+  {
+   "name": "x-local-random",
+   "description": "Picks one random local binding (queue) to route via (to).",
+   "enabled": true
+  },
+  {
+   "name": "x-modulus-hash",
+   "description": "Modulus Hashing Exchange",
+   "enabled": true
+  }
+ ],
+ "product_version": "4.3.6",
+ "product_name": "RabbitMQ",
+ "rabbitmq_version": "4.3.6",
+ "cluster_name": "rabbit@enodia-test",
+ "cluster_tags": {},
+ "node_tags": {},
+ "erlang_version": "27.3.4.18",
+ "erlang_full_version": "Erlang/OTP 27 [erts-15.2.7.13] [source] [64-bit] [smp:20:20] [ds:20:20:10] [async-threads:1] [jit:ns]",
+ "crypto_lib_version": "OpenSSL 3.5.9 29 Sep 2026",
+ "disable_stats": false,
+ "default_queue_type": "classic",
+ "is_op_policy_updating_enabled": true,
+ "enable_queue_totals": false,
+ "require_definition_json_extension": false,
+ "message_stats": {},
+ "churn_rates": {
+  "connection_closed": 0,
+  "queue_declared": 0,
+  "queue_created": 0,
+  "connection_created": 0,
+  "queue_deleted": 0,
+  "channel_created": 0,
+  "channel_closed": 0,
+  "queue_deleted_details": {
+   "rate": 0.0
+  },
+  "queue_created_details": {
+   "rate": 0.0
+  },
+  "queue_declared_details": {
+   "rate": 0.0
+  },
+  "channel_closed_details": {
+   "rate": 0.0
+  },
+  "channel_created_details": {
+   "rate": 0.0
+  },
+  "connection_closed_details": {
+   "rate": 0.0
+  },
+  "connection_created_details": {
+   "rate": 0.0
+  }
+ },
+ "queue_totals": {},
+ "object_totals": {
+  "channels": 0,
+  "consumers": 0,
+  "exchanges": 8,
+  "queues": 0,
+  "connections": 0
+ },
+ "statistics_db_event_queue": 0,
+ "node": "rabbit@enodia-test",
+ "listeners": [
+  {
+   "node": "rabbit@enodia-test",
+   "protocol": "amqp",
+   "ip_address": "::",
+   "port": 5672,
+   "socket_opts": {
+    "backlog": 128,
+    "nodelay": true,
+    "linger": [
+     true,
+     0
+    ],
+    "exit_on_close": false
+   },
+   "tls": false
+  },
+  {
+   "node": "rabbit@enodia-test",
+   "protocol": "clustering",
+   "ip_address": "::",
+   "port": 25672,
+   "socket_opts": [],
+   "tls": false
+  },
+  {
+   "node": "rabbit@enodia-test",
+   "protocol": "http",
+   "ip_address": "::",
+   "port": 15672,
+   "socket_opts": {
+    "cowboy_opts": {
+     "sendfile": false
+    },
+    "port": 15672
+   },
+   "tls": false
+  },
+  {
+   "node": "rabbit@enodia-test",
+   "protocol": "http/prometheus",
+   "ip_address": "::",
+   "port": 15692,
+   "socket_opts": {
+    "port": 15692,
+    "protocol": "http/prometheus",
+    "cowboy_opts": {
+     "sendfile": false
+    }
+   },
+   "tls": false
+  }
+ ],
+ "contexts": [
+  {
+   "ssl_opts": [],
+   "node": "rabbit@enodia-test",
+   "description": "RabbitMQ Management",
+   "path": "/",
+   "cowboy_opts": "[{sendfile,false}]",
+   "port": "15672"
+  },
+  {
+   "ssl_opts": [],
+   "node": "rabbit@enodia-test",
+   "description": "RabbitMQ Prometheus",
+   "path": "/",
+   "port": "15692",
+   "protocol": "'http/prometheus'",
+   "cowboy_opts": "[{sendfile,false}]"
+  }
+ ]
+}

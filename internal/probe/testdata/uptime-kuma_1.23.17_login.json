@@ -1,0 +1,6 @@
+[
+ "0{\"sid\":\"f2Uy_V3C1bfT14y1AAAE\",\"upgrades\":[\"websocket\"],\"pingInterval\":25000,\"pingTimeout\":20000,\"maxPayload\":1000000}",
+ "40{\"sid\":\"15R2NRMwQUc4G9KmAAAF\"}\u001e42[\"info\",{\"primaryBaseURL\":null,\"serverTimezone\":\"UTC\",\"serverTimezoneOffset\":\"+00:00\"}]",
+ "430[{\"ok\":true,\"token\":\"x\"}]",
+ "42[\"monitorList\",{}]\u001e42[\"maintenanceList\",{}]\u001e42[\"info\",{\"version\":\"1.23.17\",\"latestVersion\":\"2.5.5\",\"isContainer\":true,\"primaryBaseURL\":null,\"serverTimezone\":\"UTC\",\"serverTimezoneOffset\":\"+00:00\"}]"
+]

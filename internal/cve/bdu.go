@@ -110,7 +110,7 @@ func indexVul(idx *Index, v bduVul, softToProduct map[bduKey]bduTarget) {
 			continue
 		}
 		product := target.product
-		rng, ok := parseBDUVersion(soft.Version)
+		rng, ok := parseBDUVersion(foldBound(product, soft.Version))
 		if !ok {
 			continue
 		}

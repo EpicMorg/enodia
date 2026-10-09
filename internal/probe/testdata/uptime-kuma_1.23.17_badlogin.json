@@ -1,0 +1,5 @@
+[
+ "0{\"sid\":\"-PEHmsEPaOHerHuqAAAG\",\"upgrades\":[\"websocket\"],\"pingInterval\":25000,\"pingTimeout\":20000,\"maxPayload\":1000000}",
+ "40{\"sid\":\"ncqUEtmg7YNQRjAMAAAH\"}\u001e42[\"info\",{\"primaryBaseURL\":null,\"serverTimezone\":\"UTC\",\"serverTimezoneOffset\":\"+00:00\"}]",
+ "430[{\"ok\":false,\"msg\":\"Incorrect username or password.\"}]"
+]

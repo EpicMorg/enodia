@@ -1197,10 +1197,123 @@ Not dates. Order of work, and what each step unblocks.
   be applied. Validated against `oscap oval eval` (Astra 1.7 205/205 CVEs,
   1.8 48/48, RED OS 7.3 53/53, 8.0 60/60). See `docs/DECISIONS.md` D46.
 
+- `memcached`, `rabbitmq`, `cassandra` probes — memcached's text
+  `version` command; RabbitMQ's management API `/api/overview` (Basic);
+  Cassandra over the CQL native protocol v4 with optional SASL PLAIN.
+  Each verified live (memcached 1.6.45; RabbitMQ 4.3.6 and 3.8.34;
+  Cassandra 3.11.19, and 5.0.9 with PasswordAuthenticator). See
+  `docs/DECISIONS.md` D51.
+
+- `weblate` probe — the anonymous "Powered by Weblate" footer on
+  `/about/`, verified live (2026.10); GitHub resolver, whose release tags
+  ("weblate-2026.10") now lose their repo-name prefix. See
+  `docs/DECISIONS.md` D52.
+
+- `onlyoffice` and `euro-office` probes — one probe for ONLYOFFICE Docs
+  and its Euro-Office fork: version from the anonymous `/index.html`,
+  brand from `/welcome/`, each on its own GitHub release line. Verified
+  live (ONLYOFFICE 9.4.0, Euro-Office 9.3.1 from Nextcloud AIO). See
+  `docs/DECISIONS.md` D53.
+
+- `zookeeper` and `ghost` probes — ZooKeeper's `srvr` four-letter word
+  (the one allowed by default), Ghost's anonymous Admin API
+  `/ghost/api/admin/site/` (major.minor). Verified live (ZooKeeper 3.9.6,
+  Ghost 6.69). See `docs/DECISIONS.md` D54.
+
+- `sentry` probe — self-hosted Sentry's anonymous login page
+  (`window.__initialData.version`), resolver getsentry/self-hosted.
+  Verified live on a production 26.2.1. See `docs/DECISIONS.md` D55.
+
+- `minio` probe — `minio --version` over SSH (MinIO's network surfaces
+  give no version without an admin key or bearer token), optionally in a
+  container; `RELEASE.<timestamp>` names fold into comparable versions.
+  Verified live on an in-house build. See `docs/DECISIONS.md` D56.
+
+- `wapt` probe — the WAPT server's anonymous `/ping` (version, build from
+  git_hash, edition). No lifecycle source. Verified live (1.8.2.7334). See
+  `docs/DECISIONS.md` D57.
+
+- `uptime-kuma` probe — logs in over socket.io (Engine.IO long-polling)
+  and reads the version from the post-login `info` event; nothing
+  anonymous carries it. Verified live on 1.23.17 and 2.5.5. See
+  `docs/DECISIONS.md` D58.
+
+- `posthog` probe — self-hosted PostHog has no numbered releases; the
+  login page's `POSTHOG_APP_CONTEXT.commit_sha` is its version. Inventory
+  only. See `docs/DECISIONS.md` D59.
+
+- `netbox` and `greenbone` probes — NetBox's anonymous login page
+  (`data-netbox-version`), and gsad's `<envelope><version>` on `/gmp`, in
+  its 401 too (aliases `openvas`, `gsad`). Verified live (NetBox 4.3.3,
+  gsad 24.12.0). See `docs/DECISIONS.md` D60.
+
+- `doxygen` and `qbittorrent` probes — the generator mark Doxygen puts
+  on every page it writes, and qBittorrent's Web UI API after a form
+  login. The `github` resolver now reads "Release_1_18_0" and
+  "release-5.2.4" tags as versions. See `docs/DECISIONS.md` D61.
+
+- `home-assistant` and `openhab` probes — Home Assistant's `/api/config`
+  with a long-lived token (nothing anonymous has the version), openHAB's
+  anonymous REST root. The `github` resolver skips tags named as
+  pre-releases (openHAB's "5.3.0.M2"). See `docs/DECISIONS.md` D62.
+
+- `kafka` probe — the broker's own `kafka_<scala>-<version>.jar` over
+  SSH (optionally in a container), `kafka-topics --version` as fallback;
+  Confluent builds reported on their own line. Unblocks what D21 left
+  waiting on JMX. See `docs/DECISIONS.md` D63.
+
+- `netdata`, `libretranslate`, `torrserver` probes — each from an
+  anonymous endpoint: Netdata's `/api/v1/info`, LibreTranslate's OpenAPI
+  `/spec`, TorrServer's `/echo`. Verified live. See `docs/DECISIONS.md`
+  D64.
+
+- `phpipam` and `domainmod` probes — phpIPAM's login page (footer and
+  `?v=` asset suffix), DomainMOD's CHANGELOG served from its web root.
+  Verified live. See `docs/DECISIONS.md` D65.
+
+- `code-server` probe — the login page's coder-options meta
+  (`codeServerVersion`). Verified live (4.141.0). See
+  `docs/DECISIONS.md` D66.
+
+- `splunk` probe — splunkd's `/services/server/info` on the management
+  port (8089) with a Splunk user or token. Verified live (10.6.0.5; a
+  production 9.4.1 for the unauthenticated shape). See
+  `docs/DECISIONS.md` D67.
+
+- `enodia cve update` — downloads every configured `cve.*.path`, the
+  releases on disk and those `--from` inventories need;
+  If-Modified-Since, checked by the loaders before it replaces anything.
+  TLS against the system roots plus `cve.update.ca_file`/`ca_dir`, or
+  `cve.update.tls_skip_verify`. Verified live against all nine sources.
+  The EpicMorg images for 2.0/2.1 dropped their baked-in databases for
+  a shell script. See `docs/DECISIONS.md` D73.
+
 ## Next
 
+
 Everything found running 2.0 against a real ~600-target fleet is done
-(see above).
+(see above). Requests from a second, ~90-target fleet:
+
+- CVEs for `mariadb` — the probe shipped (D36, D47) with no CVE mapping,
+  so its CVES column is always `-`. NVD has CPE `mariadb:mariadb`, BDU
+  lists MariaDB under its own vendor name; both go into
+  `internal/cve/productmap.go` like `mysql`, checked against a real
+  10.5/10.11/11.4 the way other mappings were. MariaDB's own "Security
+  fixes by version" page (CVE → first fixed release per branch) is a
+  candidate second source if NVD's ranges turn out too coarse
+- CVEs for a database running from a Docker image — the distro's OVAL
+  sees the host's packages, not what's inside a container, so such a
+  server only gets the product-level (NVD/BDU) match above. Nothing more
+  is planned until a container-aware source is worth it
+- `nginx` behind a rewritten `Server` header (headers-more's
+  `more_set_headers`) — the probe reports `not_supported`, which is right
+  when the version is hidden on purpose. But with `server_tokens on`,
+  nginx's own error pages still print `nginx/<version>` in the body, so
+  a fallback that reads a 404 page's footer may find it. `stub_status`
+  carries no version and doesn't help. Seen on a real host with
+  `server_tokens off` + `more_set_headers`: the 404 body is a bare
+  `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
+  there. Still unchecked against `server_tokens on` with a rewritten header
 
 ## Later
 
@@ -1209,13 +1322,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   D18 (proprietary-product coverage, distro-package epoch mismatches).
   CVE correlation itself is no longer blocked: see Done above and
   DECISIONS.md D30 for the БДУ ФСТЭК-based implementation
-- `kafka` probe — the wire protocol's entire anonymous surface
-  (`ApiVersionsRequest`) is a list of per-API version-number ranges, no
-  software version string anywhere — confirmed live against a real
-  broker. Blocked pending JMX support (a materially different transport:
-  RMI, its own port, off by default), a new kind of probe this project
-  doesn't have yet — see DECISIONS.md D21 for what was tried and why an
-  ApiVersions-based guess was rejected, not just deferred
 - `redmine` probe — nowhere anonymous discloses the version at all
   (confirmed live: not the homepage, not headers, not the Atom feeds'
   own `<generator>` tag, which — unlike `wordpress`'s — carries no

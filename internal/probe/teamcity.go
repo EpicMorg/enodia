@@ -6,16 +6,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 )
 
-// teamcityProbe reads /app/rest/server — the entry point TeamCity's own REST
-// API reference points at first — for the version.
+// teamcityProbe reads the server version over TeamCity's REST API.
 //
-// There is no anonymous access by default: a fresh instance answered 401
-// with WWW-Authenticate: Basic and Bearer challenges (guest login is off by
-// default), confirmed against a live jetbrains/teamcity-server container
-// rather than assumed.
+// Without credentials it reads /app/rest/server/version, which TeamCity
+// serves to anyone: confirmed live against fresh jetbrains/teamcity-server
+// containers 2017.2.4, 2018.2.4, 2019.2.4, 2020.2.4, 2024.03 and 2026.1.1
+// with no administrator and guest login off (guest-only endpoints such as
+// /guestAuth/app/rest/projects answered 401 there), and against seven
+// production instances. The reply is plain text, "2026.1.1 (build 222577)".
+//
+// With credentials it reads /app/rest/server instead — the entry point
+// TeamCity's own REST API reference points at first, which also carries
+// internalId. That one is never anonymous: a fresh instance answered 401
+// with WWW-Authenticate: Basic and Bearer challenges.
 //
 // Both AuthBasic and AuthBearer are offered, because TeamCity has two
 // distinct kinds of token with opposite behavior, both confirmed live:
@@ -55,6 +63,11 @@ type teamcityServerInfo struct {
 	InternalID   string `json:"internalId"`
 }
 
+// teamcityVersionPattern is /app/rest/server/version's whole reply. It
+// also keeps a 200 HTML page — what TeamCity serves on every path while it
+// is still starting up — from being taken for a version.
+var teamcityVersionPattern = regexp.MustCompile(`^(\d{4}\.\d+(?:\.\d+)* \(build (\d+)\))$`)
+
 func (teamcityProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	start := time.Now()
 	obs := Observation{
@@ -62,10 +75,12 @@ func (teamcityProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 		CollectedAt: start.UTC(), TLSVerified: Verified(t.Address, t.TLS),
 	}
 
-	resp, err := FetchHTTP(ctx, t, Request{
-		Path:   "/app/rest/server",
-		Accept: "application/json",
-	})
+	anonymous := t.Creds.IsZero()
+	req := Request{Path: "/app/rest/server", Accept: "application/json"}
+	if anonymous {
+		req = Request{Path: "/app/rest/server/version", Accept: "text/plain"}
+	}
+	resp, err := FetchHTTP(ctx, t, req)
 	if err != nil {
 		return obs, err
 	}
@@ -76,6 +91,16 @@ func (teamcityProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	body, err := ReadBody(resp)
 	if err != nil {
 		return obs, err
+	}
+
+	if anonymous {
+		m := teamcityVersionPattern.FindStringSubmatch(strings.TrimSpace(string(body)))
+		if m == nil {
+			return obs, fmt.Errorf("%w: /app/rest/server/version is not a TeamCity version string", ErrUnparseable)
+		}
+		obs.Version = m[1]
+		obs.Extra = map[string]string{"buildNumber": m[2]}
+		return obs, nil
 	}
 
 	var info teamcityServerInfo

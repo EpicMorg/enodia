@@ -243,7 +243,14 @@ func indexNVDVuln(idx *Index, v nvdCVE, cpeToProduct map[cpeName]string) {
 				if !ok {
 					continue
 				}
-				rng, ok := parseNVDRange(m)
+				// Parsed from a folded copy; MatchedName keeps NVD's own text.
+				rng, ok := parseNVDRange(nvdCPEMatch{
+					Criteria:              foldBound(enodiaProduct, m.Criteria),
+					VersionStartIncluding: foldBound(enodiaProduct, m.VersionStartIncluding),
+					VersionStartExcluding: foldBound(enodiaProduct, m.VersionStartExcluding),
+					VersionEndIncluding:   foldBound(enodiaProduct, m.VersionEndIncluding),
+					VersionEndExcluding:   foldBound(enodiaProduct, m.VersionEndExcluding),
+				})
 				if !ok {
 					continue
 				}
@@ -255,7 +262,7 @@ func indexNVDVuln(idx *Index, v nvdCVE, cpeToProduct map[cpeName]string) {
 					Severity:    rating.severity,
 					CVSS:        CVSS{Version: rating.version, Score: rating.score, Severity: rating.severity},
 					MatchedName: m.Criteria,
-					RangeText:   rng.String(),
+					RangeText:   rangeText(enodiaProduct, rng),
 					Edition:     cpeSWEdition(m.Criteria),
 					rng:         rng,
 				})

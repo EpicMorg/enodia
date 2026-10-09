@@ -79,8 +79,8 @@ func TestSynologyDSMProbeParsesRealFixture(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Probe: %v", err)
 	}
-	if obs.Version != "7.3.2-86009" {
-		t.Fatalf("got version %q", obs.Version)
+	if obs.Version != "7.3.2-86009" || obs.Extra["update"] != "4" {
+		t.Fatalf("got version %q, Extra %v; want 7.3.2-86009, update 4", obs.Version, obs.Extra)
 	}
 }
 

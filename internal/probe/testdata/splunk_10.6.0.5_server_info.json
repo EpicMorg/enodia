@@ -1,0 +1,20 @@
+{
+ "generator": {
+  "build": "86587d4e3b27",
+  "version": "10.6.0.5"
+ },
+ "entry": [
+  {
+   "name": "server-info",
+   "content": {
+    "version": "10.6.0.5",
+    "build": "86587d4e3b27",
+    "product_type": "enterprise",
+    "isFree": false,
+    "isTrial": true,
+    "os_name": "Linux",
+    "licenseState": "OK"
+   }
+  }
+ ]
+}

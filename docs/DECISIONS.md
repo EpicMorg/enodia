@@ -2610,3 +2610,805 @@ mariadb:12 images: `11.4.13-MariaDB-ubu2404`, `12.3.3-MariaDB-ubu2404`.
 `mariadbServerVersion` now decides for both probes: a `5.5.5-` prefix
 (MariaDB 10.x, unmasked), or `-MariaDB` anywhere in the version (11.0+, as
 is). `mysql` rejects both, and `mariadb` accepts both.
+
+## D48 — A credential kind the product doesn't read is a config error
+
+**Found on a real fleet.** `kind: password` with a username/password on
+`routeros` and `harbor` sent no `Authorization` header at all: the HTTP
+layer (`applyCredentials`) only knows `basic`, `bearer` and
+`token-header`, and silently ignores every other kind. RouterOS answered
+401 and the target failed with an auth error that pointed nowhere near the
+cause. `kind: basic` worked. `password` is the kind for SQL/Redis AUTH and
+SSH, which is why it looked right.
+
+Every probe already declared the kinds it reads in `Meta().Auth.Kinds`, and
+`AuthSpec.Accepts` existed to check them — but nothing called it outside
+probe tests. `Config.Build` now does, per target. A mismatch fails the
+build with `ErrCredentialKind`, naming the credential, its kind, the
+product and the kinds it accepts, so `config validate` catches it offline
+and `check`/`collect` refuse to start rather than probe with credentials
+that will never be sent.
+
+**A hard error, not a warning.** A credential that is never sent is never
+what the operator meant; a warning would scroll past in a cron log while the
+target keeps failing (or, for a probe where auth is optional, keeps
+silently reporting an anonymous view). Unknown credential kinds were already
+a hard error in the same place, and this is the same class of mistake.
+
+An unknown `product` is still left to `collect`, which reports it per target
+as before: the check only applies when the product resolves.
+
+## D49 — `teamcity` reads the anonymous `/app/rest/server/version` when it has no credentials
+
+**Found by the operator, not the docs.** The probe was built on
+`/app/rest/server`, which is never anonymous (a fresh server answers 401
+with Basic and Bearer challenges), so every TeamCity target needed a token.
+TeamCity also serves `/app/rest/server/version` to anyone, as plain text:
+`2026.1.1 (build 222577)` — the same string `/app/rest/server` carries in
+its `version` field.
+
+**Checked across versions, with guest login off.** Fresh
+jetbrains/teamcity-server containers 2017.2.4, 2018.2.4, 2019.2.4,
+2020.2.4, 2024.03 and 2026.1.1, first-start wizard completed with the
+internal database and no administrator created: `/app/rest/server/version`
+(and the build-number-only `/app/rest/version`) answered 200 on all six,
+while `/app/rest/server` and the guest-only `/guestAuth/app/rest/projects`
+were refused — so this is not guest access. Also confirmed on seven
+production instances (2024.03 to 2026.1.3) with no credentials.
+
+**Which endpoint when.** No credentials → `/app/rest/server/version`. A
+token configured → `/app/rest/server` as before: the operator asked for an
+authenticated read, it carries `internalId` too, and a wrong token stays a
+visible auth error instead of being papered over by the anonymous path.
+
+**Reply validated, not trusted.** While starting up, TeamCity answers every
+path — this one included — with a 200 HTML maintenance page. The reply must
+match `YYYY.N[.N] (build N)` in full or the probe reports `ErrUnparseable`.
+
+## D50 — MariaDB CVEs: BDU and NVD, plus MariaDB's own fixed-versions table, which wins where it knows a CVE
+
+**The ask.** `mariadb` (D36) shipped with no CVE mapping, so its CVES
+column was always `-`. NVD has CPE `mariadb:mariadb` (1,513 matches across
+2002–2026) and BDU lists it as vendor "MariaDB Foundation", name "MariaDB"
+(438 entries), so both went into `productmap.go` like `mysql`.
+
+**Why that alone was wrong.** Checked against real fleet versions, BDU and
+NVD flagged the latest release of maintained series: 10.11.19 got 3 CVEs,
+11.4.13 got 2. BDU writes a per-series fix as an open-ended range with no
+lower bound ("до 11.4.10", "до 11.8.6", "до 12.2.2"), so "до 11.8.6"
+covers 10.11.19 too — D30's overlapping-branch limitation, which bites
+hard on a product that maintains five or six series at once. NVD did the
+same for CVE-2026-35549 ("before 11.4.10"). MariaDB's own table shows both
+were fixed only in 11.4/11.8/12.2: 10.11 never had the affected code. In
+the other direction, NVD and BDU missed 9 of the 21 CVEs MariaDB lists for
+10.11.8.
+
+**The vendor source.** MariaDB publishes "Security Vulnerabilities (CVE)
+Fixed in MariaDB Community Server" with a Markdown source
+(`https://mariadb.com/docs/server/security/cve/community-server.md`,
+~320KB, 456 CVEs). Each row is a CVE, its CVSS 3.1 base score, and the
+releases fixing it, one per series, mostly with a release date. The
+operator downloads it like the Debian tracker; `cve.mariadb.path` points at
+the file. Rules (`LoadMariaDB`):
+
+- A series with its own fix: vulnerable from the series' first release up
+  to that fix.
+- A series with no fix of its own, still maintained (it got some security
+  release on or after this CVE's first fix date) — unaffected: MariaDB
+  fixes every live series together.
+- A series with no fix of its own whose last security release in the
+  table predates this CVE's first fix — it had ended. Every release of it
+  is flagged, with the lowest fix in a newer series as the upgrade target
+  and FixStatus saying so. This over-reports on purpose (an ended series
+  may never have had the code — D30's bias); it only applies to ended
+  series.
+- Rows naming a whole series ("[5.5]", 2012) or no release give no bound
+  and are skipped.
+
+**Merging.** All three sources are merged like BDU and NVD always were,
+and the report groups them per CVE. One rule on top: when the vendor's
+table knows a CVE and doesn't flag this version for it, a BDU or NVD
+finding whose CVEs are all known to the table is dropped
+(`Index.vendorCVEs`, `Lookup`). A finding the table doesn't cover —
+newer than the downloaded table, BDU-only, or with no CVE id — is kept.
+Without `cve.mariadb.path`, BDU and NVD apply on their own, with the
+overlap limitation above.
+
+**Result on fleet versions** (local NVD/BDU copies from 2026-09-23):
+10.5.12 89 CVEs, 10.5.29 23 (ended series), 10.11.8 26, and 10.11.19,
+11.4.13 and 12.3.3 none.
+
+## D51 — `memcached`, `rabbitmq`, `cassandra`: each over its own protocol, each checked against live servers
+
+Asked for by a second fleet, all three running there in Docker.
+
+**memcached** speaks its text protocol on 11211: `version\r\n` →
+`VERSION 1.6.45\r\n` (memcached:1.6, captured byte for byte). The text
+protocol has no authentication, so the probe takes no credentials. A
+server started with SASL speaks only the binary protocol and refuses the
+text command; that is `ErrNotSupported`, not a guess.
+
+**rabbitmq** reads the management plugin's `GET /api/overview`, the one
+place RabbitMQ serves its version: the AMQP port has no pre-auth version
+exchange. It is never anonymous (rabbitmq:4-management answered 401), so
+credentials are required, `kind: basic`. `rabbitmq_version` is the
+version; `product_name`, `product_version`, `erlang_version` and
+`cluster_name` go into extra. The same fields are in 3.8.34's reply. The
+management API is plain HTTP on 15672 unless TLS is set up on it, and
+credentials over plain HTTP need `allow_insecure_transport`, as for every
+probe.
+
+**cassandra** has no HTTP API; it speaks the CQL native protocol on 9042,
+implemented here without a driver: STARTUP; READY, or AUTHENTICATE answered
+with one SASL PLAIN AUTH_RESPONSE (`kind: password`); then `SELECT
+release_version FROM system.local`, a one-row, one-column Rows result.
+OPTIONS/SUPPORTED, the only pre-auth exchange, carries CQL and protocol
+versions but not the server's. Protocol v4: the one every supported
+Cassandra speaks — 3.11 refused v5 ("Beta version of the protocol used"),
+5.0 accepts v4. Captured live: cassandra:3.11 without auth (3.11.19) and
+cassandra:5.0 with PasswordAuthenticator (5.0.9), including the real
+bad-credentials ERROR (0x0100 → `ErrAuth`). No credentials against a
+cluster that asks for them is `ErrAuth` naming the authenticator.
+Cassandra 2.x (protocol v3 at most) is long out of support and not
+attempted.
+
+All three have endoflife.date calendars (`memcached`, `rabbitmq`,
+`apache-cassandra`). CVE mappings for them are a separate step.
+
+## D52 — `weblate` reads its public footer; GitHub release tags lose a repo-name prefix
+
+**Where the version is.** Weblate prints it on every page: the footer's
+"Powered by <a href="https://weblate.org/">Weblate 2026.10</a>" and the
+Documentation link, `docs.weblate.org/en/weblate-2026.10/`. Confirmed live
+against weblate/weblate:latest (with PostgreSQL and Redis), where the
+package's own `weblate.utils.version.VERSION` was `2026.10` too. The REST
+API root `/api/` is anonymous but has no version, `/api/metrics/` needs a
+token. The probe reads `/about/` anonymously, the footer first and the docs
+link if the footer was customised away; a REQUIRE_LOGIN site redirects to
+its login page, which has the same footer. Weblate moved to calendar
+versions after 5.x (2026.9, 2026.9.1, 2026.10); both shapes parse.
+
+**Lifecycle.** No endoflife.date page (404), so the `github` resolver on
+WeblateOrg/weblate. Its release tags are `weblate-2026.10`, and the report
+showed exactly that in LATEST and CYCLE: D39's `version.Clean` strips only
+a `v`. The resolver now drops a leading `<repo>-` or `<repo>_` (matched
+case-insensitively against the repository name) from the tag — in the
+resolver, not `version.Clean`, which every observed version also passes
+through. Tags without that prefix are unchanged.
+
+## D53 — `onlyoffice` and `euro-office`: one probe, two products, told apart by `/welcome/`
+
+**The version.** The document service answers its root, `/index.html`,
+anonymously even with JWT enabled: "Server is functioning normally.
+Version: 9.4.0. Build: 129. Release date: 2026-05-18T00:00:00.000Z.
+Package type: 0. ..." (onlyoffice/documentserver:latest, live). Package
+type 0/1/2 is Community/Enterprise/Developer and goes into extra as
+`edition`, with the build number as `build`. `/coauthoring/CommandService.ashx`'s
+`version` command needs the JWT secret; `api.js` carries no version.
+
+**Euro-Office.** The fork Nextcloud ships (nextcloud/aio-eurooffice, run
+live with PostgreSQL and Redis) answers `/index.html` in exactly the same
+words: "Version: 9.3.1. Build: 37. Release date: 2016-06-29..." — the date
+is a placeholder, the version is real (the image's own package is
+`euro-office-documentserver 9.3.1-dev.1`). It has its own release line
+(Euro-Office/DocumentServer: v9.3.3, v9.3.4, v9.3.4-hotfix.1) apart from
+ONLYOFFICE's (v9.3.1, v9.4.0), so it is its own product with its own
+resolver: compared against ONLYOFFICE's releases, a current Euro-Office
+would always read as behind.
+
+**Telling them apart.** `/index.html` can't, and `api.js` barely differs
+(both still say Ascensio/ONLYOFFICE in their headers). The welcome page's
+title does: "ONLYOFFICE Docs Community Edition" vs "Euro-Office Docs
+Community Edition". The editors' static files sit under versioned paths,
+and the SDK bundle that carries the brand is 2.6–3.5MB — not something to
+pull every hour. So the probe reads `/welcome/` too: a brand that belongs
+to the other product is refused with the product to use (as `mysql`
+refuses MariaDB, D36), and a server with the welcome page turned off (404)
+is taken to be what the config says.
+
+Both on `github` resolvers (neither has an endoflife.date page). No
+credentials: both pages are public.
+
+## D54 — `zookeeper` via `srvr`, `ghost` via its public site endpoint (major.minor only)
+
+**zookeeper.** Four-letter words on the client port (2181), no auth: the
+probe sends `srvr` and reads until the server closes — "Zookeeper version:
+3.9.6-<git hash>, built on ...", then counters and "Mode: standalone"
+(zookeeper:3.9, live). ZooKeeper 3.5+ allows only `srvr` by default
+(`4lw.commands.whitelist`); `stat`, `mntr`, `ruok`, `envi` answered "is
+not executed because it is not in the whitelist", which is
+`ErrNotSupported` if a server has removed `srvr` too. The AdminServer
+(HTTP, 8080) carries the same, but is often not exposed; the client port
+always is. Git hash and mode go into extra; endoflife: `zookeeper`.
+
+**ghost.** `GET /ghost/api/admin/site/` is the one Admin API endpoint
+served without a session or key — the admin app reads it before login —
+and returns `site.version`. Live on ghost:6 it said "6.69", the same as
+`<meta name="generator">` and the Content-Version header, while the
+installed package was 6.69.0: Ghost makes only major.minor public. The
+full version needs the Admin API's key, which is a signed JWT — a new
+credential kind for one digit, not worth it: Ghost's releases are x.y.0
+almost without exception, and "6.69" compares equal to the v6.69.0 tag.
+Resolver: `github` TryGhost/Ghost (no endoflife.date page).
+
+## D55 — `sentry` reads the version self-hosted Sentry embeds in its login page
+
+Self-hosted Sentry embeds `window.__initialData = {...}` in every page,
+the login page included, and that object carries `"version": {"current":
+"26.2.1", "latest": ..., "build": "<git sha>", "upgradeAvailable": ...}`.
+Confirmed live, anonymously, on a production self-hosted 26.2.1:
+`/auth/login/` redirects to the single organization's login page, which
+has it. `current` is the version; `build` and `sentryMode` go into extra.
+`latest` is Sentry's own upgrade check and not used: with the check off it
+was stale (21.7.0). The API root `/api/0/` is anonymous too but answers
+`"version": "0"`, the API's version; `/api/0/internal/health/` needs auth.
+
+Resolver: `github` on getsentry/self-hosted, whose release tags (26.7.0,
+26.8.0, 26.9.0) are the server versions it installs. No endoflife.date
+page. The fixture is that login page reduced to the relevant
+`__initialData` keys, values as served, hostname replaced — standing up a
+self-hosted Sentry (a few dozen containers) for a capture wasn't needed
+with a real instance at hand.
+
+## D56 — `minio` over SSH; MinIO release names compare; larger GitHub release lists
+
+**Why SSH.** MinIO gives no version anonymously on any network surface:
+the S3 API's Server header is a bare "MinIO", the Console's anonymous
+`/api/v1/login` returns only the login strategy, and the admin API
+(`/minio/admin/v3/info`) and Prometheus metrics need an admin key or a
+bearer token generated with `mc`. On the fleet this was built against the
+S3 port (9000) wasn't reachable from the network at all, while the hosts
+were already SSH targets. So `minio` runs `minio --version` (by name, then
+`/usr/local/bin/minio`) over SSH like `freeradius` (D45), with the same
+`options.container`/`container_runtime`, now a shared helper
+(`containerCommand`). Live, an in-house build said "minio version
+RELEASE_INHOUSE.2025-03-12T18-04-18Z (commit-id=01234567...)", then
+"Runtime: go1.24.4 linux/amd64" (the builder's own marker and commit are
+replaced by placeholders here and in the fixture). The marker, commit and
+Go runtime go into extra.
+
+**Comparable versions.** MinIO names releases by UTC timestamp,
+`RELEASE.2025-10-15T17-29-55Z`, in `--version` and in its GitHub tags;
+version.Core found only "2025" in it. `version.Clean` now folds that name,
+with or without a `_<MARKER>` after RELEASE, into "2025.10.15.17.29.55" —
+applied to the observed version and, through D39, to the resolver's tag,
+so both sides compare.
+
+**Lifecycle.** `github` on minio/minio (no endoflife.date page). That
+repository is archived: the community edition's last release is
+RELEASE.2025-10-15T17-29-55Z, which is what a MinIO is compared against
+from now on. The resolver failed on it at first: GitHub's releases list
+carries every release's full changelog, and minio/minio's 30 latest came
+to 3.4MB, cut mid-JSON by the resolver's 1MiB read cap. The `github`
+resolver's own cap is now 8MiB.
+
+## D57 — `wapt` reads the server's anonymous `/ping`; no lifecycle source
+
+The WAPT server (Tranquil IT) answers `GET /ping` without a session:
+`{"msg": "WAPT Server running", "result": {"version": "1.8.2", "git_hash":
+"1.8.2.7334-2d15afd9-debian-10-amd64", "edition": "community",
+"api_version": "v3", ...}}` — confirmed live on a production 1.8.2 server.
+`git_hash` starts with the full build number, so 1.8.2.7334 is the version
+when it extends `version`; edition, API version and git_hash go into
+extra.
+
+No resolver: there is no endoflife.date page, and Tranquil IT's GitHub
+repository's tags stopped at 1.5 years ago; releases are published on
+their own site, which no resolver here reads. Inventory only, like the BMC
+probes (D40).
+
+## D58 — `uptime-kuma` logs in over socket.io; nothing anonymous has the version
+
+**Where the version isn't.** Uptime Kuma's UI talks to its server over
+socket.io, and the server's "info" event carries `version` — but a fresh
+connection gets it without: `sendInfo(socket, hideVersion)` in
+server/client.js hides it until the socket is logged in. `/metrics` has no
+version series, and API keys open only `/metrics`. Confirmed live on
+louislam/uptime-kuma 1.23.17 and 2.5.5 and on a production instance's
+public status page, whose `/api/status-page/*` and socket carry none
+either.
+
+**So the probe logs in** (`kind: password`, required), speaking just
+enough of Engine.IO v4's HTTP long-polling transport, through FetchHTTP:
+GET opens a session (`0{"sid":...}`), POST `40` connects the default
+namespace, POST `420["login",{"username","password","token":""}]` emits
+the login with an ack, then GETs are polled — answering Engine.IO pings
+(`2` → `3`) — until an "info" event with `version` arrives (then `41`
+disconnects), or the ack (`430[...]`) refuses. 1.23.17 sent the ack, then
+`monitorList`, `maintenanceList` and the versioned "info"; 2.5.5 sent the
+versioned "info" before the ack — both orders are handled, and the
+recorded transcripts are the fixtures (JWT in the ack replaced). A refused
+login is `ErrAuth` with Kuma's own message ("Incorrect username or
+password."); an ack asking for a token means the user has 2FA, reported as
+`ErrNotSupported` — use a monitoring user without it. Plain-HTTP Kuma
+needs `allow_insecure_transport`, as for any credential.
+
+Kuma rate-limits logins: a run right after several wrong passwords once
+failed on 2.5.5 and passed on every run after. `latestVersion` (Kuma's own
+update check) and `dbType` go into extra; lifecycle comes from the `github`
+resolver on louislam/uptime-kuma.
+
+## D59 — `posthog`: the git commit is the version
+
+PostHog stopped shipping numbered releases; a self-hosted (hobby) install
+tracks the main branch, and the only identifier it exposes is the commit
+it was built from. The login page embeds `window.POSTHOG_APP_CONTEXT =
+JSON.parse("{...}")` — a JSON document inside a JS string literal, quotes
+escaped as `\u0022` — and its `commit_sha` is that commit (confirmed live,
+anonymously, on a production self-hosted instance). The probe decodes the
+string literal as a JSON string, then the document, and reports the commit
+as the version, with the realm ("hosted-clickhouse") in extra.
+`/_preflight/` is anonymous too but carries only service health and the
+realm; `/api/instance_status` needs a login.
+
+No resolver: there are no releases to compare a commit with. How far
+behind main a commit is would take GitHub's compare API — a resolver of a
+different kind than any here; not done.
+
+## D60 — `netbox` from its login page, `greenbone` from gsad's 401
+
+**netbox.** The login page's root element carries
+`data-netbox-version="4.3.3-Docker-3.3.0"`, and the bundle loads as
+`/static/netbox.js?v=4.3.3` — both anonymous, confirmed live on a
+production NetBox run from netbox-docker. The part before `-Docker-` is
+NetBox's version; the rest, netbox-docker's image version, goes into extra.
+The asset's `?v=` is the fallback for pages without the attribute. The REST
+API (`/api/status/`) needs a token. Resolver: `github` on
+netbox-community/netbox (no endoflife.date page).
+
+**greenbone.** Greenbone Community Edition (OpenVAS behind the Greenbone
+Security Assistant) answers through gsad, which wraps every `/gmp` reply in
+`<envelope><version>24.12.0</version><vendor_version/>...` — the 401 for a
+request with no session included ("Authentication required ... (GSA
+24.12.0)"), confirmed live on a production instance. The probe accepts that
+401 (`OKStatuses`) and reads the envelope. The UI itself is a static React
+bundle with no version. Product `greenbone`, aliases `openvas` and `gsad`;
+the version is gsad's, compared against greenbone/gsad's GitHub releases
+(no endoflife.date page). The scanner (openvas-scanner) and gvmd behind it
+version separately and aren't visible without a login.
+
+## D61 — `doxygen` from its generator mark, `qbittorrent` via a form login; two more GitHub tag spellings
+
+**doxygen.** Every HTML page Doxygen writes says which version wrote it:
+`<meta name="generator" content="Doxygen 1.19.0"/>`, `<!-- Generated by
+Doxygen 1.19.0 -->` and the footer (doxygen.nl's own manual, generated by
+Doxygen, is the fixture). The probe reads `/` (or the target's `path`)
+and reports that version — the one the docs were last built with, which
+is what flags a stale docs pipeline; there is no server to ask. A docs
+site behind SSO (an oauth2-proxy login page, as on the fleet that asked)
+has no mark and is `ErrNotSupported`; `kind: basic` is accepted for sites
+behind HTTP Basic.
+
+**qbittorrent.** The Web UI answers everything — `/` included — with 401
+without a session (linuxserver/qbittorrent 5.2.4, live). The probe posts
+the form login to `/api/v2/auth/login` with the target's own origin as
+Referer (qBittorrent checks it against Host), passes back whatever cookie
+it sets (5.x: 204 and `QBT_SID_<port>`; 4.x: 200 "Ok." and `SID`), reads
+`/api/v2/app/version` ("v5.2.4") and `/api/v2/app/buildInfo` (libtorrent
+and Qt into extra), and logs out. A wrong password is 401 on 5.x and 200
+"Fails." on 4.x, both `ErrAuth`. Credentials are `kind: password` — a form
+login, not HTTP Basic, like `uptime-kuma` (D58) — and optional, for a Web
+UI that bypasses auth for the prober's subnet. qBittorrent also checks that
+the Host header's port is its own: behind a reverse proxy that maps ports
+it must be configured for that, or every request is 401 — what a live
+capture through a remapped container port showed until the ports matched.
+
+**GitHub tags.** doxygen/doxygen tags releases "Release_1_18_0" and
+qbittorrent/qBittorrent "release-5.2.4". The `github` resolver now turns a
+word followed by underscore-separated numbers into a dotted version (the
+same `normalizeRELTag` github-tags uses) and drops a leading "release-",
+after the repo-name prefix of D52. Other tags are left for
+`version.Clean`.
+
+## D62 — `home-assistant` with a token, `openhab` anonymously; pre-release tag names skipped
+
+**home-assistant.** Nothing anonymous carries Home Assistant's version:
+`/api/` and `/api/config` answer 401, and `/manifest.json`,
+`/auth/providers` and the onboarding endpoints have none (live on
+ghcr.io/home-assistant/home-assistant:stable). The REST API's documented
+auth is a long-lived access token as `Authorization: Bearer`, so that is
+the credential (`kind: bearer`, required); `GET /api/config` then returns
+`version` ("2026.10.0"). The same reply carries the home's coordinates,
+paths and URLs — only version, state and safe/recovery mode are read, and
+the fixture keeps just those. Resolver: `github` on home-assistant/core.
+
+**openhab.** `GET /rest/` answers without a login: the REST API's own
+version ("8") and `runtimeInfo` {"version": "5.2.2", "buildString":
+"Release Build"} (live on openhab/openhab:latest, whose
+version.properties said openhab-distro 5.2.2). `runtimeInfo.version` is
+the version; `/rest/systeminfo` needs a login. Bearer or Basic credentials
+are passed if configured, for an instance that turns anonymous access
+off. Resolver: `github` on openhab/openhab-distro.
+
+**Pre-release names.** openhab-distro publishes milestones ("5.3.0.M2")
+as ordinary GitHub releases, not flagged as pre-releases; one landing
+first would make every stable openHAB read as behind. The `github`
+resolver now also skips a release whose tag ends in a numbered
+pre-release marker (`M2`, `b7`, `rc1` after a digit) or a separated word
+(`-alpha`, `-beta.1`, `-rc`, `-pre`). Letter patch releases ("1.1.1b")
+don't match: the marker must carry a number.
+
+## D63 — `kafka` over SSH from the broker's own jar; JMX not reimplemented
+
+D21 left Kafka waiting on JMX: the protocol's only anonymous exchange,
+ApiVersions, carries API version ranges and no software version. JMX does
+have it (`kafka.server:type=app-info`), but JMX is Java RMI over Java
+serialization — a client for it is a JVM protocol stack, not something to
+reimplement in Go for one string, and the port is off unless the operator
+turns it on. Jolokia or a Prometheus JMX exporter would be HTTP, but
+neither is there by default.
+
+So `kafka` runs a command over SSH, like `minio` (D56), with the same
+`options.container`. Every distribution ships `kafka_<scala>-<version>.jar`
+in its libs directory — apache/kafka: `/opt/kafka/libs/kafka_2.13-4.3.1.jar`;
+confluentinc/cp-kafka: `/usr/share/java/kafka/kafka_2.13-8.3.2-ccs.jar` —
+so the command lists that under `$KAFKA_HOME` and the usual install paths
+first: no JVM start. `kafka-topics(.sh) --version` (a JVM start, a few
+seconds; "4.3.1", "8.3.2-ccs") is the fallback. Both outputs are the
+fixtures; verified live through SSH into a host running Kafka in a Podman
+container.
+
+**Confluent Platform** numbers its builds on its own line: since 7.0, CP
+x.y ships Apache Kafka (x-4).y (7.6 → 3.6, 8.3 → 4.3); before that it
+didn't (6.0 was 2.6), and CP patch numbers are independent. endoflife.date
+has no Confluent calendar, and mapping the patch would invent a version. A
+`-ccs`/`-ce` build is reported as is with edition `confluent`, and for 7.0+
+the Apache Kafka line it carries goes into extra (`apacheKafka`: "4.3").
+Resolver: endoflife `apache-kafka`.
+
+## D64 — `netdata`, `libretranslate`, `torrserver`: one anonymous endpoint each
+
+All three verified live on their official images.
+
+**netdata.** The agent's `GET /api/v1/info` is served without a login by
+default and starts with `"version": "v2.12.1"`, with `release-channel`
+alongside. The rest of that reply describes the host (uid, kernel,
+labels, hardware, cloud) — only version and release channel are read, and
+the fixture keeps only a few keys. Basic or bearer credentials pass
+through for an agent behind a proxy that asks for them. Resolver: `github`
+netdata/netdata.
+
+**libretranslate.** The API's own OpenAPI document, `GET /spec`, is public
+even where translating needs an API key, and its `info.version` is the
+server's ("1.9.6", matching the v1.9.6 release). The probe also checks
+`info.title` is "LibreTranslate", so another service's swagger isn't read
+as one. Resolver: `github` LibreTranslate/LibreTranslate.
+
+**torrserver.** `GET /echo` answers with the version as plain text,
+"MatriX.146" — the same spelling as its GitHub release tags (MatriX.146,
+MatriX.145.2). It is kept as is; `version.Core` compares the numbers after
+the codename, on both sides. Basic credentials pass through for an
+instance with auth on. Resolver: `github` YouROK/TorrServer.
+
+## D65 — `phpipam` from its login page, `domainmod` from its served CHANGELOG
+
+**phpipam.** The login page's footer reads "phpIPAM IP address management
+[v1.8.3]", and every stylesheet and script is loaded with
+`?v=1.8.3_r002_v46` — phpIPAM's own SCRIPT_PREFIX: VERSION_VISIBLE, the
+code revision and the database schema version (functions/version.php).
+Confirmed live on phpipam/phpipam-www:latest with MariaDB, before and after
+the schema was installed. The footer gives the version; the asset suffix
+is the fallback and gives revision and schema version for extra. Resolver:
+`github` phpipam/phpipam.
+
+**domainmod.** DomainMOD shows "Version 4.23.0" only in the logged-in
+layout's footer, but its web root ships the CHANGELOG, served as a static
+file: "DomainMOD CHANGELOG", a rule, then the newest entry first —
+"v4.23.0     2025-01-04" (domainmod/domainmod:latest, live, whose
+software.inc.php says SOFTWARE_VERSION = '4.23.0'). The probe requires
+that heading, so another app's changelog isn't read as DomainMOD's; a web
+server that blocks the file makes it `ErrNotSupported`. Resolver: `github`
+domainmod/domainmod.
+
+## D66 — `code-server` reads the options its login page embeds
+
+code-server's login page carries `<meta id="coder-options"
+data-settings="{...}">`, HTML-escaped JSON with `codeServerVersion`
+("4.141.0") — live on codercom/code-server:latest, whose `code-server
+--version` said "4.141.0 ... with Code 1.141.0". `/version` needs the
+password and `/healthz` has no version. The probe reads `/login`,
+unescapes the attribute and decodes it. Resolver: `github`
+coder/code-server.
+
+## D67 — `splunk` asks splunkd's management API, with credentials
+
+Splunk's web UI (8000) is the wrong place: in the deployment this was
+asked for it sits behind a CDN that challenges or rewrites it, and its
+login page carries no version to rely on. splunkd's management port (8089)
+is direct, and `GET /services/server/info?output_mode=json` returns
+`entry[0].content` with `version` ("10.6.0.5"), `build`, `product_type`,
+`isFree`/`isTrial` — but only with credentials. Without them splunkd answers
+401 with an XML `<msg type="ERROR">Unauthorized</msg>` and `Server:
+Splunkd` (seen on a production 9.4.1 and on splunk/splunk:latest, run
+locally with the Splunk General Terms accepted for the capture). So
+credentials are required: a Splunk user (`kind: basic`) or a Splunk
+authentication token (`kind: bearer`). Build, product type and
+free/trial go into extra.
+
+An address without a port gets 8089: the probe has nothing to read on the
+web port. Resolver: endoflife `splunk`. A build newer than the calendar
+(10.6, when endoflife.date listed up to 10.4) reads as `cycle_unmatched`
+until the calendar catches up.
+
+
+## D68 — CVE mapping for the newer probes
+
+The probes added since D33 had no CVE products. Each candidate CPE and
+BDU name was checked against the full local exports (NVD 2002-2026, BDU
+`vulxml.zip`), with its version shape, before going into `productmap.go`:
+cassandra, code-server, domainmod, doxygen, ghost, greenbone (gsad's
+`greenbone_security_assistant`, not the `openvas_manager` daemon),
+home-assistant, kafka, memcached, minio, netbox, netdata, onlyoffice
+(`document_server`; `onlyoffice:server` is the separate Community
+Server), openhab, pfsense, phpipam, qbittorrent, rabbitmq (Pivotal,
+VMware and Broadcom CPEs), sentry, splunk, uptime-kuma (three CPE
+spellings), wapt, weblate, zookeeper.
+
+Left out: posthog (NVD bounds are commit hashes), euro-office (a fork
+with no entries of its own), libretranslate and torrserver (none),
+BDU's "LenelS2 NetBox" (a different product) and BDU's "Sentry" (the SDK).
+
+Four needed more than a table row:
+
+- **MinIO** bounds are release timestamps in both sources
+  ("2025-10-15t17-29-55z", either case). `cleanVersionParts` folds that
+  exact shape into the same dotted form `version.Clean` makes of a probed
+  `RELEASE.…Z`; a plain date bound still doesn't parse.
+- **pfSense**: `netgate:pfsense` holds Plus ranges ("< 22.05", sw_edition
+  `plus`) beside CE ones. The probe reports CE only, so Subject gives the
+  edition `community` and a Plus range never applies.
+- **Splunk**: `splunk:splunk` splits `enterprise` from the retired
+  `light`; splunkd's `product_type` ("enterprise", "lite") picks it.
+  Splunk Cloud has its own CPE and isn't mapped.
+- **Kafka**: a Confluent Platform build ("7.6.1-ccs") gets no lookup. Its
+  own numbering would compare as newer than every Apache bound, and the
+  Apache release it carries is known only to major.minor.
+
+WAPT's own edition ("community"/"enterprise") is passed through as is.
+Checked live against the full data: MinIO's last community release
+matches 8 findings, pfSense CE 2.8.1 none, Splunk 10.6.0 none and 9.4.1 134.
+
+## D69 — Atlassian's own per-release CVE data (`cve.atlassian.path`)
+
+Atlassian publishes, with no login,
+`https://api.atlassian.com/vuln-transparency/v1/products`: for Jira
+Software, Jira Core, Jira Service Management, Confluence, Bitbucket,
+Bamboo, Crowd, Fisheye and Crucible (Server and Data Center each), every
+release with the CVEs it is `AFFECTED` by or that were `FIXED` in it, plus
+a summary, CVSS score and tracking issue per CVE. 2.3MB, 419 CVEs, from
+July 2023 on, most of them in third-party dependencies that NVD's
+Atlassian CPEs never list. The operator downloads it like the MariaDB
+table; `LoadAtlassian` reads it.
+
+Mapped: jira (Jira Software and Jira Core), confluence, bitbucket,
+bamboo. The probe can't tell Server from Data Center, so both lists are
+read and either one's `AFFECTED` counts. Jira Service Management numbers
+its releases on its own (5.x beside Jira 9.x) and isn't mapped. Release
+candidates and EAPs ("10.0.0-rc3") are skipped.
+
+**The export is sparse.** A CVE is usually listed at the first affected
+release of a branch and at its fix ("8.5.0 AFFECTED", "8.5.10 FIXED"),
+not at every release between. Reading only the listed points would miss
+8.5.1–8.5.9. Reading a span to the next fix across branches flagged Jira
+10.3.26 for CVE-2023-45133, which is listed for 10.1.1 and fixed in
+11.3.10 but never listed for 10.3. So spans stay within a major.minor
+branch: from an affected release to the next one listed as fixing it, or
+to the branch's end when no fix follows (an ended or non-LTS branch).
+A branch the CVE never names isn't affected.
+
+**Merging** works like MariaDB's (D50), with one difference. Atlassian
+lists releases one by one, so its verdict holds only for a release it
+lists. A newer release (or one it skipped) keeps BDU's and NVD's findings.
+For a listed release, a BDU/NVD finding whose CVEs Atlassian tracks but
+doesn't flag there is dropped. "Tracks" means listed for any product in
+the export: BDU files Confluence's CVE-2024-21672..21674 under "Jira Data
+Center" (with a bound typed "19.07.18"), and Atlassian's per-release lists
+say Jira was never affected.
+
+Checked against the full export plus full NVD and BDU: the newest
+release of each maintained branch (Jira 10.3.26 and 11.3.12, Confluence
+9.2.26 and 10.2.19, Bitbucket 9.4.26) has no Atlassian findings, and the
+three stray BDU findings on Jira are gone. Older releases gain many: Jira
+10.3.12 goes from 4 CVEs (NVD and BDU) to 119, almost all of them
+dependencies Atlassian fixed in later 10.3 releases.
+
+## D70 — Jenkins: weekly and LTS ranges kept apart; no update-center source
+
+Jenkins ships the same security fix twice under different numbers: weekly
+"2.580" and LTS "2.568.3". NVD writes one range for each, marking the LTS
+one `sw_edition: lts` and leaving the weekly one unmarked ("-"). BDU
+writes both with no marking at all. Lookup applied every range to every
+version, so a fixed LTS was flagged by the weekly bound: live, LTS 2.568.3
+got 14 CVEs from ranges like "before 2.580". The release line is in the
+version's own shape (weekly has two parts, LTS three), so Subject reports
+`weekly` or `lts` as the edition, and for jenkins a finding the source
+left unmarked takes its edition from the shape of its bound
+(`findingEdition`). After that, LTS 2.568.3 and 2.580.1 and weekly 2.585
+have no findings, and LTS 2.568.2 has the ten CVEs of the 2026-09-02
+advisory.
+
+**Jenkins' own data wasn't added as a source.** The update center's
+`warnings` (https://updates.jenkins.io/current/update-center.actual.json,
+55 core entries) carry a regex per release line and an advisory link,
+but no CVE ids. Without them they can't replace a BDU/NVD verdict the way
+MariaDB's and Atlassian's do (D50, D69). Added next to them, they would
+count the same bugs twice. Used instead as the check: for 246 versions
+(weekly 2.400–2.585, fifteen LTS lines .1–.4), "some core warning
+matches" and "NVD+BDU find something" agree on all but 2.408 and 2.465,
+two numbers Jenkins never released.
+
+## D71 — PostgreSQL's and nginx's own security pages
+
+BDU writes most PostgreSQL ranges with no lower bound and only the newest
+major's fix ("до 18.5"). Every older major's latest release falls inside:
+live, 17.11, 16.15, 15.19 and 14.24 got 46–55 CVEs each from BDU, every
+one fixed on its own branch. nginx has the same problem: BDU bounds a fix
+by the mainline release ("от 1.0.0 до 1.31.0"), so stable 1.30.5 got six
+CVEs it has the fix for. NVD was right on both. Both projects publish the
+per-branch truth, and these are two more sources merged the way MariaDB's
+is (D50).
+
+**PostgreSQL** (`cve.postgresql.path`):
+https://www.postgresql.org/support/security/ as HTML. Each row has the
+CVE, the affected majors ("18, 17, 16, 15, 14"), the fix in each ("18.6,
+17.11, …"), the component and CVSS score, and the release announcement
+link. A major is "17", or "9.6" before 10. The main page names only the
+majors supported today. Each per-major page (`/support/security/13/`)
+names its own major too, so the path may be a directory of pages. Rows
+for the same CVE are merged across pages: each page's majors and fixes
+are added.
+
+- The verdict covers only majors the pages name (`vendorCovers`, the
+  same mechanism D69 added for Atlassian's listed releases). With the
+  main page alone, 13 keeps BDU's and NVD's findings.
+- An ended major is never named for a CVE published after it ended. The
+  oldest major an announcement fixed is the oldest one supported then. If
+  a CVE reaches back to that major, the named majors older than it are
+  flagged in full, with no fix. The fix listed is the lowest fix in a
+  supported major. This is the same rule as MariaDB's ended series.
+- `packaging` rows (an installer or RPM build) are tracked but not
+  flagged: they are about one build, not the release.
+
+Live, main page plus the 13 and 9.6 pages: 18.6, 17.11, 16.15, 15.19 and
+14.24 have no findings (they had 0, 46, 52, 52 and 55). 18.5 gets the
+28 CVEs fixed in 18.6, which neither NVD nor BDU had yet. 13.23 (ended)
+gets 37.
+
+**nginx** (`cve.nginx.path`):
+https://nginx.org/en/security_advisories.html as HTML. Each advisory has
+"Vulnerable: 0.9.6-1.31.2" (sometimes several spans, "1.25.0-1.25.5,
+1.26.0") and "Not vulnerable: 1.31.3+, 1.30.4+".
+
+- A `X+` entry covers the rest of X's own branch. The newest one also
+  covers everything after it.
+- What the spans keep after removing those is vulnerable. Ended branches
+  (1.29.x for a fix in 1.31.3/1.30.4) stay flagged.
+- Skipped: advisories for nginx/Windows only, and the 2009 "all"/"none"
+  entry.
+
+Live: 1.30.5 and 1.31.6 have no findings. 1.30.4 and 1.31.5 get
+CVE-2026-90439, which isn't in NVD or BDU yet.
+
+## D72 — CVEs for iLO 4, iDRAC and Synology DSM
+
+The three were the remaining probes with usable ranges in NVD and BDU.
+
+**iLO 4** (`hp-ilo4`): NVD's `hp:integrated_lights-out_4` and
+`_firmware` (29 CVEs, "< 2.82"), BDU's "HP iLO 4". The probe's "2.82"
+compares as is.
+
+**iDRAC** (`dell-idrac`): both sources name each generation as its own
+product — `idrac6_firmware` … `idrac10_firmware`, plus `idrac7`,
+`emc_idrac8`, `integrated_dell_remote_access_controller_9_firmware` and
+the like; BDU's "iDRAC7" … "iDRAC10". The numbers overlap: iDRAC7 and
+iDRAC8 both run 2.x with different fixes (CVE-2019-3764: < 2.65.65.65 and
+< 2.70.70.70), iDRAC6 is 1.x–2.x, iDRAC10 1.x. Subject reads the
+generation from the probe's Extra["model"], Redfish's Manager Model ("12G
+Modular"): 11G is iDRAC6, 12G iDRAC7, 13G iDRAC8, 14G–16G iDRAC9, 17G
+iDRAC10. Without a model, 3.x and later can only be iDRAC9 and are looked
+up; anything else isn't.
+
+**Synology DSM** (`synology-dsm`), left out in D33: a release is version,
+build and Update. Synology writes "DSM 7.2.1-69057 Update 6"; NVD and BDU
+bound it as "7.2.1-69057-6" (once "6.2.4-25556.4"), sometimes without the
+patch number ("7.2-64570-4"). For this product only (`boundFolds`), both
+sources' bounds and the probed version fold to
+major.minor.patch.build.update, a missing patch or Update as 0:
+7.2-64570-4 is 7.2.0.64570.4, after a bare "7.2" bound and before 7.2.1.
+The report writes ranges back in Synology's notation. The probe now
+reports the Update in Extra["update"]; Version stays "7.2.1-69057", so
+drift and lifecycle still compare the release. An inventory from before
+reads as Update 0: fixed Updates may be flagged, none is missed.
+
+Live: iLO 4 2.82, iDRAC8 2.86.86.86, iDRAC9 7.20.30.50, iDRAC10
+1.30.10.50 and DSM 7.3.2-86009 Update 4 have no findings; iLO 4 2.70 gets
+20, iDRAC9 6.10.30.00 10.
+
+**Not fixed: BDU's branch bounds.** BDU writes DSM's per-branch fixes as
+separate open-lower ranges ("до 7.2-64570-4", "до 7.2.1-69057-6", "до
+7.2.2-72806-1"). Under D30's rule, the newest branch's bound flags every
+older branch's fixed releases: 7.2.1-69057 Update 8 gets 5 BDU findings,
+7.1.1-42962 Update 9 gets 13. NVD bounds each branch and is right. This
+is the same limitation as Confluence's in D30, left as it is here; if
+it is lifted, it should be lifted for every product at once.
+
+## D73 — `enodia cve update`
+
+Every operator was writing the same cron script: twenty-five NVD years,
+BDU with a certificate workaround, an OVAL file per release. Since D30
+enodia has never downloaded anything, so air-gapped installs could trust
+that `check` stays offline. `cve update` keeps that guarantee: it is the
+only command that fetches, and only when run. `check`, `collect` and
+`serve` still only read files. PRIVACY.md lists the hosts it contacts.
+
+**What it fetches.** Into each configured `cve.*.path`, what that entry
+reads:
+
+- BDU's `vulxml.zip`. The path must be a `.zip`; the `.xml` and
+  `.tar.gz` forms the loader also accepts are the operator's own
+  repackaging.
+- NVD's yearly gzips. NVD rebuilds every yearly file daily (checked:
+  2002's and 2010's Last-Modified were this week's), so If-Modified-Since
+  saves nothing on the old years. By default it fetches this year, last
+  year and any year not on disk; `--all-years` fetches all of them.
+- The Debian tracker's `.json`.
+- OVAL, Alpine secdb and PostgreSQL's per-major pages are per release.
+  The releases come from three places: files already in the directory
+  (vendor file names map back to releases), the `--from` inventories
+  (keyed the way the package lookups key them: Ubuntu and Mint codename,
+  RHEL-family major with Rocky on rhel, Astra and RED OS minor, Alpine
+  `vX.Y`, PostgreSQL major), and `--oval`/`--alpine`/`--postgresql`.
+  enodia keeps no "latest inventory" of its own, so no other source was
+  possible.
+- MariaDB's table, Atlassian's export, PostgreSQL's main page and nginx's
+  page.
+
+**How.**
+
+- Each file is requested If-Modified-Since its copy's modification
+  time. On success the copy's time is set to the server's Last-Modified.
+  All nine sources answer 304 except MariaDB, PostgreSQL and Atlassian,
+  which send no Last-Modified; for those, an identical download counts as
+  unchanged.
+- A download goes to `.enodia-update/` beside its destination. That is
+  the same filesystem, so the rename is atomic, and the loaders skip
+  subdirectories.
+- The download is checked by loading it with the same `cve.Load*` that
+  `check` uses, not by sniffing magic bytes. A truncated zip or an HTML
+  error page never replaces a working file.
+- A per-release file under another name (an uncompressed copy of the same
+  release) is removed once the release's file is in place, or the OVAL
+  loader would read the release twice.
+- Network errors, 429 and 5xx are retried twice with backoff. 404 is not
+  retried.
+- One failure doesn't stop the rest; the exit status is 1 if any failed.
+
+**TLS.** bdu.fstec.ru's chain ends at the Russian Trusted Root CA, through
+"Russian Trusted Sub CA" 2024, and the server sends no intermediate. The
+root is in almost no trust store. Embedding the two certificates was
+considered and rejected: the binary would carry a CA trusted for every
+host, and would go stale when the Sub CA is reissued.
+
+Instead, `cve.update` takes:
+
+- `ca_file` and `ca_dir`: certificates added to the system roots, PEM
+  (one or many) or DER;
+- `tls_skip_verify`: verification off for every download.
+
+Without them BDU fails with Go's "certificate signed by unknown
+authority" and the rest still download. One trap found live:
+`cat root.crt sub.crt` glues the armour lines together when root.crt has
+no final newline (the Root CA's published file doesn't), and pem.Decode
+then reads neither certificate. The glued form is split before parsing.
+
+Live, with every source configured: BDU downloads with the CA bundle and
+its load check takes about 20 s. A repeat run with nothing changed upstream
+is all "same" in 9 s: 304s, plus the three sources without Last-Modified
+downloaded again and compared.
+
+**The 2.0/2.1 images** (EpicMorg/docker): baked-in databases removed,
+`/var/lib/enodia/cve` made a volume, and an `enodia-cve-update` shell
+script added that mirrors this for the sources each version reads. 2.0.0
+gets NVD and BDU; 2.1.x adds Debian, OVAL and Alpine. Its BDU default is
+`-k`, the user's choice for a script with no config.
+

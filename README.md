@@ -34,9 +34,10 @@ You describe your services once. Enodia handles the rest.
 > **[docs.enodia.sh](https://docs.enodia.sh)** · full docs, config reference,
 > and per-product probe notes.
 
-> **Status: 2.1.** The full pipeline (collect → inventory → evaluate →
-> render), 96 probes, CVE correlation against BDU ФСТЭК and NVD and, for
-> twelve Linux distributions, per installed package,
+> **Status: 2.2.** The full pipeline (collect → inventory → evaluate →
+> render), 123 probes, CVE correlation against BDU ФСТЭК, NVD and vendors'
+> own advisories and, for twelve Linux distributions, per installed package,
+> `enodia cve update` for the databases,
 > `settings.yaml`, and the release/packaging pipeline are all implemented
 > and used against real production infrastructure. See
 > [`CHANGELOG.md`](CHANGELOG.md) for release history, or the
@@ -155,6 +156,14 @@ SSH instead: enodia runs one identifying command (`cat /etc/os-release`,
 body. `kind: ssh-key` and `kind: password` credentials cover both auth shapes;
 host key verification reuses the same `pin_sha256`/`insecure` fields TLS
 targets already have.
+
+**A credential's `kind` has to match its transport.** HTTP products read
+`basic`, `bearer` or `token-header`; SSH probes read `ssh-key` or
+`password`; Redis, PostgreSQL and the other wire-protocol probes read
+`password`. A user/password pair for a web UI or REST API (RouterOS,
+Harbor, Jenkins, a BMC) is therefore `kind: basic`, not `kind: password`.
+`config validate` and every run reject a mismatch and name the kinds the
+product does accept (D48).
 
 ## Views
 
@@ -348,10 +357,11 @@ the fleet view's rows from the same data:
 
 ## CVE correlation
 
-Optional. enodia can match every probed version against two local
-vulnerability databases, BDU ФСТЭК and NIST NVD. It never downloads them:
-you fetch the files yourself, as often as you like, and point `enodia.yaml`
-at them.
+Optional. enodia can match every probed version against local
+vulnerability databases: BDU ФСТЭК and NIST NVD, distributions' own
+security data and some vendors' own. Point `enodia.yaml` at the files;
+`enodia cve update` downloads them, or fetch them yourself. `check`,
+`collect` and `serve` never download anything.
 
 ```yaml
 cve:
@@ -365,7 +375,62 @@ cve:
     path: /var/lib/enodia/cve/oval             # vendor OVAL files, one per release (see below)
   alpine:
     path: /var/lib/enodia/cve/alpine           # https://secdb.alpinelinux.org/<branch>/{main,community}.json
+  mariadb:
+    path: /var/lib/enodia/cve/mariadb.md       # https://mariadb.com/docs/server/security/cve/community-server.md
+  atlassian:
+    path: /var/lib/enodia/cve/atlassian.json   # https://api.atlassian.com/vuln-transparency/v1/products
+  postgresql:
+    path: /var/lib/enodia/cve/postgresql       # https://www.postgresql.org/support/security/ (+ /<major>/ pages)
+  nginx:
+    path: /var/lib/enodia/cve/nginx.html       # https://nginx.org/en/security_advisories.html
 ```
+
+### Updating the databases
+
+```sh
+enodia cve update                        # every cve.*.path in the active config
+enodia cve update --from inventory.jsonl # also the OVAL releases, Alpine branches and
+                                         # PostgreSQL majors that inventory's hosts need
+enodia cve update --dry-run              # list what would be fetched
+```
+
+It fetches into each configured path what that entry reads: BDU's `.zip`,
+NVD's yearly files (this year, last year and any year not on disk yet;
+`--all-years` refreshes all of them — NVD rebuilds every yearly file
+daily), the Debian tracker's `.json`, MariaDB's, Atlassian's, nginx's
+pages and PostgreSQL's main page. For OVAL, Alpine and PostgreSQL's
+per-major pages it fetches the releases already in those directories,
+the ones the `--from` inventories need, and any given with
+`--oval ubuntu:noble`, `--alpine v3.22` or `--postgresql 13`. So
+`oval.path`, `alpine.path` and `nvd.path` must be directories, `bdu.path`
+a `.zip` and `debian.path` a `.json`; a `postgresql.path` that is a file
+gets the main page only.
+
+Each file is requested If-Modified-Since its copy on disk, downloaded
+beside it, loaded by the same code `check` uses, and only then moved over
+the old copy: an unchanged file costs one request, and a failed or broken
+download never replaces a working one. The exit status is 1 if any file
+failed; the others are still updated. Run it from cron; the next `check`
+or `serve` collection picks the new files up.
+
+TLS is verified against the system's trusted roots. bdu.fstec.ru's chain
+ends at the Russian Trusted Root CA, which most systems don't carry, and
+the server doesn't send its intermediate — add both, or turn verification
+off:
+
+```yaml
+cve:
+  update:
+    ca_file: /etc/enodia/russian-trusted.pem  # added to the system roots; PEM (one or many) or DER
+    ca_dir: /etc/enodia/ca                    # every certificate file in it, likewise
+    tls_skip_verify: false                    # true: verify nothing, for every download
+```
+
+The Root CA and "Russian Trusted Sub CA" (2024) are published at
+`http://nuc-cdp.digital.gov.ru/cdp/rootca_ssl_rsa2022.crt` and
+`http://nuc-cdp.digital.gov.ru/cdp/subca_ssl_rsa2024.crt`.
+
+### Sources
 
 Each block works alone. `bdu.path` is the export as published (`.zip`),
 or the `.xml` inside it, or a `.tar.gz`. `nvd.path` is one file or a
@@ -418,6 +483,46 @@ and `community.json` files of each branch in your fleet (download them
 under distinct names, e.g. `v3.20-main.json`). `alpine-linux` targets
 are matched per origin package.
 
+`mariadb.path` is MariaDB's own table of fixed CVEs, the Markdown page
+above saved as is. It lists, for every CVE, the release that fixes it in
+each maintained series, so a `mariadb` target is judged on its own
+series: 10.11.19 is not flagged for a CVE fixed only in 11.4 and up. A
+series that had already ended when a CVE was fixed elsewhere is flagged,
+with the newer release to move to. It merges with BDU and NVD (which also
+cover `mariadb`): for a CVE MariaDB's table knows, its verdict wins,
+because BDU's and NVD's per-series ranges often reach into series the bug
+never existed in. CVEs the table doesn't list yet still come from BDU and
+NVD.
+
+`atlassian.path` is Atlassian's vulnerability transparency export, the
+JSON that URL returns, saved as is. It lists Jira, Confluence, Bitbucket
+and Bamboo releases (Server and Data Center) with the CVEs each is
+affected by and the release that fixes each, third-party dependencies
+included. A target is judged within its own branch: Jira 10.3.26 is not
+flagged for a CVE Atlassian lists only for 10.1 and 11.3. A branch with no
+fix listed after an affected release is flagged to its end. It merges with
+BDU and NVD like MariaDB's table: for a release Atlassian lists, its
+verdict wins on every CVE it tracks; a release newer than the file keeps
+BDU's and NVD's findings.
+
+`postgresql.path` is the PostgreSQL project's security page saved as
+HTML, or a directory of such pages. The main page names, for every CVE,
+the supported majors it affects and the release that fixes each. A major
+no longer supported isn't named there; save its own page
+(`/support/security/13/`) into the same directory to cover it. A major
+that had ended before a CVE came out, when the CVE reaches back to the
+oldest major still supported then, is flagged with no fix. For a major
+the pages name, the project's verdict replaces BDU's, whose PostgreSQL
+ranges have no lower bound ("до 18.5") and flag every older major's
+latest release.
+
+`nginx.path` is nginx's security advisories page saved as HTML. Each
+advisory lists the vulnerable versions and, per branch, the first fixed
+release ("1.31.6+, 1.30.5+"). A stable release with the fix (1.30.5) is no
+longer flagged by a range written up to the mainline fix ("до 1.31.0").
+Branches that never got the fix stay flagged. Advisories for
+nginx/Windows only are skipped.
+
 A Proxmox VE host gets package findings as a second, SSH `debian` target
 alongside its API `proxmox` one.
 
@@ -427,7 +532,7 @@ Alpine findings grouped per package (`linux 6.12.107-1 → 6.12.111-1`, linked t
 the advisory that fixes it, with its CVE list folded).
 `export --format json` carries every finding with its source. Which
 products are matched, and why some deliberately aren't, is in
-`docs/DECISIONS.md` D30–D35 and D42–D46.
+`docs/DECISIONS.md` D30–D35, D42–D46 and D50.
 
 ## File locations
 
