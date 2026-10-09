@@ -10,6 +10,9 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `netdata` probe: the agent's anonymous `/api/v1/info` (D64).
+- `libretranslate` probe: the public OpenAPI document `/spec` (D64).
+- `torrserver` probe: `/echo` (D64).
 - `kafka` probe: the broker's version over SSH from its own jar, optionally
   in a container; Confluent Platform builds are reported as `confluent`
   with the Apache Kafka line they carry (D63).

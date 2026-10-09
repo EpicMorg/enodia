@@ -3056,3 +3056,27 @@ has no Confluent calendar, and mapping the patch would invent a version. A
 the Apache Kafka line it carries goes into extra (`apacheKafka`: "4.3").
 Resolver: endoflife `apache-kafka`.
 
+## D64 — `netdata`, `libretranslate`, `torrserver`: one anonymous endpoint each
+
+All three verified live on their official images.
+
+**netdata.** The agent's `GET /api/v1/info` is served without a login by
+default and starts with `"version": "v2.12.1"`, with `release-channel`
+alongside. The rest of that reply describes the host (uid, kernel,
+labels, hardware, cloud) — only version and release channel are read, and
+the fixture keeps only a few keys. Basic or bearer credentials pass
+through for an agent behind a proxy that asks for them. Resolver: `github`
+netdata/netdata.
+
+**libretranslate.** The API's own OpenAPI document, `GET /spec`, is public
+even where translating needs an API key, and its `info.version` is the
+server's ("1.9.6", matching the v1.9.6 release). The probe also checks
+`info.title` is "LibreTranslate", so another service's swagger isn't read
+as one. Resolver: `github` LibreTranslate/LibreTranslate.
+
+**torrserver.** `GET /echo` answers with the version as plain text,
+"MatriX.146" — the same spelling as its GitHub release tags (MatriX.146,
+MatriX.145.2). It is kept as is; `version.Core` compares the numbers after
+the codename, on both sides. Basic credentials pass through for an
+instance with auth on. Resolver: `github` YouROK/TorrServer.
+

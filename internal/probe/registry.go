@@ -106,6 +106,8 @@ var builtin = []Probe{
 	keycloakProbe{},
 	kibanaProbe{},
 	zouFamilyProbe{product: "kitsu", summary: "Kitsu (CG-Wire / Zou frontend)", resolver: ResolverRef{Type: "github", ID: "cgwire/kitsu"}},
+	// info.version of the public OpenAPI document /spec. Verified live (1.9.6).
+	libretranslateProbe{},
 	// Real ISO rootfs capture: ID=linuxmint, VERSION_ID="22.3" — unlike the
 	// only Docker Hub image found earlier (linuxmintd/mint22-amd64, Mint's
 	// own CI build chroot, which reports the underlying Ubuntu instead),
@@ -130,6 +132,8 @@ var builtin = []Probe{
 	unameFamilyProbe{product: "netbsd", summary: "NetBSD", resolver: ResolverRef{Type: "endoflife", ID: "netbsd"}, unameName: "NetBSD"},
 	// data-netbox-version on /login/, anonymous. Verified live (4.3.3).
 	netboxProbe{},
+	// The anonymous agent API /api/v1/info. Verified live (v2.12.1).
+	netdataProbe{},
 	nextcloudProbe{},
 	nexusProbe{},
 	nginxProbe{},
@@ -233,6 +237,8 @@ var builtin = []Probe{
 	synologyDSMProbe{},
 	teamcityProbe{},
 	testrailProbe{},
+	// GET /echo, plain text "MatriX.146". Verified live.
+	torrserverProbe{},
 	traefikProbe{},
 	// GET /api/v2.0/system/info, authenticated with an API key as a plain
 	// bearer token. Verified live against a real TrueNAS 25.10.7 host —

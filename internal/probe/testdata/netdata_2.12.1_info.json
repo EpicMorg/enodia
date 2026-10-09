@@ -1,0 +1,6 @@
+{
+ "version": "v2.12.1",
+ "release-channel": "nightly",
+ "architecture": "x86_64",
+ "container": "podman"
+}

@@ -1,0 +1,14 @@
+{
+ "swagger": "2.0",
+ "info": {
+  "description": "Free and Open Source Machine Translation API.",
+  "license": {
+   "name": "AGPL-3.0"
+  },
+  "title": "LibreTranslate",
+  "version": "1.9.6"
+ },
+ "paths": {
+  "/languages": {}
+ }
+}

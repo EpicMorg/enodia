@@ -1262,7 +1262,14 @@ Not dates. Order of work, and what each step unblocks.
   Confluent builds reported on their own line. Unblocks what D21 left
   waiting on JMX. See `docs/DECISIONS.md` D63.
 
+- `netdata`, `libretranslate`, `torrserver` probes — each from an
+  anonymous endpoint: Netdata's `/api/v1/info`, LibreTranslate's OpenAPI
+  `/spec`, TorrServer's `/echo`. Verified live. See `docs/DECISIONS.md`
+  D64.
+
 ## Next
+
+- `phpipam`, `domainmod`, `splunk` probes — asked for, in progress
 
 Everything found running 2.0 against a real ~600-target fleet is done
 (see above). Requests from a second, ~90-target fleet:
