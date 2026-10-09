@@ -95,6 +95,8 @@ func validateCVEPaths(cfg *config.Config) error {
 		"cve.atlassian.path":  cfg.AtlassianPath,
 		"cve.postgresql.path": cfg.PostgreSQLPath,
 		"cve.nginx.path":      cfg.NginxPath,
+		"cve.update.ca_file":  cfg.UpdateCAFile,
+		"cve.update.ca_dir":   cfg.UpdateCADir,
 	} {
 		path, ok := resolve()
 		if !ok {

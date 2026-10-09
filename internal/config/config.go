@@ -44,8 +44,9 @@ type Config struct {
 
 // CVESpec configures vulnerability correlation. See docs/DECISIONS.md D30
 // for why this lives in enodia.yaml (data that affects evaluation, per D19)
-// rather than settings.yaml (display preferences), and why enodia never
-// fetches the underlying data itself.
+// rather than settings.yaml (display preferences). Only `enodia cve
+// update` downloads the files the paths name (D73); every other command
+// reads them offline.
 type CVESpec struct {
 	BDU        BDUSpec        `yaml:"bdu,omitempty"`
 	NVD        NVDSpec        `yaml:"nvd,omitempty"`
@@ -56,20 +57,18 @@ type CVESpec struct {
 	Atlassian  AtlassianSpec  `yaml:"atlassian,omitempty"`
 	PostgreSQL PostgreSQLSpec `yaml:"postgresql,omitempty"`
 	Nginx      NginxSpec      `yaml:"nginx,omitempty"`
+	Update     CVEUpdateSpec  `yaml:"update,omitempty"`
 }
 
-// BDUSpec points at a local copy of FSTEC's БДУ export the operator
-// downloaded themselves — enodia has no code path that reaches
-// bdu.fstec.ru on its own. Path may be a raw .xml file, a .zip (BDU's own
+// BDUSpec points at a local copy of FSTEC's БДУ export. Path may be a raw .xml file, a .zip (BDU's own
 // publication format), or a .tar.gz, and may be relative to the config
 // file, the same convention CredentialsFile already uses.
 type BDUSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
-// NVDSpec points at a local copy of NIST NVD's yearly CVE exports the
-// operator downloaded themselves — enodia has no code path that reaches
-// nvd.nist.gov on its own (see docs/DECISIONS.md D31). Path may be a
+// NVDSpec points at a local copy of NIST NVD's yearly CVE exports (see
+// docs/DECISIONS.md D31). Path may be a
 // single file (.json, .json.gz, or .json.zip — NVD's own publication
 // formats) or a directory containing any number of them, and may be
 // relative to the config file, the same convention BDUSpec.Path uses.
@@ -78,16 +77,14 @@ type NVDSpec struct {
 }
 
 // DebianSpec points at a local copy of the Debian Security Tracker's JSON
-// export (https://security-tracker.debian.org/tracker/data/json) the
-// operator downloaded themselves — package-level CVE matching for debian
-// targets, see docs/DECISIONS.md D42. Path may be .json, .json.gz or
+// export (https://security-tracker.debian.org/tracker/data/json) —
+// package-level CVE matching for debian targets, see docs/DECISIONS.md D42. Path may be .json, .json.gz or
 // .json.zip, and may be relative to the config file, like BDUSpec.Path.
 type DebianSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
-// OVALSpec points at vendor OVAL files the operator downloaded themselves
-// — package-level CVE matching for ubuntu, linuxmint, rhel, rocky-linux,
+// OVALSpec points at vendor OVAL files — package-level CVE matching for ubuntu, linuxmint, rhel, rocky-linux,
 // almalinux and oracle-linux targets, see docs/DECISIONS.md D43. Path is
 // one file or a directory of them (.xml or the vendors' own .xml.bz2),
 // one per release, relative to the config file like BDUSpec.Path.
@@ -95,8 +92,7 @@ type OVALSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
-// AlpineSpec points at Alpine's secdb JSON files the operator downloaded
-// themselves (https://secdb.alpinelinux.org/<branch>/main.json and
+// AlpineSpec points at Alpine's secdb JSON files (https://secdb.alpinelinux.org/<branch>/main.json and
 // community.json) — package-level CVE matching for alpine-linux targets,
 // see docs/DECISIONS.md D44. Path is one file or a directory of them,
 // relative to the config file like BDUSpec.Path.
@@ -104,8 +100,7 @@ type AlpineSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
-// MariaDBSpec points at MariaDB's own fixed-CVE table the operator
-// downloaded themselves
+// MariaDBSpec points at MariaDB's own fixed-CVE table
 // (https://mariadb.com/docs/server/security/cve/community-server.md) —
 // the vendor's per-series fix versions for mariadb targets, merged with
 // BDU and NVD, see docs/DECISIONS.md D50. Relative to the config file like
@@ -115,7 +110,6 @@ type MariaDBSpec struct {
 }
 
 // AtlassianSpec points at Atlassian's vulnerability transparency export
-// the operator downloaded themselves
 // (https://api.atlassian.com/vuln-transparency/v1/products) — per-release
 // CVE status for jira, confluence, bitbucket and bamboo targets, merged
 // with BDU and NVD, see docs/DECISIONS.md D69. Relative to the config file
@@ -124,8 +118,8 @@ type AtlassianSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
-// PostgreSQLSpec points at the PostgreSQL project's security table the
-// operator saved themselves (https://www.postgresql.org/support/security/,
+// PostgreSQLSpec points at the PostgreSQL project's security table
+// (https://www.postgresql.org/support/security/,
 // optionally with the per-major pages beside it in a directory) — the
 // fix release per major for postgresql targets, merged with BDU and NVD,
 // see docs/DECISIONS.md D71. Relative to the config file like
@@ -134,13 +128,34 @@ type PostgreSQLSpec struct {
 	Path string `yaml:"path,omitempty"`
 }
 
-// NginxSpec points at nginx's security advisories page the operator saved
-// themselves (https://nginx.org/en/security_advisories.html) — vulnerable
+// NginxSpec points at nginx's security advisories page (https://nginx.org/en/security_advisories.html) — vulnerable
 // and fixed releases per branch for nginx targets, merged with BDU and
 // NVD, see docs/DECISIONS.md D71. Relative to the config file like
 // BDUSpec.Path.
 type NginxSpec struct {
 	Path string `yaml:"path,omitempty"`
+}
+
+// CVEUpdateSpec configures `enodia cve update`, the one command that
+// downloads the files the cve.*.path entries name (see docs/DECISIONS.md
+// D73). TLS is verified against the system's trusted roots plus CAFile
+// and every certificate in CADir — bdu.fstec.ru's chain ends at the
+// Russian Trusted Root CA, which most systems don't carry.
+// TLSSkipVerify turns verification off for every download instead.
+type CVEUpdateSpec struct {
+	TLSSkipVerify bool   `yaml:"tls_skip_verify,omitempty"`
+	CAFile        string `yaml:"ca_file,omitempty"`
+	CADir         string `yaml:"ca_dir,omitempty"`
+}
+
+// UpdateCAFile is BDUPath's counterpart for cve.update.ca_file.
+func (c *Config) UpdateCAFile() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.Update.CAFile)
+}
+
+// UpdateCADir is BDUPath's counterpart for cve.update.ca_dir.
+func (c *Config) UpdateCADir() (path string, ok bool) {
+	return resolvePathRelativeToConfig(c.path, c.CVE.Update.CADir)
 }
 
 // BDUPath returns the configured BDU export path, resolved relative to
@@ -313,6 +328,8 @@ func (c *Config) Validate() error {
 		"cve.atlassian.path":  c.CVE.Atlassian.Path,
 		"cve.postgresql.path": c.CVE.PostgreSQL.Path,
 		"cve.nginx.path":      c.CVE.Nginx.Path,
+		"cve.update.ca_file":  c.CVE.Update.CAFile,
+		"cve.update.ca_dir":   c.CVE.Update.CADir,
 	} {
 		if strings.ContainsFunc(p, unicode.IsControl) {
 			return fmt.Errorf("%s: %s %q contains a control character — a Windows path in double quotes "+

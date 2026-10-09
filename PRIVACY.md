@@ -18,8 +18,16 @@ runs no server that enodia talks to and receives nothing from it.
   only the public repository name is in the request. If you set
   `GITHUB_TOKEN`, it is sent to GitHub only, to raise the rate limit.
 
-That is all. CVE databases (NVD, BDU, Debian, OVAL, Alpine) are files you
-download yourself; enodia only reads them from disk.
+- **CVE database publishers**, only when you run `enodia cve update`, and
+  only those your `cve.*.path` entries name: nvd.nist.gov, bdu.fstec.ru,
+  security-tracker.debian.org, the OVAL publishers (Canonical, Red Hat,
+  AlmaLinux, Oracle, Astra Linux, RED OS), secdb.alpinelinux.org,
+  mariadb.com, api.atlassian.com, www.postgresql.org and nginx.org. The
+  requests are plain downloads of public files; the only thing they say
+  about your fleet is which OS releases and PostgreSQL majors you fetch
+  data for.
+
+That is all. Every other command only reads the CVE files from disk.
 
 The HTML report loads Bootstrap from a CDN (jsDelivr / cdnjs) **in the
 browser that opens it** when `html.assets: cdn` is set; the default

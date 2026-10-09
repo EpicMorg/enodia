@@ -16,10 +16,11 @@
 //     the same product-own-numbering shape BDU's ranges are, cross-checked
 //     against the very same real CVEs D30/D31 already verify.
 //
-// enodia never fetches either of these itself: both are large, and neither
+// This package never fetches either of them: both are large, and neither
 // has a documented, stable API meant to be polled on every collection
-// cycle. The operator downloads them on whatever schedule they like and
-// points `cve.bdu.path`/`cve.nvd.path` at the result.
+// cycle. It reads the files `cve.bdu.path`/`cve.nvd.path` name, which
+// the operator refreshes on their own schedule — by hand or with
+// `enodia cve update` (internal/cveupdate, docs/DECISIONS.md D73).
 package cve
 
 import (

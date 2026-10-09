@@ -356,10 +356,11 @@ the fleet view's rows from the same data:
 
 ## CVE correlation
 
-Optional. enodia can match every probed version against two local
-vulnerability databases, BDU ФСТЭК and NIST NVD. It never downloads them:
-you fetch the files yourself, as often as you like, and point `enodia.yaml`
-at them.
+Optional. enodia can match every probed version against local
+vulnerability databases: BDU ФСТЭК and NIST NVD, distributions' own
+security data and some vendors' own. Point `enodia.yaml` at the files;
+`enodia cve update` downloads them, or fetch them yourself. `check`,
+`collect` and `serve` never download anything.
 
 ```yaml
 cve:
@@ -382,6 +383,53 @@ cve:
   nginx:
     path: /var/lib/enodia/cve/nginx.html       # https://nginx.org/en/security_advisories.html
 ```
+
+### Updating the databases
+
+```sh
+enodia cve update                        # every cve.*.path in the active config
+enodia cve update --from inventory.jsonl # also the OVAL releases, Alpine branches and
+                                         # PostgreSQL majors that inventory's hosts need
+enodia cve update --dry-run              # list what would be fetched
+```
+
+It fetches into each configured path what that entry reads: BDU's `.zip`,
+NVD's yearly files (this year, last year and any year not on disk yet;
+`--all-years` refreshes all of them — NVD rebuilds every yearly file
+daily), the Debian tracker's `.json`, MariaDB's, Atlassian's, nginx's
+pages and PostgreSQL's main page. For OVAL, Alpine and PostgreSQL's
+per-major pages it fetches the releases already in those directories,
+the ones the `--from` inventories need, and any given with
+`--oval ubuntu:noble`, `--alpine v3.22` or `--postgresql 13`. So
+`oval.path`, `alpine.path` and `nvd.path` must be directories, `bdu.path`
+a `.zip` and `debian.path` a `.json`; a `postgresql.path` that is a file
+gets the main page only.
+
+Each file is requested If-Modified-Since its copy on disk, downloaded
+beside it, loaded by the same code `check` uses, and only then moved over
+the old copy: an unchanged file costs one request, and a failed or broken
+download never replaces a working one. The exit status is 1 if any file
+failed; the others are still updated. Run it from cron; the next `check`
+or `serve` collection picks the new files up.
+
+TLS is verified against the system's trusted roots. bdu.fstec.ru's chain
+ends at the Russian Trusted Root CA, which most systems don't carry, and
+the server doesn't send its intermediate — add both, or turn verification
+off:
+
+```yaml
+cve:
+  update:
+    ca_file: /etc/enodia/russian-trusted.pem  # added to the system roots; PEM (one or many) or DER
+    ca_dir: /etc/enodia/ca                    # every certificate file in it, likewise
+    tls_skip_verify: false                    # true: verify nothing, for every download
+```
+
+The Root CA and "Russian Trusted Sub CA" (2024) are published at
+`http://nuc-cdp.digital.gov.ru/cdp/rootca_ssl_rsa2022.crt` and
+`http://nuc-cdp.digital.gov.ru/cdp/subca_ssl_rsa2024.crt`.
+
+### Sources
 
 Each block works alone. `bdu.path` is the export as published (`.zip`),
 or the `.xml` inside it, or a `.tar.gz`. `nvd.path` is one file or a

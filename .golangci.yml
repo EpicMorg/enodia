@@ -17,6 +17,7 @@ linters:
     misspell:
       ignore-rules:
         - routeros # MikroTik's own product name, not a typo of "routers"
+        - alse # Astra Linux Special Edition, in its OVAL file names
   exclusions:
     generated: lax
     presets:

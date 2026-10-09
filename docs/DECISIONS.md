@@ -3332,3 +3332,83 @@ older branch's fixed releases: 7.2.1-69057 Update 8 gets 5 BDU findings,
 is the same limitation as Confluence's in D30, left as it is here; if
 it is lifted, it should be lifted for every product at once.
 
+## D73 — `enodia cve update`
+
+Every operator was writing the same cron script: twenty-five NVD years,
+BDU with a certificate workaround, an OVAL file per release. Since D30
+enodia has never downloaded anything, so air-gapped installs could trust
+that `check` stays offline. `cve update` keeps that guarantee: it is the
+only command that fetches, and only when run. `check`, `collect` and
+`serve` still only read files. PRIVACY.md lists the hosts it contacts.
+
+**What it fetches.** Into each configured `cve.*.path`, what that entry
+reads:
+
+- BDU's `vulxml.zip`. The path must be a `.zip`; the `.xml` and
+  `.tar.gz` forms the loader also accepts are the operator's own
+  repackaging.
+- NVD's yearly gzips. NVD rebuilds every yearly file daily (checked:
+  2002's and 2010's Last-Modified were this week's), so If-Modified-Since
+  saves nothing on the old years. By default it fetches this year, last
+  year and any year not on disk; `--all-years` fetches all of them.
+- The Debian tracker's `.json`.
+- OVAL, Alpine secdb and PostgreSQL's per-major pages are per release.
+  The releases come from three places: files already in the directory
+  (vendor file names map back to releases), the `--from` inventories
+  (keyed the way the package lookups key them: Ubuntu and Mint codename,
+  RHEL-family major with Rocky on rhel, Astra and RED OS minor, Alpine
+  `vX.Y`, PostgreSQL major), and `--oval`/`--alpine`/`--postgresql`.
+  enodia keeps no "latest inventory" of its own, so no other source was
+  possible.
+- MariaDB's table, Atlassian's export, PostgreSQL's main page and nginx's
+  page.
+
+**How.**
+
+- Each file is requested If-Modified-Since its copy's modification
+  time. On success the copy's time is set to the server's Last-Modified.
+  All nine sources answer 304 except MariaDB, PostgreSQL and Atlassian,
+  which send no Last-Modified; for those, an identical download counts as
+  unchanged.
+- A download goes to `.enodia-update/` beside its destination. That is
+  the same filesystem, so the rename is atomic, and the loaders skip
+  subdirectories.
+- The download is checked by loading it with the same `cve.Load*` that
+  `check` uses, not by sniffing magic bytes. A truncated zip or an HTML
+  error page never replaces a working file.
+- A per-release file under another name (an uncompressed copy of the same
+  release) is removed once the release's file is in place, or the OVAL
+  loader would read the release twice.
+- Network errors, 429 and 5xx are retried twice with backoff. 404 is not
+  retried.
+- One failure doesn't stop the rest; the exit status is 1 if any failed.
+
+**TLS.** bdu.fstec.ru's chain ends at the Russian Trusted Root CA, through
+"Russian Trusted Sub CA" 2024, and the server sends no intermediate. The
+root is in almost no trust store. Embedding the two certificates was
+considered and rejected: the binary would carry a CA trusted for every
+host, and would go stale when the Sub CA is reissued.
+
+Instead, `cve.update` takes:
+
+- `ca_file` and `ca_dir`: certificates added to the system roots, PEM
+  (one or many) or DER;
+- `tls_skip_verify`: verification off for every download.
+
+Without them BDU fails with Go's "certificate signed by unknown
+authority" and the rest still download. One trap found live:
+`cat root.crt sub.crt` glues the armour lines together when root.crt has
+no final newline (the Root CA's published file doesn't), and pem.Decode
+then reads neither certificate. The glued form is split before parsing.
+
+Live, with every source configured: BDU downloads with the CA bundle and
+its load check takes about 20 s. A repeat run with nothing changed upstream
+is all "same" in 9 s: 304s, plus the three sources without Last-Modified
+downloaded again and compared.
+
+**The 2.0/2.1 images** (EpicMorg/docker): baked-in databases removed,
+`/var/lib/enodia/cve` made a volume, and an `enodia-cve-update` shell
+script added that mirrors this for the sources each version reads. 2.0.0
+gets NVD and BDU; 2.1.x adds Debian, OVAL and Alpine. Its BDU default is
+`-k`, the user's choice for a script with no config.
+

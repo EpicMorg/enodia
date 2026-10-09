@@ -10,6 +10,15 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `enodia cve update`: downloads the CVE databases every configured
+  `cve.*.path` names — BDU, NVD (this year, last year and missing years;
+  `--all-years`), Debian, OVAL and Alpine (the releases already on disk,
+  those `--from` inventories need, `--oval`/`--alpine`), MariaDB,
+  Atlassian, PostgreSQL (`--postgresql` for per-major pages) and nginx.
+  If-Modified-Since; a download replaces a file only after it loads. TLS
+  is verified against the system roots plus `cve.update.ca_file` and
+  `cve.update.ca_dir`, or not at all with `cve.update.tls_skip_verify`.
+  Every other command still never downloads anything (D73).
 - `splunk` probe: splunkd's management API on 8089 with Basic or a Splunk
   token (D67).
 - `code-server` probe: `codeServerVersion` from the login page (D66).
