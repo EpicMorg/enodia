@@ -135,3 +135,18 @@ func TestGithubSourceReadsLargeReleaseLists(t *testing.T) {
 		t.Fatalf("got %q", cycles[0].Latest)
 	}
 }
+
+func TestGithubReleaseTag(t *testing.T) {
+	for _, tc := range []struct{ tag, repo, want string }{
+		{"Release_1_18_0", "doxygen/doxygen", "1.18.0"},
+		{"weblate-2026.10", "WeblateOrg/weblate", "2026.10"},
+		{"v4.7.2", "netbox-community/netbox", "v4.7.2"},
+		{"RELEASE.2025-10-15T17-29-55Z", "minio/minio", "RELEASE.2025-10-15T17-29-55Z"},
+		{"26.9.0", "getsentry/self-hosted", "26.9.0"},
+		{"release-5.2.4", "qbittorrent/qBittorrent", "5.2.4"},
+	} {
+		if got := githubReleaseTag(tc.tag, tc.repo); got != tc.want {
+			t.Errorf("githubReleaseTag(%q, %q) = %q, want %q", tc.tag, tc.repo, got, tc.want)
+		}
+	}
+}

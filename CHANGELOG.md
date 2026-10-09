@@ -10,6 +10,10 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Added
 
+- `doxygen` probe: which Doxygen generated a docs site, from its generator
+  mark (D61).
+- `qbittorrent` probe: the Web UI API after a form login, `kind: password`
+  (D61).
 - `netbox` probe: the anonymous login page's `data-netbox-version` (D60).
 - `greenbone` probe (aliases `openvas`, `gsad`): gsad's version from the
   envelope of its `/gmp` reply, unauthenticated (D60).
@@ -50,6 +54,8 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Changed
 
+- The `github` resolver reads underscore-spelled (`Release_1_18_0`) and
+  `release-`-prefixed (`release-5.2.4`) tags as versions (D61).
 - The `github` resolver drops a leading `<repo>-`/`<repo>_` from release
   tags, so `weblate-2026.10` reads as `2026.10` in LATEST/CYCLE and in the
   comparison (D52).

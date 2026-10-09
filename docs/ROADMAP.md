@@ -1247,6 +1247,11 @@ Not dates. Order of work, and what each step unblocks.
   its 401 too (aliases `openvas`, `gsad`). Verified live (NetBox 4.3.3,
   gsad 24.12.0). See `docs/DECISIONS.md` D60.
 
+- `doxygen` and `qbittorrent` probes — the generator mark Doxygen puts
+  on every page it writes, and qBittorrent's Web UI API after a form
+  login. The `github` resolver now reads "Release_1_18_0" and
+  "release-5.2.4" tags as versions. See `docs/DECISIONS.md` D61.
+
 ## Next
 
 Everything found running 2.0 against a real ~600-target fleet is done
@@ -1293,9 +1298,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
   there. Still unchecked against `server_tokens on` with a rewritten header
 - Kafka stays blocked on JMX — see Later and D21
-- More probes asked for, not yet looked at: `posthog` (self-hosted), `qbittorrent` (Web UI API), `doxygen` (a
-  generated site — the version is in each page's footer comment),
-  `netbox`, `openvas` (Greenbone)
 
 ## Later
 

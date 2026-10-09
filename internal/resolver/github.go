@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -81,7 +82,7 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 		if rel.Draft || rel.Prerelease {
 			continue
 		}
-		tag := trimRepoPrefix(rel.TagName, ref.ID)
+		tag := githubReleaseTag(rel.TagName, ref.ID)
 		c := Cycle{Cycle: tag, Latest: tag}
 		if rel.PublishedAt != nil {
 			d := Date{Time: *rel.PublishedAt}
@@ -91,6 +92,31 @@ func (s *githubSource) Fetch(ctx context.Context, ref probe.ResolverRef) ([]Cycl
 		return []Cycle{c}, nil
 	}
 	return nil, fmt.Errorf("%w: %q has no published, non-prerelease release", ErrUnknownProduct, ref.ID)
+}
+
+// underscoreTag is a release tag spelled with underscores for dots behind a
+// word: doxygen/doxygen tags "Release_1_18_0".
+var underscoreTag = regexp.MustCompile(`^[A-Za-z]+_\d+(?:_\d+)+$`)
+
+// releaseWordTag is a tag spelled "release-5.2.4" (qbittorrent/qBittorrent).
+var releaseWordTag = regexp.MustCompile(`^(?i:release)-(\d.*)$`)
+
+// githubReleaseTag is a release tag as a version: a repo-name prefix
+// dropped (trimRepoPrefix), a "release-" prefix dropped, and an
+// underscore-spelled tag made dotted the
+// way github-tags does for "REL-9_17" (normalizeRELTag). Anything else is
+// left for version.Clean.
+func githubReleaseTag(tag, ownerRepo string) string {
+	tag = trimRepoPrefix(tag, ownerRepo)
+	if m := releaseWordTag.FindStringSubmatch(tag); m != nil {
+		return m[1]
+	}
+	if underscoreTag.MatchString(tag) {
+		if v, ok := normalizeRELTag(tag); ok {
+			return v
+		}
+	}
+	return tag
 }
 
 // trimRepoPrefix drops a leading "<repo>-" or "<repo>_" from a release

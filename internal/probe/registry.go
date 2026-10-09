@@ -50,6 +50,9 @@ var builtin = []Probe{
 	// Confirmed live: /redfish/v1 carries Oem.Dell, the Manager resource
 	// itself carries none — see dellidrac.go for why this is 2 requests.
 	dellIDRACProbe{},
+	// <meta name="generator" content="Doxygen X"> on a generated docs site.
+	// Verified against doxygen.nl's own manual (1.19.0).
+	doxygenProbe{},
 	elasticsearchProbe{},
 	esxiProbe{},
 	// Real ISO rootfs capture (not a Docker image — none exists): ID="eurolinux", VERSION_ID="8.10".
@@ -183,6 +186,9 @@ var builtin = []Probe{
 	// GET /api2/json/version, authenticated with an API token. Verified
 	// live against a real Proxmox VE 9.2.2 host.
 	proxmoxProbe{},
+	// Web UI API: form login, then /api/v2/app/version. Verified live
+	// against linuxserver/qbittorrent 5.2.4.
+	qbittorrentProbe{},
 	// GET /api/overview on the management plugin, Basic auth. Verified live
 	// against rabbitmq:4-management (4.3.6).
 	rabbitmqProbe{},
