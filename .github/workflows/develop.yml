@@ -55,103 +55,103 @@ jobs:
       # .goreleaser.yaml's own archive name_template; goreleaser fails the
       # whole job already if one is missing, so if-no-files-found: error
       # here is just a second, more specific check.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_amd64
           path: dist/enodia_linux_amd64.tar.gz
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_arm64
           path: dist/enodia_linux_arm64.tar.gz
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_darwin_amd64
           path: dist/enodia_darwin_amd64.tar.gz
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_darwin_arm64
           path: dist/enodia_darwin_arm64.tar.gz
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_android_arm64
           path: dist/enodia_android_arm64.tar.gz
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_windows_amd64
           path: dist/enodia_windows_amd64.zip
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_windows_arm64
           path: dist/enodia_windows_arm64.zip
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_windows_386
           path: dist/enodia_windows_386.zip
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_amd64_deb
           path: dist/enodia_linux_amd64.deb
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_arm64_deb
           path: dist/enodia_linux_arm64.deb
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_amd64_rpm
           path: dist/enodia_linux_amd64.rpm
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_arm64_rpm
           path: dist/enodia_linux_arm64.rpm
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_amd64_apk
           path: dist/enodia_linux_amd64.apk
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_arm64_apk
           path: dist/enodia_linux_arm64.apk
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_amd64_pkg_tar_zst
           path: dist/enodia_linux_amd64.pkg.tar.zst
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enodia_linux_arm64_pkg_tar_zst
           path: dist/enodia_linux_arm64.pkg.tar.zst
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: checksums
           path: dist/checksums.txt
