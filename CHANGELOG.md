@@ -10,6 +10,11 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Fixed
 
+- `${VAR}` in a config or `credentials_file` is now expanded on the parsed
+  YAML tree (scalars only) instead of the raw file text, so a variable's
+  value is taken verbatim: a password with a backslash, `#`, `: ` or a
+  leading `*`/`&`/`[` no longer breaks the scalar it lands in or
+  `config validate`.
 - `cve update` with `cve.oval.path` or `cve.alpine.path` set but no
   release or branch to fetch (none on disk, in `--from` or the flags)
   succeeded quietly, leaving a directory `check` then refused; it now says

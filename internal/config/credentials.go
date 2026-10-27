@@ -3,13 +3,10 @@
 package config
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/EpicMorg/enodia/internal/probe"
 )
@@ -46,18 +43,12 @@ func (c *Config) LoadCredentials(warn func(string)) (map[string]CredentialSpec, 
 	if err != nil {
 		return nil, fmt.Errorf("reading credentials_file %s: %w", credPath, err)
 	}
-	interpolated, err := Interpolate(raw, envLookup)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", credPath, err)
-	}
 
 	var f struct {
 		Credentials map[string]CredentialSpec `yaml:"credentials"`
 	}
-	dec := yaml.NewDecoder(bytes.NewReader(interpolated))
-	dec.KnownFields(true)
-	if err := dec.Decode(&f); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", credPath, err)
+	if err := decodeInterpolated(raw, credPath, &f); err != nil {
+		return nil, err
 	}
 
 	for name, spec := range f.Credentials {

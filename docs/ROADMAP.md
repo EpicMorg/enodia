@@ -18,7 +18,11 @@ Not dates. Order of work, and what each step unblocks.
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
 - `internal/config` — schema, `${VAR}`/`${VAR:-default}` interpolation,
-  named credentials + `credentials_file`, path resolution order
+  named credentials + `credentials_file`, path resolution order.
+  Interpolation runs on the parsed YAML tree (scalars only), not the raw
+  bytes, so an env value is taken verbatim whatever it contains — a
+  password with a backslash, `#`, `: ` or a leading `*`/`&`/`[` can no
+  longer break the scalar it lands in or `config validate`
 - `internal/resolver` — endoflife.date with on-disk cache, GitHub Releases
   fallback
 - `internal/evaluate` — three axes per D6, policy, reason/severity split
@@ -1340,14 +1344,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   greeting on 5.7/8.0/8.4 builds, whether endoflife.date has a Percona
   calendar or MySQL's cycles fit, and how NVD/BDU name it for CVEs.
   Percona XtraDB Cluster the same way
-- `${VAR}` lands in YAML as raw text — `Interpolate` runs on the file's
-  bytes before parsing (by design: one pass for every scalar), so a value
-  is reparsed as YAML. A password with a backslash breaks a
-  double-quoted `"${PG_PASSWORD}"` ("found unknown escape character"),
-  and `#`, `: ` or a leading `*`/`&`/`[` break a plain one. Expand on the
-  parsed tree instead (yaml.Node walk, scalars only), so a variable's
-  value is always taken verbatim, whatever the quoting; `config validate`
-  then can't be broken by an env value at all
 - PostgreSQL CVE counts look inflated — a real fleet shows 273 CVEs on
   12.22 (the last 12.x) and 117 on 18.3 with 18.6 current. Find which
   source and which records match: likely NVD entries for other products

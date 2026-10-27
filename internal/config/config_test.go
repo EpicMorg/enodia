@@ -4,6 +4,7 @@ package config
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -161,6 +162,56 @@ targets:
 	}
 	if got, want := c.Targets[0].Address, "https://jira.example.com"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestLoadInterpolatesValueVerbatim(t *testing.T) {
+	// A password with characters that break YAML tokenisation (a backslash, a
+	// '#', a ': ' and a leading '*') must survive interpolation unchanged,
+	// because it is substituted into the parsed tree, not the raw file text.
+	const pw = `p@ss\w#1: *x`
+	t.Setenv("ENODIA_TEST_PW", pw)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+credentials:
+  db:
+    kind: password
+    username: enodia
+    password: ${ENODIA_TEST_PW}
+targets:
+  - id: pg
+    product: postgresql
+    address: db.example.com:5432
+    credentials: db
+`)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	store, err := c.LoadCredentials(func(string) {})
+	if err != nil {
+		t.Fatalf("LoadCredentials: %v", err)
+	}
+	if got := store["db"].Password; got != pw {
+		t.Fatalf("password got %q, want %q", got, pw)
+	}
+}
+
+func TestLoadInterpolationErrorMentionsVariable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, path, `
+schemaVersion: 1
+targets:
+  - id: jira
+    product: jira
+    address: https://${ENODIA_MISSING_VAR}
+`)
+	_, err := Load(path)
+	if err == nil || !strings.Contains(err.Error(), "ENODIA_MISSING_VAR") {
+		t.Fatalf("got %v, want an error naming ENODIA_MISSING_VAR", err)
 	}
 }
 
