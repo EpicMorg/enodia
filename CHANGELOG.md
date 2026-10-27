@@ -8,6 +8,16 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ## [Unreleased]
 
+## [2.2.1+0] — 2026-10-27
+
+A maintenance release: probes stop tripping over their own version checks
+(MySQL/MariaDB host blocks, PostgreSQL login-only roles), `${VAR}` config
+values are taken verbatim, and two `cve update` edge cases are fixed. One
+behaviour change to know about: the `postgresql` probe now connects to the
+`postgres` database by default instead of one named after the login user
+(`options.database` overrides it) — set it if a target has no `postgres`
+database. Inventories are unchanged.
+
 ### Added
 
 - `postgresql` targets take an `options.database` setting. The probe now

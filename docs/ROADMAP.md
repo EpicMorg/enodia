@@ -1340,17 +1340,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   `server_tokens off` + `more_set_headers`: the 404 body is a bare
   `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
   there. Still unchecked against `server_tokens on` with a rewritten header
-- Percona Server for MySQL — today it is recorded as plain `mysql`: its
-  greeting carries the MySQL version with a build suffix (`8.0.x-NN`)
-  and no vendor name, which is only in `@@version_comment` ("Percona
-  Server (GPL), Release NN, …"). Reading it means an authenticated query,
-  which the probe does not do today (the 1129 fix answers the greeting
-  with a throwaway login, it does not log in for real), so this needs its
-  own credentialled path first. Without credentials the build suffix
-  alone is too weak a signal to switch products on. Check before writing:
-  the exact greeting on 5.7/8.0/8.4 builds, whether endoflife.date has a
-  Percona calendar or MySQL's cycles fit, and how NVD/BDU name it for CVEs.
-  Percona XtraDB Cluster the same way
 
 ## Later
 
@@ -1392,6 +1381,15 @@ Everything found running 2.0 against a real ~600-target fleet is done
 
 ## Deliberately not planned
 
+- A dedicated Percona Server probe. Percona tracks MySQL's exact version
+  numbering (`8.0.36-28` is MySQL 8.0.36, Percona release 28), unlike
+  MariaDB's own scheme, so the `mysql` probe already reads the right
+  version from the greeting anonymously and maps it to MySQL's
+  endoflife.date calendar — a close-enough proxy. Telling Percona apart
+  needs `@@version_comment`, an authenticated query the probe doesn't do,
+  and would only add a vendor label and a slightly more exact EOL. Not
+  worth a real login path, especially with no Percona in the fleet.
+  Revisit only if a Percona server turns up and its precise EOL matters.
 - Narrowing PostgreSQL CVE counts on EOL majors. Investigated 2026-10-27:
   the report already de-dupes to distinct CVE IDs, and NVD is accurate
   (~9 bounded records on 12.22, no driver/extension CPE leakage). A server
