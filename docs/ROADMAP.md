@@ -1351,25 +1351,7 @@ Everything found running 2.0 against a real ~600-target fleet is done
   the exact greeting on 5.7/8.0/8.4 builds, whether endoflife.date has a
   Percona calendar or MySQL's cycles fit, and how NVD/BDU name it for CVEs.
   Percona XtraDB Cluster the same way
-- PostgreSQL CVE counts on EOL majors are over-inclusive. Investigated
-  2026-10-27 against a real fleet: the report column already de-dupes to
-  distinct CVE IDs (the raw per-source Finding count is higher by design,
-  D7, and was what an earlier note mis-read as "273"). NVD is accurate —
-  only ~9 properly-bounded records match 12.22, no driver/extension CPEs
-  leak in. The over-count is BDU on EOL majors: a server on the last patch
-  of an EOL branch (12.22, 13.21) still shows ~60 CVEs because BDU lists
-  one upper-bound-only range per maintenance branch ("до 13.5", "до 14.1")
-  with no lower bound, so a CVE fixed in 12.9 (and later in 13.5/14.1)
-  matches 12.22 through its sibling-branch ranges. This is the documented
-  BDU limitation (D31/D50), deliberately biased towards a false positive
-  over a miss. The vendor data (`cve.postgresql`) would correct it, but
-  (a) `vendorCovers` only returns true for currently-supported majors, and
-  (b) only the main `security.html` is fetched, not the per-major pages for
-  EOL branches (`cve update --postgresql`). Candidate fix: fetch the
-  per-major pages and extend `vendorCovers` to any major the vendor data
-  actually has fix info for — with care, since the main page alone has
-  only partial EOL data and over-extending coverage risks a miss. Needs a
-  decision because it changes the D31 trade-off.
+
 ## Later
 
 - CVE correlation via OSV.dev specifically — investigated twice,
@@ -1410,6 +1392,17 @@ Everything found running 2.0 against a real ~600-target fleet is done
 
 ## Deliberately not planned
 
+- Narrowing PostgreSQL CVE counts on EOL majors. Investigated 2026-10-27:
+  the report already de-dupes to distinct CVE IDs, and NVD is accurate
+  (~9 bounded records on 12.22, no driver/extension CPE leakage). A server
+  on the last patch of an EOL branch (12.22, 13.21) still shows ~60 CVEs
+  because BDU lists one upper-bound-only range per maintenance branch, so a
+  CVE fixed in 12.9 (and later 13.5/14.1) matches 12.22 through its
+  sibling-branch ranges — the documented BDU limitation (D31/D50), biased
+  towards a false positive over a miss. Left as is: the counts are honest
+  for an EOL database (it genuinely carries many unfixable CVEs), and the
+  only correction (per-major vendor pages + widened `vendorCovers`) would
+  risk a miss on incomplete EOL data, which is the wrong side of D31.
 - Hosted SaaS
 - A refresh button that triggers collection
 - Any growth of the generic probe's vocabulary
