@@ -1330,6 +1330,16 @@ Everything found running 2.0 against a real ~600-target fleet is done
   still comes from the greeting. Credentials become optional for both
   products (kind `password`). Check against MySQL 5.7/8.x and MariaDB
   10.x/11.x that the host-error counter no longer grows
+- Percona Server for MySQL — today it is recorded as plain `mysql`: its
+  greeting carries the MySQL version with a build suffix (`8.0.x-NN`)
+  and no vendor name, which is only in `@@version_comment` ("Percona
+  Server (GPL), Release NN, …"). With credentials (the item above), the
+  `mysql` probe reads `@@version_comment` after logging in and records
+  Percona as its own product; without them the suffix alone is too weak
+  a signal to switch products on. Check before writing: the exact
+  greeting on 5.7/8.0/8.4 builds, whether endoflife.date has a Percona
+  calendar or MySQL's cycles fit, and how NVD/BDU name it for CVEs.
+  Percona XtraDB Cluster the same way
 - `postgresql`: a `database` option (`options: {database: ...}`) — the
   probe connects to a database named after the user, so a LOGIN-only
   role fails with `database "<user>" does not exist` and admins have to
