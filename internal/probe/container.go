@@ -8,7 +8,7 @@ import (
 )
 
 // Target options for SSH probes whose software may run in a container on
-// the SSH host instead of on the host itself (freeradius, minio).
+// the SSH host instead of on the host itself (freeradius, minio, kafka).
 const (
 	// containerOption names the container to run the probe's command in.
 	containerOption = "container"

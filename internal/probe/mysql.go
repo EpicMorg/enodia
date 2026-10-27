@@ -5,19 +5,26 @@ package probe
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 	"time"
 )
 
 // mysqlProbe reads the version out of MySQL's initial handshake packet
-// (Protocol::HandshakeV10). No request is ever sent: the server announces
-// its version unprompted, before authentication, the instant a client
-// connects — the roadmap's own reason for calling mysql "the interesting
-// one" among the non-HTTP probes, and D10's transport-belongs-to-the-probe
-// principle in its purest form, since there is no HTTP request to make at
-// all.
+// (Protocol::HandshakeV10). The server announces its version unprompted,
+// before authentication, the instant a client connects — the roadmap's own
+// reason for calling mysql "the interesting one" among the non-HTTP probes,
+// and D10's transport-belongs-to-the-probe principle in its purest form.
+//
+// After reading the version the probe answers the greeting with a throwaway
+// login (completeMySQLHandshake): the version needs no credential, but a probe
+// that read the greeting and hung up would be a pre-auth aborted connection,
+// and enough of those from one host trip max_connect_errors and block it
+// (ERR 1129). Answering turns it into a rejected authentication, which does
+// not count towards the block.
 type mysqlProbe struct{}
 
 func (mysqlProbe) Meta() Meta {
@@ -36,6 +43,12 @@ func (mysqlProbe) Meta() Meta {
 const (
 	mysqlDefaultPort  = "3306"
 	maxMySQLHandshake = 4096 // a real handshake is well under 150 bytes
+
+	mysqlComQuit = 0x01
+	// mysqlProbeUser is the throwaway login completeMySQLHandshake offers. It
+	// never authenticates; a distinctive name just makes the rejected attempt
+	// recognisable as enodia's in a server's auth log.
+	mysqlProbeUser = "enodia"
 )
 
 func (mysqlProbe) Probe(ctx context.Context, t Target) (Observation, error) {
@@ -50,9 +63,24 @@ func (mysqlProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	}
 	defer cleanup()
 
-	version, err := readMySQLHandshakeVersion(conn)
+	payload, seq, err := readMySQLPacket(conn)
 	if err != nil {
 		return obs, tcpErr(ctx, err)
+	}
+	version, verr := mysqlVersionFromPayload(payload)
+	if verr == nil {
+		// A real greeting: answer it so this connection is not an aborted
+		// pre-auth one, even if the product check below then rejects it.
+		completeMySQLHandshake(conn, seq)
+	}
+	if verr != nil {
+		return obs, tcpErr(ctx, verr)
+	}
+
+	// product: mysql pointed at a MariaDB server is exactly the kind of
+	// mismatch D9 wants caught, not silently recorded as a MySQL fact.
+	if unmasked, ok := mariadbServerVersion(version); ok {
+		return obs, fmt.Errorf("%w: this server is MariaDB (%s), not MySQL", ErrNotSupported, unmasked)
 	}
 
 	obs.Version = version
@@ -62,17 +90,14 @@ func (mysqlProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 }
 
 // readMySQLHandshakeVersion reads one MySQL packet and returns its version,
-// rejecting a MariaDB server's reply (see mariadbServerVersion). mariadbProbe (mariadb.go)
-// calls the shared readMySQLProtocolVersion directly instead, and accepts
-// exactly the shape this rejects.
+// rejecting a MariaDB server's reply (see mariadbServerVersion). It is the
+// version-only path used by the unit tests; the probes read the packet and its
+// sequence number directly so they can answer the greeting.
 func readMySQLHandshakeVersion(r io.Reader) (string, error) {
 	version, err := readMySQLProtocolVersion(r)
 	if err != nil {
 		return "", err
 	}
-
-	// product: mysql pointed at a MariaDB server is exactly the kind of
-	// mismatch D9 wants caught, not silently recorded as a MySQL fact.
 	if unmasked, ok := mariadbServerVersion(version); ok {
 		return "", fmt.Errorf("%w: this server is MariaDB (%s), not MySQL", ErrNotSupported, unmasked)
 	}
@@ -99,8 +124,35 @@ func mariadbServerVersion(version string) (string, bool) {
 	return "", false
 }
 
-// readMySQLProtocolVersion reads one MySQL packet and extracts the raw
-// version string from a Protocol::HandshakeV10 payload:
+// readMySQLProtocolVersion reads one MySQL packet and extracts the version.
+func readMySQLProtocolVersion(r io.Reader) (string, error) {
+	payload, _, err := readMySQLPacket(r)
+	if err != nil {
+		return "", err
+	}
+	return mysqlVersionFromPayload(payload)
+}
+
+// readMySQLPacket reads one MySQL protocol packet: a 4-byte header (3-byte
+// little-endian length + 1-byte sequence number) followed by the payload.
+func readMySQLPacket(r io.Reader) (payload []byte, seq byte, err error) {
+	header := make([]byte, 4)
+	if _, err := io.ReadFull(r, header); err != nil {
+		return nil, 0, fmt.Errorf("%w: reading handshake header: %w", ErrUnreachable, err)
+	}
+	length := int(header[0]) | int(header[1])<<8 | int(header[2])<<16
+	if length <= 0 || length > maxMySQLHandshake {
+		return nil, 0, fmt.Errorf("%w: implausible handshake packet length %d", ErrUnparseable, length)
+	}
+	payload = make([]byte, length)
+	if _, err := io.ReadFull(r, payload); err != nil {
+		return nil, 0, fmt.Errorf("%w: reading handshake payload: %w", ErrUnreachable, err)
+	}
+	return payload, header[3], nil
+}
+
+// mysqlVersionFromPayload extracts the server version from a
+// Protocol::HandshakeV10 payload:
 //
 //	1 byte   protocol version (0x0a)
 //	string   server version, NUL-terminated   <- this is all we need
@@ -108,25 +160,10 @@ func mariadbServerVersion(version string) (string, bool) {
 //	...      auth-plugin-data and capability flags, ignored
 //
 // verified against a live MySQL 8.0 server's real handshake packet (see
-// testdata/mysql_8.0.46.bin) rather than assumed from the protocol docs
-// alone. Shared by mysqlProbe and mariadbProbe (mariadb.go): both speak
-// this identical wire format and only differ in whether the version
+// testdata/mysql_8.0.46.bin). Shared by mysqlProbe and mariadbProbe: both
+// speak this identical wire format and only differ in whether the version
 // string is MariaDB's (mariadbServerVersion).
-func readMySQLProtocolVersion(r io.Reader) (string, error) {
-	header := make([]byte, 4)
-	if _, err := io.ReadFull(r, header); err != nil {
-		return "", fmt.Errorf("%w: reading handshake header: %w", ErrUnreachable, err)
-	}
-	length := int(header[0]) | int(header[1])<<8 | int(header[2])<<16
-	if length <= 0 || length > maxMySQLHandshake {
-		return "", fmt.Errorf("%w: implausible handshake packet length %d", ErrUnparseable, length)
-	}
-
-	payload := make([]byte, length)
-	if _, err := io.ReadFull(r, payload); err != nil {
-		return "", fmt.Errorf("%w: reading handshake payload: %w", ErrUnreachable, err)
-	}
-
+func mysqlVersionFromPayload(payload []byte) (string, error) {
 	// An ERR packet (0xff) means the server refused the connection at the
 	// protocol level — too many connections, host blocked, and the like —
 	// which is an environmental reachability problem, not a handshake to
@@ -147,4 +184,72 @@ func readMySQLProtocolVersion(r io.Reader) (string, error) {
 		return "", fmt.Errorf("%w: handshake version string is not NUL-terminated", ErrUnparseable)
 	}
 	return string(payload[1 : 1+end]), nil
+}
+
+// completeMySQLHandshake answers the server's greeting with a throwaway login
+// so the connection is recorded as a rejected authentication, not a pre-auth
+// aborted one — the latter is what accrues towards max_connect_errors and
+// eventually blocks the host (ERR 1129, confirmed live: a read-and-hang-up
+// probe raises Aborted_connects_preauth, a completed handshake does not).
+//
+// The version has already been read from the greeting, so this is courtesy
+// only: every error is ignored, and the caller returns the version regardless.
+func completeMySQLHandshake(conn net.Conn, greetSeq byte) {
+	if writeMySQLPacket(conn, greetSeq+1, mysqlHandshakeResponse(mysqlProbeUser)) != nil {
+		return
+	}
+	payload, seq, err := readMySQLPacket(conn)
+	if err != nil {
+		return
+	}
+	// 0xfe is an AuthSwitchRequest: MySQL 8's default caching_sha2_password
+	// asks the client to switch even for an unknown user (so the reply does
+	// not reveal whether the user exists). An empty response reaches the same
+	// Access-denied result without computing any auth data.
+	if len(payload) > 0 && payload[0] == 0xfe {
+		if writeMySQLPacket(conn, seq+1, nil) == nil {
+			_, _, _ = readMySQLPacket(conn)
+		}
+	}
+	_ = writeMySQLPacket(conn, 0, []byte{mysqlComQuit})
+}
+
+// writeMySQLPacket frames payload as one MySQL protocol packet and writes it.
+func writeMySQLPacket(w io.Writer, seq byte, payload []byte) error {
+	buf := make([]byte, 4+len(payload))
+	buf[0] = byte(len(payload))
+	buf[1] = byte(len(payload) >> 8)
+	buf[2] = byte(len(payload) >> 16)
+	buf[3] = seq
+	copy(buf[4:], payload)
+	_, err := w.Write(buf)
+	return err
+}
+
+// mysqlHandshakeResponse builds a HandshakeResponse41 for user with an empty
+// password and no database. The capability set is the minimum a modern server
+// accepts (PROTOCOL_41 + SECURE_CONNECTION + PLUGIN_AUTH); the empty auth
+// response and mysql_native_password plugin name make the server answer with
+// Access denied (or, on MySQL 8, an AuthSwitchRequest first). Confirmed live
+// against MySQL 8.0 and MariaDB 10.11/11.4.
+func mysqlHandshakeResponse(user string) []byte {
+	const (
+		clientLongPassword     = 0x00000001
+		clientProtocol41       = 0x00000200
+		clientSecureConnection = 0x00008000
+		clientPluginAuth       = 0x00080000
+	)
+	caps := uint32(clientLongPassword | clientProtocol41 | clientSecureConnection | clientPluginAuth)
+
+	b := make([]byte, 0, 64)
+	b = binary.LittleEndian.AppendUint32(b, caps)
+	b = binary.LittleEndian.AppendUint32(b, 0xffffff) // max packet size
+	b = append(b, 45)                                 // character set: utf8mb4_general_ci
+	b = append(b, make([]byte, 23)...)                // reserved
+	b = append(b, user...)
+	b = append(b, 0)                          // username NUL terminator
+	b = append(b, 0)                          // auth-response length = 0 (empty password)
+	b = append(b, "mysql_native_password"...) // client auth plugin
+	b = append(b, 0)
+	return b
 }

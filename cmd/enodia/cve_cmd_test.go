@@ -81,3 +81,26 @@ cve:
 		t.Fatalf("got %v, want a ca_file error", err)
 	}
 }
+
+func TestCVEUpdateNothingToFetchForAlpine(t *testing.T) {
+	// No Alpine host known: an empty cve/alpine would make check refuse the
+	// config, so cve update says so instead of succeeding quietly.
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "enodia.yaml")
+	writeFile(t, cfgPath, `schemaVersion: 1
+targets: []
+cve:
+  alpine: {path: cve/alpine}
+`)
+	withConfigFlag(t, cfgPath)
+	withCVEUpdateFlags(t, nil, nil, false)
+
+	cmd, _, stderr := testCmd(t)
+	var ee *ExitError
+	if err := runCVEUpdateCmd(cmd, nil); !errors.As(err, &ee) || ee.Code != 1 {
+		t.Fatalf("got %v, want exit 1", err)
+	}
+	if !strings.Contains(stderr.String(), "no Alpine branch to fetch") {
+		t.Errorf("stderr lacks the reason:\n%s", stderr)
+	}
+}

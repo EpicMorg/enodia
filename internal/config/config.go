@@ -7,6 +7,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -292,19 +293,44 @@ func Load(path string) (*Config, error) {
 }
 
 func parse(raw []byte, path string) (*Config, error) {
-	interpolated, err := Interpolate(raw, envLookup)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
-	}
-
+	// Parse the file first, then expand ${VAR} in the resulting scalars, so a
+	// variable's value can never break the YAML it lands in (see
+	// interpolateNode). An empty file unmarshals to a zero Node (no content);
+	// Validate then reports the missing schemaVersion.
+	// An empty file leaves c zero; Validate reports the missing schemaVersion.
 	var c Config
-	dec := yaml.NewDecoder(bytes.NewReader(interpolated))
-	dec.KnownFields(true)
-	if err := dec.Decode(&c); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", path, err)
+	if err := decodeInterpolated(raw, path, &c); err != nil {
+		return nil, err
 	}
 	c.path = path
 	return &c, nil
+}
+
+// decodeInterpolated parses raw YAML, expands ${VAR} in its scalars (see
+// interpolateNode), re-emits the tree so substituted values are quoted
+// correctly, and decodes the result into out with KnownFields on. An empty or
+// comment-only file leaves out untouched. Errors are wrapped with path.
+func decodeInterpolated(raw []byte, path string, out any) error {
+	var root yaml.Node
+	if err := yaml.Unmarshal(raw, &root); err != nil {
+		return fmt.Errorf("parsing %s: %w", path, err)
+	}
+	if root.Kind == 0 {
+		return nil
+	}
+	if err := interpolateNode(&root, envLookup); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	interpolated, err := yaml.Marshal(&root)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	dec := yaml.NewDecoder(bytes.NewReader(interpolated))
+	dec.KnownFields(true)
+	if err := dec.Decode(out); err != nil && err != io.EOF {
+		return fmt.Errorf("parsing %s: %w", path, err)
+	}
+	return nil
 }
 
 // Validate checks the schema version and every target for the errors that

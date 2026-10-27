@@ -18,7 +18,11 @@ Not dates. Order of work, and what each step unblocks.
 - `internal/collect` — concurrent runner, retry policy, warnings
 - `internal/inventory` — JSONL writer/reader, schema versioning
 - `internal/config` — schema, `${VAR}`/`${VAR:-default}` interpolation,
-  named credentials + `credentials_file`, path resolution order
+  named credentials + `credentials_file`, path resolution order.
+  Interpolation runs on the parsed YAML tree (scalars only), not the raw
+  bytes, so an env value is taken verbatim whatever it contains — a
+  password with a backslash, `#`, `: ` or a leading `*`/`&`/`[` can no
+  longer break the scalar it lands in or `config validate`
 - `internal/resolver` — endoflife.date with on-disk cache, GitHub Releases
   fallback
 - `internal/evaluate` — three axes per D6, policy, reason/severity split
@@ -1124,6 +1128,28 @@ Not dates. Order of work, and what each step unblocks.
   calendar (`mariadb`, confirmed live). CVE mapping deliberately not
   done yet — that's the later, dedicated CVE pass, not an oversight.
   See `docs/DECISIONS.md` D36.
+- `mysql`/`mariadb` no longer get their own host blocked (ERR 1129). The
+  probe used to read the greeting and hang up, which the server counts as
+  an aborted pre-auth connection; `max_connect_errors` of those blocks the
+  host until `FLUSH HOSTS`. The probe now answers the greeting with a
+  throwaway login (a HandshakeResponse41 for a fixed made-up user
+  `enodia`, empty password) and reads the Access-denied reply, so the
+  connection is a rejected authentication instead — which does not count
+  towards the block. MySQL 8's caching_sha2_password sends an
+  AuthSwitchRequest first; an empty response reaches the same rejection.
+  The version still comes from the greeting; no credential is used.
+  Confirmed live against MySQL 8.0 and MariaDB 10.11/11.4: the probe reads
+  the version and `Aborted_connects_preauth` does not move, where a
+  read-and-close raised it. Real authenticated login was not needed for
+  this and is not implemented.
+- `postgresql` probe asks for the `postgres` database by default, not one
+  named after the login user. The server defaults an omitted database to
+  the username, so a login-only role (the least privilege that still
+  reveals the version) failed with `database "<user>" does not exist`
+  unless an admin created an empty database per server. `postgres` exists
+  everywhere and grants CONNECT to PUBLIC; `options: {database: ...}`
+  overrides it for a server that doesn't. Confirmed live: a login-only
+  role now returns the version with no database of its own.
 - `pfsense` probe (Community Edition) — confirmed live against three
   real dev hosts: SSH in, read `/etc/version` and `/etc/platform` in
   one round trip. Netgate's commercial pfSense Plus is a different
@@ -1355,6 +1381,26 @@ Everything found running 2.0 against a real ~600-target fleet is done
 
 ## Deliberately not planned
 
+- A dedicated Percona Server probe. Percona tracks MySQL's exact version
+  numbering (`8.0.36-28` is MySQL 8.0.36, Percona release 28), unlike
+  MariaDB's own scheme, so the `mysql` probe already reads the right
+  version from the greeting anonymously and maps it to MySQL's
+  endoflife.date calendar — a close-enough proxy. Telling Percona apart
+  needs `@@version_comment`, an authenticated query the probe doesn't do,
+  and would only add a vendor label and a slightly more exact EOL. Not
+  worth a real login path, especially with no Percona in the fleet.
+  Revisit only if a Percona server turns up and its precise EOL matters.
+- Narrowing PostgreSQL CVE counts on EOL majors. Investigated 2026-10-27:
+  the report already de-dupes to distinct CVE IDs, and NVD is accurate
+  (~9 bounded records on 12.22, no driver/extension CPE leakage). A server
+  on the last patch of an EOL branch (12.22, 13.21) still shows ~60 CVEs
+  because BDU lists one upper-bound-only range per maintenance branch, so a
+  CVE fixed in 12.9 (and later 13.5/14.1) matches 12.22 through its
+  sibling-branch ranges — the documented BDU limitation (D31/D50), biased
+  towards a false positive over a miss. Left as is: the counts are honest
+  for an EOL database (it genuinely carries many unfixable CVEs), and the
+  only correction (per-major vendor pages + widened `vendorCovers`) would
+  risk a miss on incomplete EOL data, which is the wrong side of D31.
 - Hosted SaaS
 - A refresh button that triggers collection
 - Any growth of the generic probe's vocabulary

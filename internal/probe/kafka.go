@@ -15,10 +15,11 @@ import (
 // in its libs directory (Apache's image: /opt/kafka/libs/kafka_2.13-4.3.1.jar;
 // Confluent's cp-kafka: /usr/share/java/kafka/kafka_2.13-8.3.2-ccs.jar),
 // looked for under $KAFKA_HOME and the usual install paths. kafka-topics
-// --version (a JVM start, a few seconds) is the fallback for an install
-// elsewhere on PATH. `|| true` keeps a host without Kafka from failing the
-// command; that is reported from the missing version instead.
-const kafkaVersionCommand = `for d in "$KAFKA_HOME" /opt/kafka /opt/bitnami/kafka /usr/local/kafka /usr/share/java/kafka; do [ -n "$d" ] && ls "$d"/libs/kafka_2.*.jar "$d"/kafka_2.*.jar 2>/dev/null; done; kafka-topics.sh --version 2>/dev/null || kafka-topics --version 2>/dev/null || true`
+// --version (a JVM start, a few seconds) runs only when no jar is found,
+// for an install elsewhere on PATH. `|| true` keeps a host without Kafka
+// from failing the command; that is reported from the missing version
+// instead.
+const kafkaVersionCommand = `j=$(for d in "$KAFKA_HOME" /opt/kafka /opt/bitnami/kafka /usr/local/kafka /usr/share/java/kafka; do [ -n "$d" ] && ls "$d"/libs/kafka_2.*.jar "$d"/kafka_2.*.jar 2>/dev/null; done); if [ -n "$j" ]; then echo "$j"; else kafka-topics.sh --version 2>/dev/null || kafka-topics --version 2>/dev/null || true; fi`
 
 var (
 	kafkaJarPattern     = regexp.MustCompile(`kafka_2\.\d+-(\d+\.\d+\.\d+(?:-[A-Za-z0-9]+)?)\.jar`)

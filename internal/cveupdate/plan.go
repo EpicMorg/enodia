@@ -192,6 +192,9 @@ func Plan(p Paths, w Wants, now time.Time, allYears bool) ([]Item, []error) {
 					}
 				}
 			}
+			if len(releases) == 0 {
+				errs = append(errs, fmt.Errorf("cve.oval.path %s: no OVAL release to fetch (none on disk, in --from or --oval), and the CVE lookup refuses an empty directory; name a release or drop the key", p.OVAL))
+			}
 			seen := map[string]bool{}
 			for _, r := range releases {
 				product, rel, err := ParseOVALRelease(r)
@@ -220,6 +223,9 @@ func Plan(p Paths, w Wants, now time.Time, allYears bool) ([]Item, []error) {
 				if m := alpineFile.FindStringSubmatch(name); m != nil {
 					branches = append(branches, m[1])
 				}
+			}
+			if len(branches) == 0 {
+				errs = append(errs, fmt.Errorf("cve.alpine.path %s: no Alpine branch to fetch (none on disk, in --from or --alpine), and the CVE lookup refuses an empty directory; name a branch or drop the key", p.Alpine))
 			}
 			for _, b := range dedupe(branches) {
 				if !alpineBranch.MatchString(b) {

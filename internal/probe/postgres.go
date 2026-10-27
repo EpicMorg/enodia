@@ -53,6 +53,14 @@ const (
 	postgresProtocolVersion = 196608 // 3.0: major<<16 | minor
 	postgresDefaultUsername = "postgres"
 	maxPostgresMessage      = 1 << 20 // generous; real messages here are tiny
+
+	// postgresDatabaseOption names the database the startup message asks for.
+	// It defaults to "postgres", which exists on every server and grants
+	// CONNECT to PUBLIC, so a login-only role needs no database of its own —
+	// without it the server looks for a database named after the user and a
+	// login-only role fails with `database "<user>" does not exist`.
+	postgresDatabaseOption  = "database"
+	postgresDefaultDatabase = "postgres"
 )
 
 func (postgresProbe) Probe(ctx context.Context, t Target) (Observation, error) {
@@ -70,9 +78,16 @@ func (postgresProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	if username == "" {
 		username = postgresDefaultUsername
 	}
-	// database defaults to the same value as username server-side when
-	// absent; being explicit here means we never depend on that default.
-	if _, err := conn.Write(postgresStartupMessage(username, username)); err != nil {
+	// The server defaults the database to the username when the startup
+	// message omits it, which makes a login-only role fail with
+	// `database "<user>" does not exist`. Ask for "postgres" instead (it
+	// exists everywhere and grants CONNECT to PUBLIC), overridable per target
+	// with options.database for servers that don't have it.
+	database := t.Options[postgresDatabaseOption]
+	if database == "" {
+		database = postgresDefaultDatabase
+	}
+	if _, err := conn.Write(postgresStartupMessage(username, database)); err != nil {
 		return obs, tcpErr(ctx, fmt.Errorf("%w: sending startup message: %w", ErrUnreachable, err))
 	}
 
