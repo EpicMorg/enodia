@@ -1340,6 +1340,20 @@ Everything found running 2.0 against a real ~600-target fleet is done
   greeting on 5.7/8.0/8.4 builds, whether endoflife.date has a Percona
   calendar or MySQL's cycles fit, and how NVD/BDU name it for CVEs.
   Percona XtraDB Cluster the same way
+- `${VAR}` lands in YAML as raw text — `Interpolate` runs on the file's
+  bytes before parsing (by design: one pass for every scalar), so a value
+  is reparsed as YAML. A password with a backslash breaks a
+  double-quoted `"${PG_PASSWORD}"` ("found unknown escape character"),
+  and `#`, `: ` or a leading `*`/`&`/`[` break a plain one. Expand on the
+  parsed tree instead (yaml.Node walk, scalars only), so a variable's
+  value is always taken verbatim, whatever the quoting; `config validate`
+  then can't be broken by an env value at all
+- PostgreSQL CVE counts look inflated — a real fleet shows 273 CVEs on
+  12.22 (the last 12.x) and 117 on 18.3 with 18.6 current. Find which
+  source and which records match: likely NVD entries for other products
+  under a `postgresql` CPE (drivers, extensions, pgAdmin) or ranges with
+  no upper bound. The vendor page (`cve.postgresql`) lists per-branch
+  fixed versions and should win where it covers a CVE
 - `postgresql`: a `database` option (`options: {database: ...}`) — the
   probe connects to a database named after the user, so a LOGIN-only
   role fails with `database "<user>" does not exist` and admins have to
