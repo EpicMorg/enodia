@@ -1314,6 +1314,28 @@ Everything found running 2.0 against a real ~600-target fleet is done
   `server_tokens off` + `more_set_headers`: the 404 body is a bare
   `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
   there. Still unchecked against `server_tokens on` with a rewritten header
+- `mysql`/`mariadb` get a host blocked (ERR 1129) — the probe reads the
+  greeting and closes without answering it, which the server counts as
+  an aborted handshake; `max_connect_errors` defaults to 100, so an
+  hourly run gets its own address blocked in about four days, and only
+  `FLUSH HOSTS` lifts it. Failed logins don't count towards the block, so
+  the probe answers the greeting instead: with credentials it logs in for
+  real (a success resets the counter; then `COM_QUIT`), without them it
+  sends a HandshakeResponse for a fixed made-up user (`enodia`, no
+  password, so the server's log says who knocked) and reads the
+  `Access denied`. MySQL 8 answers an unknown user with an
+  AuthSwitchRequest (caching_sha2_password hides whether the user
+  exists), so that is answered with an empty response before closing;
+  `require_secure_transport` servers send an ERR either way. The version
+  still comes from the greeting. Credentials become optional for both
+  products (kind `password`). Check against MySQL 5.7/8.x and MariaDB
+  10.x/11.x that the host-error counter no longer grows
+- `postgresql`: a `database` option (`options: {database: ...}`) — the
+  probe connects to a database named after the user, so a LOGIN-only
+  role fails with `database "<user>" does not exist` and admins have to
+  create an empty one per server. Default it to `postgres` (exists
+  everywhere, CONNECT granted to PUBLIC), keep the option for servers
+  without it
 
 ## Later
 
