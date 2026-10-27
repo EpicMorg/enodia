@@ -8,6 +8,14 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ## [Unreleased]
 
+### Added
+
+- `postgresql` targets take an `options.database` setting. The probe now
+  asks for the `postgres` database by default instead of one named after
+  the login user, so a login-only role reveals the version without a
+  database of its own; set `options: {database: ...}` for a server that
+  has no `postgres` database.
+
 ### Fixed
 
 - `mysql` and `mariadb` probes no longer risk getting enodia's own host

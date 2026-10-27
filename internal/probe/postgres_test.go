@@ -203,6 +203,10 @@ type fakePostgresServer struct {
 	username string
 	password string
 	authMode string // "trust", "cleartext", "md5", "scram", "unsupported"
+
+	// wantDatabase, when set, asserts the startup message asked for this
+	// database (the "database\x00<value>\x00" parameter).
+	wantDatabase string
 }
 
 func (f fakePostgresServer) serve(t *testing.T, conn net.Conn) {
@@ -216,6 +220,9 @@ func (f fakePostgresServer) serve(t *testing.T, conn net.Conn) {
 	rest := make([]byte, length-4)
 	if _, err := readFullConn(conn, rest); err != nil {
 		return
+	}
+	if f.wantDatabase != "" && !bytes.Contains(rest, []byte("database\x00"+f.wantDatabase+"\x00")) {
+		t.Errorf("startup message did not ask for database %q: %q", f.wantDatabase, rest)
 	}
 
 	switch f.authMode {
@@ -420,6 +427,32 @@ func TestPostgresProbeTrustAuth(t *testing.T) {
 	}
 	if obs.Version != pgTestVersion {
 		t.Fatalf("got %+v", obs)
+	}
+}
+
+func TestPostgresProbeDefaultsDatabaseToPostgres(t *testing.T) {
+	// A login-only role has no database named after it; the probe must ask for
+	// "postgres" by default, not the username.
+	addr := startFakePostgresServer(t, fakePostgresServer{authMode: "trust", wantDatabase: "postgres"})
+	p := postgresProbe{}
+	target := Target{
+		ID: "x", Product: "postgresql", Address: addr, Timeout: 2 * time.Second,
+		Creds: Credentials{Kind: AuthPassword, Username: "svc-enodia"},
+	}
+	if _, err := p.Probe(context.Background(), target); err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+}
+
+func TestPostgresProbeDatabaseOptionOverrides(t *testing.T) {
+	addr := startFakePostgresServer(t, fakePostgresServer{authMode: "trust", wantDatabase: "appdb"})
+	p := postgresProbe{}
+	target := Target{
+		ID: "x", Product: "postgresql", Address: addr, Timeout: 2 * time.Second,
+		Options: map[string]string{"database": "appdb"},
+	}
+	if _, err := p.Probe(context.Background(), target); err != nil {
+		t.Fatalf("Probe: %v", err)
 	}
 }
 

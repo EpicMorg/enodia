@@ -1142,6 +1142,14 @@ Not dates. Order of work, and what each step unblocks.
   the version and `Aborted_connects_preauth` does not move, where a
   read-and-close raised it. Real authenticated login was not needed for
   this and is not implemented.
+- `postgresql` probe asks for the `postgres` database by default, not one
+  named after the login user. The server defaults an omitted database to
+  the username, so a login-only role (the least privilege that still
+  reveals the version) failed with `database "<user>" does not exist`
+  unless an admin created an empty database per server. `postgres` exists
+  everywhere and grants CONNECT to PUBLIC; `options: {database: ...}`
+  overrides it for a server that doesn't. Confirmed live: a login-only
+  role now returns the version with no database of its own.
 - `pfsense` probe (Community Edition) — confirmed live against three
   real dev hosts: SSH in, read `/etc/version` and `/etc/platform` in
   one round trip. Netgate's commercial pfSense Plus is a different
@@ -1349,13 +1357,6 @@ Everything found running 2.0 against a real ~600-target fleet is done
   under a `postgresql` CPE (drivers, extensions, pgAdmin) or ranges with
   no upper bound. The vendor page (`cve.postgresql`) lists per-branch
   fixed versions and should win where it covers a CVE
-- `postgresql`: a `database` option (`options: {database: ...}`) — the
-  probe connects to a database named after the user, so a LOGIN-only
-  role fails with `database "<user>" does not exist` and admins have to
-  create an empty one per server. Default it to `postgres` (exists
-  everywhere, CONNECT granted to PUBLIC), keep the option for servers
-  without it
-
 ## Later
 
 - CVE correlation via OSV.dev specifically — investigated twice,
