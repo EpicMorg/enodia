@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -192,5 +193,70 @@ func TestMySQLProbeMeta(t *testing.T) {
 	}
 	if m.DefaultResolver.Type != "endoflife" || m.DefaultResolver.ID != "mysql" {
 		t.Fatalf("got resolver %+v", m.DefaultResolver)
+	}
+}
+
+// mysqlGreetingServerCapturing writes greeting, then records the next packet
+// the client sends (the HandshakeResponse) and replies with an Access-denied
+// ERR, closing afterwards. The captured bytes are sent on the returned channel.
+func mysqlGreetingServerCapturing(t *testing.T, greeting []byte) (string, <-chan []byte) {
+	t.Helper()
+	ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+
+	got := make(chan []byte, 1)
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			got <- nil
+			return
+		}
+		defer conn.Close()
+		_ = conn.SetDeadline(time.Now().Add(2 * time.Second))
+		if _, err := conn.Write(greeting); err != nil {
+			got <- nil
+			return
+		}
+		header := make([]byte, 4)
+		if _, err := io.ReadFull(conn, header); err != nil {
+			got <- nil
+			return
+		}
+		n := int(header[0]) | int(header[1])<<8 | int(header[2])<<16
+		payload := make([]byte, n)
+		_, _ = io.ReadFull(conn, payload)
+		got <- payload
+		// 0xff ERR packet (Access denied), seq 2, so the probe's reply read
+		// succeeds rather than hitting EOF.
+		_, _ = conn.Write([]byte{0x09, 0x00, 0x00, 0x02, 0xff, 0x15, 0x04, 'd', 'e', 'n', 'i', 'e', 'd'})
+	}()
+	return ln.Addr().String(), got
+}
+
+func TestMySQLProbeAnswersGreeting(t *testing.T) {
+	greeting := loadMySQLFixture(t, "mysql_8.0.46.bin")
+	addr, got := mysqlGreetingServerCapturing(t, greeting)
+
+	p := mysqlProbe{}
+	obs, err := p.Probe(context.Background(), Target{ID: "x", Product: "mysql", Address: addr, Timeout: 2 * time.Second})
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	if obs.Version != "8.0.46" {
+		t.Fatalf("version %q, want 8.0.46", obs.Version)
+	}
+
+	resp := <-got
+	if len(resp) == 0 {
+		t.Fatal("probe sent no HandshakeResponse — the server would see an aborted pre-auth connection")
+	}
+	if !bytes.Contains(resp, []byte(mysqlProbeUser)) {
+		t.Errorf("HandshakeResponse lacks the probe username %q: % x", mysqlProbeUser, resp)
+	}
+	if !bytes.Contains(resp, []byte("mysql_native_password")) {
+		t.Errorf("HandshakeResponse lacks the auth plugin name: % x", resp)
 	}
 }

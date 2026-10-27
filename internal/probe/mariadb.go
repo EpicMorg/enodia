@@ -52,9 +52,18 @@ func (mariadbProbe) Probe(ctx context.Context, t Target) (Observation, error) {
 	}
 	defer cleanup()
 
-	raw, err := readMySQLProtocolVersion(conn)
+	payload, seq, err := readMySQLPacket(conn)
 	if err != nil {
 		return obs, tcpErr(ctx, err)
+	}
+	raw, verr := mysqlVersionFromPayload(payload)
+	if verr == nil {
+		// A real greeting: answer it so this connection is not an aborted
+		// pre-auth one that would count towards the host block (ERR 1129).
+		completeMySQLHandshake(conn, seq)
+	}
+	if verr != nil {
+		return obs, tcpErr(ctx, verr)
 	}
 
 	unmasked, ok := mariadbServerVersion(raw)

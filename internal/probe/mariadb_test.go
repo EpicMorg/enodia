@@ -133,3 +133,22 @@ func TestMariaDBProbeUnmaskedVersions(t *testing.T) {
 		}
 	}
 }
+
+func TestMariaDBProbeAnswersGreeting(t *testing.T) {
+	// The same courtesy handshake as mysqlProbe: a MariaDB server is exactly
+	// where the host block (ERR 1129) was seen, so the probe must answer.
+	greeting := loadMySQLFixture(t, "mariadb_10.11.19.bin")
+	addr, got := mysqlGreetingServerCapturing(t, greeting)
+
+	p := mariadbProbe{}
+	obs, err := p.Probe(context.Background(), Target{ID: "x", Product: "mariadb", Address: addr, Timeout: 2 * time.Second})
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	if obs.Version != "10.11.19" {
+		t.Fatalf("version %q, want 10.11.19", obs.Version)
+	}
+	if resp := <-got; len(resp) == 0 {
+		t.Fatal("probe sent no HandshakeResponse to the MariaDB greeting")
+	}
+}

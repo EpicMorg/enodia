@@ -10,6 +10,13 @@ below lives in `docs/DECISIONS.md`, referenced by its `D`-number.
 
 ### Fixed
 
+- `mysql` and `mariadb` probes no longer risk getting enodia's own host
+  blocked (ERR 1129). They used to read the version from the greeting and
+  hang up, which the server counts as an aborted pre-auth connection;
+  enough of those trip `max_connect_errors`. The probes now answer the
+  greeting with a throwaway login and read the (rejected) result, so the
+  connection counts as a failed authentication, which does not block the
+  host. The version still comes from the greeting; no credential is used.
 - `${VAR}` in a config or `credentials_file` is now expanded on the parsed
   YAML tree (scalars only) instead of the raw file text, so a variable's
   value is taken verbatim: a password with a backslash, `#`, `: ` or a

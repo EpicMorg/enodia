@@ -1128,6 +1128,20 @@ Not dates. Order of work, and what each step unblocks.
   calendar (`mariadb`, confirmed live). CVE mapping deliberately not
   done yet — that's the later, dedicated CVE pass, not an oversight.
   See `docs/DECISIONS.md` D36.
+- `mysql`/`mariadb` no longer get their own host blocked (ERR 1129). The
+  probe used to read the greeting and hang up, which the server counts as
+  an aborted pre-auth connection; `max_connect_errors` of those blocks the
+  host until `FLUSH HOSTS`. The probe now answers the greeting with a
+  throwaway login (a HandshakeResponse41 for a fixed made-up user
+  `enodia`, empty password) and reads the Access-denied reply, so the
+  connection is a rejected authentication instead — which does not count
+  towards the block. MySQL 8's caching_sha2_password sends an
+  AuthSwitchRequest first; an empty response reaches the same rejection.
+  The version still comes from the greeting; no credential is used.
+  Confirmed live against MySQL 8.0 and MariaDB 10.11/11.4: the probe reads
+  the version and `Aborted_connects_preauth` does not move, where a
+  read-and-close raised it. Real authenticated login was not needed for
+  this and is not implemented.
 - `pfsense` probe (Community Edition) — confirmed live against three
   real dev hosts: SSH in, read `/etc/version` and `/etc/platform` in
   one round trip. Netgate's commercial pfSense Plus is a different
@@ -1318,31 +1332,16 @@ Everything found running 2.0 against a real ~600-target fleet is done
   `server_tokens off` + `more_set_headers`: the 404 body is a bare
   `<h1>404 Not Found</h1>`, nothing to read — `not_supported` stays right
   there. Still unchecked against `server_tokens on` with a rewritten header
-- `mysql`/`mariadb` get a host blocked (ERR 1129) — the probe reads the
-  greeting and closes without answering it, which the server counts as
-  an aborted handshake; `max_connect_errors` defaults to 100, so an
-  hourly run gets its own address blocked in about four days, and only
-  `FLUSH HOSTS` lifts it. Failed logins don't count towards the block, so
-  the probe answers the greeting instead: with credentials it logs in for
-  real (a success resets the counter; then `COM_QUIT`), without them it
-  sends a HandshakeResponse for a fixed made-up user (`enodia`, no
-  password, so the server's log says who knocked) and reads the
-  `Access denied`. MySQL 8 answers an unknown user with an
-  AuthSwitchRequest (caching_sha2_password hides whether the user
-  exists), so that is answered with an empty response before closing;
-  `require_secure_transport` servers send an ERR either way. The version
-  still comes from the greeting. Credentials become optional for both
-  products (kind `password`). Check against MySQL 5.7/8.x and MariaDB
-  10.x/11.x that the host-error counter no longer grows
 - Percona Server for MySQL — today it is recorded as plain `mysql`: its
   greeting carries the MySQL version with a build suffix (`8.0.x-NN`)
   and no vendor name, which is only in `@@version_comment` ("Percona
-  Server (GPL), Release NN, …"). With credentials (the item above), the
-  `mysql` probe reads `@@version_comment` after logging in and records
-  Percona as its own product; without them the suffix alone is too weak
-  a signal to switch products on. Check before writing: the exact
-  greeting on 5.7/8.0/8.4 builds, whether endoflife.date has a Percona
-  calendar or MySQL's cycles fit, and how NVD/BDU name it for CVEs.
+  Server (GPL), Release NN, …"). Reading it means an authenticated query,
+  which the probe does not do today (the 1129 fix answers the greeting
+  with a throwaway login, it does not log in for real), so this needs its
+  own credentialled path first. Without credentials the build suffix
+  alone is too weak a signal to switch products on. Check before writing:
+  the exact greeting on 5.7/8.0/8.4 builds, whether endoflife.date has a
+  Percona calendar or MySQL's cycles fit, and how NVD/BDU name it for CVEs.
   Percona XtraDB Cluster the same way
 - PostgreSQL CVE counts look inflated — a real fleet shows 273 CVEs on
   12.22 (the last 12.x) and 117 on 18.3 with 18.6 current. Find which
